@@ -23,14 +23,14 @@ void drawInputPoints() {
 
 // ベジェ曲線の描画
 void drawBezierCurve() {
-  if (points.size() < 2 || ctrlPoints[0] == null) return;
+  if (points.size() < 2 || control[0] == null) return;
 
   stroke(WHITE);
   strokeWeight(3);
   noFill();
   beginShape();
   for (float t = 0; t <= 1; t += 0.01) {
-    PVector p = bezierCurve(ctrlPoints[0], ctrlPoints[1], ctrlPoints[2], ctrlPoints[3], t);
+    PVector p = bezierCurve(control[0], control[1], control[2], control[3], t);
     vertex(p.x, p.y);
   }
   endShape();
@@ -38,38 +38,38 @@ void drawBezierCurve() {
 
 // 制御ポリゴンの描画
 void drawControlPolygon() {
-  if (points.size() < 2 || ctrlPoints[0] == null) return;
+  if (points.size() < 2 || control[0] == null) return;
 
   stroke(YELLOW);
   strokeWeight(1);
   noFill();
 
   beginShape();
-  vertex(ctrlPoints[0].x, ctrlPoints[0].y);
-  vertex(ctrlPoints[1].x, ctrlPoints[1].y);
+  vertex(control[0].x, control[0].y);
+  vertex(control[1].x, control[1].y);
   endShape();
 
   beginShape();
-  vertex(ctrlPoints[2].x, ctrlPoints[2].y);
-  vertex(ctrlPoints[3].x, ctrlPoints[3].y);
+  vertex(control[2].x, control[2].y);
+  vertex(control[3].x, control[3].y);
   endShape();
 }
 
 // 制御点の描画
 void drawctrlPoints() {
-  if (points.size() < 2 || ctrlPoints[0] == null) return;
+  if (points.size() < 2 || control[0] == null) return;
 
   fill(YELLOW);
   noStroke();
   rectMode(CENTER);
 
   // 端点
-  rect(ctrlPoints[0].x, ctrlPoints[0].y, pointSize, pointSize);
-  rect(ctrlPoints[3].x, ctrlPoints[3].y, pointSize, pointSize);
+  rect(control[0].x, control[0].y, pointSize, pointSize);
+  rect(control[3].x, control[3].y, pointSize, pointSize);
 
   // ハンドル
-  circle(ctrlPoints[1].x, ctrlPoints[1].y, ctrlPointSize);
-  circle(ctrlPoints[2].x, ctrlPoints[2].y, ctrlPointSize);
+  circle(control[1].x, control[1].y, ctrlPointSize);
+  circle(control[2].x, control[2].y, ctrlPointSize);
 }
 
 // クリアボタンの描画

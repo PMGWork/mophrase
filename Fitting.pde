@@ -42,23 +42,23 @@ void computeParameters() {
 }
 
 // 3. 3次ベジェ曲線の始点と終点を定める
-void computeEndPoints(PVector[] ctrlPoints) {
+void computeEndPoints(PVector[] control) {
   int n = points.size();
   if(n < 2) return;
 
   // 始点と終点を設定
-  ctrlPoints[0] = points.get(0).copy();      // V_0 = d_1
-  ctrlPoints[3] = points.get(n - 1).copy();  // V_3 = d_n
+  control[0] = points.get(0).copy();      // V_0 = d_1
+  control[3] = points.get(n - 1).copy();  // V_3 = d_n
 }
 
 // 4. 始点と終点以外の2つ制御点の端点からの距離を求めて、3次ベジェ曲線を決定する
-void computectrlPoints(PVector[] ctrlPoints, PVector[] tangents) {
+void computectrlPoints(PVector[] control, PVector[] tangents) {
   int n = points.size();
-  if(n < 2 || tangents[0] == null || tangents[1] == null || ctrlPoints[0] == null || ctrlPoints[3] == null || params.size() != n) return;
+  if(n < 2 || tangents[0] == null || tangents[1] == null || control[0] == null || control[3] == null || params.size() != n) return;
 
   // 端点と接ベクトル
-  PVector v0 = ctrlPoints[0].copy();
-  PVector v3 = ctrlPoints[3].copy();
+  PVector v0 = control[0].copy();
+  PVector v3 = control[3].copy();
   PVector t1 = tangents[0].copy();
   PVector t2 = tangents[1].copy();
   float chord = PVector.dist(v0, v3);
@@ -112,6 +112,6 @@ void computectrlPoints(PVector[] ctrlPoints, PVector[] tangents) {
   float useAlpha2 = alpha2Valid ? alpha_2 : fallbackAlpha;
 
   // 4つの制御点を設定
-  ctrlPoints[1] = PVector.add(v0, PVector.mult(t1, useAlpha1));  // V1 = V0 + α_1*t1
-  ctrlPoints[2] = PVector.add(v3, PVector.mult(t2, useAlpha2));  // V2 = V3 + α_2*t2
+  control[1] = PVector.add(v0, PVector.mult(t1, useAlpha1));  // V1 = V0 + α_1*t1
+  control[2] = PVector.add(v3, PVector.mult(t2, useAlpha2));  // V2 = V3 + α_2*t2
 }
