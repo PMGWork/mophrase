@@ -7,7 +7,7 @@ PVector[] endPoints = new PVector[2];  // 端点
 PVector[] controlPoints = new PVector[4];    // 制御点
 PVector[] tangents = new PVector[2];   // 端点の接ベクトル
 
-int selected = -1;  // 選択中の制御点 (-1: なし, 1: V1, 2: V2)
+int selected = -1;  // 選択中の制御点 (-1: なし, 0: V0, 1: V1, 2: V2, 3: V3)
 boolean curveExists = false;  // 曲線が既に存在するかどうか
 
 int clearButtonX = 20;
@@ -34,11 +34,9 @@ void mouseDragged() {
     // 点を追加
     points.add(new PVector(mouseX, mouseY));
   } else if(selected >= 0) {
-    // ハンドルを移動
-    if (selected == 1 && controlPoints[1] != null) {
-      controlPoints[1].set(mouseX, mouseY);
-    } else if (selected == 2 && controlPoints[2] != null) {
-      controlPoints[2].set(mouseX, mouseY);
+    // 制御点を移動
+    if (selected >= 0 && selected <= 3 && controlPoints[selected] != null) {
+      controlPoints[selected].set(mouseX, mouseY);
     }
   }
 }
@@ -51,11 +49,15 @@ void mousePressed() {
     return;
   }
 
-  // ハンドルの選択判定
-  if(controlPoints[1] != null && dist(mouseX, mouseY, controlPoints[1].x, controlPoints[1].y) < 15) {
+  // 制御点の選択判定（端点とハンドル）
+  if(controlPoints[0] != null && dist(mouseX, mouseY, controlPoints[0].x, controlPoints[0].y) < 15) {
+    selected = 0;
+  } else if(controlPoints[1] != null && dist(mouseX, mouseY, controlPoints[1].x, controlPoints[1].y) < 15) {
     selected = 1;
   } else if (controlPoints[2] != null && dist(mouseX, mouseY, controlPoints[2].x, controlPoints[2].y) < 15) {
     selected = 2;
+  } else if (controlPoints[3] != null && dist(mouseX, mouseY, controlPoints[3].x, controlPoints[3].y) < 15) {
+    selected = 3;
   } else if (!curveExists) {
     // 曲線がまだ存在しない場合のみ、新しく描画開始
     selected = -1;
