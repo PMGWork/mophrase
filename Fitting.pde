@@ -21,23 +21,23 @@ void computeParameters() {
   int n = points.size();
   if(n < 2) return;
 
+  params.clear();
+
   // u_i = 0 (i = 0)
   params.add(new PVector(0, 0));
 
   // 累積距離を計算
-  float totalDistance = 0;
+  float totalDist = 0;
   for(int j = 1; j < n; j++) {
-    totalDistance += PVector.dist(points.get(j), points.get(j - 1));
+    totalDist += PVector.dist(points.get(j), points.get(j - 1));
   }
 
   // 各 u_i を計算 (i > 1)
-  if(totalDistance > 0) {
-    float cumulativeDistance = 0;
-    for(int i = 1; i < n; i++) {
-      cumulativeDistance += PVector.dist(points.get(i), points.get(i - 1));
-      float u_i = cumulativeDistance / totalDistance;
-      params.add(new PVector(u_i, 0));
-    }
+  float cumulativeDist = 0;
+  for(int i = 1; i < n; i++) {
+    cumulativeDist += PVector.dist(points.get(i), points.get(i - 1));
+    float u_i = cumulativeDist / totalDist;
+    params.add(new PVector(u_i, 0));
   }
 }
 
@@ -61,14 +61,17 @@ void computectrlPoints(PVector[] control, PVector[] tangents) {
   PVector v3 = control[3].copy();
   PVector t1 = tangents[0].copy();
   PVector t2 = tangents[1].copy();
-  float chord = PVector.dist(v0, v3);
+
+  // デフォルトのα値（端点からの距離）
+  float chordLength = PVector.dist(v0, v3);
+  float defaultAlpha = chordLength / 3.0;
 
   // 正規方程式の係数行列と右辺ベクトルを初期化
-  float c00 = 0;  // C_00 = Σ a0·a0
-  float c01 = 0;  // C_01 = Σ a0·a1
-  float c11 = 0;  // C_11 = Σ a1·a1
-  float x0 = 0;   // X_0 = Σ a0·C_i
-  float x1 = 0;   // X_1 = Σ a1·C_i
+  float c11 = 0;  // C_11 = Σ A1·A1
+  float c12 = 0;  // C_12 = Σ A1·A2
+  float c22 = 0;  // C_22 = Σ A2·A2
+  float x1 = 0;   // X_1 = Σ A1·C_i
+  float x2 = 0;   // X_2 = Σ A2·C_i
 
   for(int i = 0; i < n; i++) {
     float u = params.get(i).x;
@@ -79,39 +82,47 @@ void computectrlPoints(PVector[] control, PVector[] tangents) {
     float b2 = bernstein(2, 3, u);
     float b3 = bernstein(3, 3, u);
 
-    // a0(u) = t1 * B_1^3(u), a1(u) = t2 * B_2^3(u)
-    PVector a0 = PVector.mult(t1, b1);
-    PVector a1 = PVector.mult(t2, b2);
+    // A1 = B_1(u)·t_1
+    // A2 = B_2(u)·t_2
+    PVector a1 = PVector.mult(t1, b1);
+    PVector a2 = PVector.mult(t2, b2);
 
-    // C_i = d_i - V0(B_0^3 + B_1^3) - V3(B_2^3 + B_3^3)
-    PVector tmp = PVector.add(PVector.mult(v0, b0 + b1),
-                              PVector.mult(v3, b2 + b3));
-    PVector cVec = PVector.sub(points.get(i), tmp);
+    // T_i = d_i - V_0(B_0 + B_1) - V_3(B_2 + B_3)
+    PVector tVec = PVector.sub(
+      points.get(i),
+      PVector.add(
+        PVector.mult(v0, b0 + b1),
+        PVector.mult(v3, b2 + b3)
+      )
+    );
 
     // 係数行列の要素を累積
-    c00 += PVector.dot(a0, a0);  // C_00 = Σ a0·a0
-    c01 += PVector.dot(a0, a1);  // C_01 = Σ a0·a1
     c11 += PVector.dot(a1, a1);  // C_11 = Σ a1·a1
+    c12 += PVector.dot(a1, a2);  // C_12 = Σ a1·a2
+    c22 += PVector.dot(a2, a2);  // C_22 = Σ a2·a2
 
     // 右辺ベクトルの要素を累積
-    x0 += PVector.dot(a0, cVec);  // X_0 = Σ a0·C_i
-    x1 += PVector.dot(a1, cVec);  // X_1 = Σ a1·C_i
+    x1 += PVector.dot(a1, tVec);  // X_1 = Σ a1·T_i
+    x2 += PVector.dot(a2, tVec);  // X_2 = Σ a2·T_i
   }
 
-  // クラメルの公式で連立方程式を解く
-  // det = C_00*C_11 - C_01^2
-  float det = c00 * c11 - c01 * c01;
+  // 連立方程式を解く
+  // C_11·α_1 + C_12·α_2 = X_1
+  // C_12·α_1 + C_22·α_2 = X_2
+  float det = (c11 * c22 - c12 * c12);
 
-  float alpha_1 = (c11 * x0 - c01 * x1) / det;
-  float alpha_2 = (c00 * x1 - c01 * x0) / det;
+  // 特異行列の場合はデフォルト値を使用
+  if (abs(det) < 1e-6 || chordLength == 0) {
+    control[1] = PVector.add(v0, PVector.mult(t1, defaultAlpha));
+    control[2] = PVector.add(v3, PVector.mult(t2, defaultAlpha));
+    return;
+  }
 
-  boolean alpha1Valid = !Float.isNaN(alpha_1) && !Float.isInfinite(alpha_1) && alpha_1 > 1e-6;
-  boolean alpha2Valid = !Float.isNaN(alpha_2) && !Float.isInfinite(alpha_2) && alpha_2 > 1e-6;
-  float fallbackAlpha = chord > 0 ? chord / 3.0 : 0;
-  float useAlpha1 = alpha1Valid ? alpha_1 : fallbackAlpha;
-  float useAlpha2 = alpha2Valid ? alpha_2 : fallbackAlpha;
+  // α_1, α_2 を計算
+  float alpha_1 = (c22 * x1 - c12 * x2) / det;
+  float alpha_2 = (c11 * x2 - c12 * x1) / det;
 
-  // 4つの制御点を設定
-  control[1] = PVector.add(v0, PVector.mult(t1, useAlpha1));  // V1 = V0 + α_1*t1
-  control[2] = PVector.add(v3, PVector.mult(t2, useAlpha2));  // V2 = V3 + α_2*t2
+  // 制御点を設定
+  control[1] = PVector.add(v0, PVector.mult(t1, alpha_1));  // V_1 = V_0 + α_1·t_1
+  control[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
 }

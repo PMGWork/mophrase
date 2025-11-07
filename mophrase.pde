@@ -80,9 +80,9 @@ void mouseReleased() {
 
   if (!curveExists && points.size() >= 2) {
     // ベジェ曲線を計算
-    computeEndTangents(tangents);         // 1. 端点の接ベクトルを計算
-    computeParameters();                  // 2. パラメータを計算
-    computeEndPoints(control);      // 3. 端点を計算
+    computeEndTangents(tangents);          // 1. 端点の接ベクトルを計算
+    computeParameters();                   // 2. パラメータを計算
+    computeEndPoints(control);             // 3. 端点を計算
     computectrlPoints(control, tangents);  // 4. 制御点を計算
 
     // 曲線が作成されたことを記録
@@ -99,5 +99,5 @@ void clearAll() {
   for (int i = 0; i < control.length; i++) {
     control[i] = null;
   }
-  curveExists = false;  // 曲線をクリア
+  curveExists = false;
 }
