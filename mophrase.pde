@@ -92,7 +92,6 @@ void mouseReleased() {
 
 void clearAll() {
   points.clear();
-  params.clear();
   for (int i = 0; i < tangents.length; i++) {
     tangents[i] = null;
   }

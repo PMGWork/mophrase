@@ -21,6 +21,7 @@ void computeParameters() {
   int n = points.size();
   if(n < 2) return;
 
+  // パラメータをクリア
   params.clear();
 
   // u_i = 0 (i = 0)
