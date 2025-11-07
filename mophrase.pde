@@ -1,13 +1,12 @@
 /// メインプログラム
 
 ArrayList<PVector> points = new ArrayList<PVector>();  // 入力した点群
-ArrayList<PVector> uList = new ArrayList<PVector>();   // パラメータ
+ArrayList<PVector> params = new ArrayList<PVector>();  // パラメータ
 
-PVector[] endPoints = new PVector[2];  // 端点
-PVector[] controlPoints = new PVector[4];    // 制御点
-PVector[] tangents = new PVector[2];   // 端点の接ベクトル
+PVector[] ctrlPoints = new PVector[4];  // 制御点
+PVector[] tangents = new PVector[2];       // 端点の接ベクトル
 
-int selected = -1;  // 選択中の制御点 (-1: なし, 0: V0, 1: V1, 2: V2, 3: V3)
+int selected = -1;            // 選択中の制御点
 boolean curveExists = false;  // 曲線が既に存在するかどうか
 
 int clearButtonX = 20;
@@ -25,7 +24,7 @@ void draw() {
   drawInputPoints();
   drawBezierCurve();
   drawControlPolygon();
-  drawControlPoints();
+  drawctrlPoints();
   drawClearButton();
 }
 
@@ -35,16 +34,16 @@ void mouseDragged() {
     points.add(new PVector(mouseX, mouseY));
   } else if(selected >= 0) {
     // 制御点を移動
-    if (selected >= 0 && selected <= 3 && controlPoints[selected] != null) {
-      PVector prevPos = controlPoints[selected].copy();
-      controlPoints[selected].set(mouseX, mouseY);
+    if (selected >= 0 && selected <= 3 && ctrlPoints[selected] != null) {
+      PVector prevPos = ctrlPoints[selected].copy();
+      ctrlPoints[selected].set(mouseX, mouseY);
 
-      if (selected == 0 && controlPoints[1] != null) {
-        PVector delta = PVector.sub(controlPoints[0], prevPos);
-        controlPoints[1].add(delta);
-      } else if (selected == 3 && controlPoints[2] != null) {
-        PVector delta = PVector.sub(controlPoints[3], prevPos);
-        controlPoints[2].add(delta);
+      if (selected == 0 && ctrlPoints[1] != null) {
+        PVector delta = PVector.sub(ctrlPoints[0], prevPos);
+        ctrlPoints[1].add(delta);
+      } else if (selected == 3 && ctrlPoints[2] != null) {
+        PVector delta = PVector.sub(ctrlPoints[3], prevPos);
+        ctrlPoints[2].add(delta);
       }
     }
   }
@@ -59,13 +58,13 @@ void mousePressed() {
   }
 
   // 制御点の選択判定（端点とハンドル）
-  if(controlPoints[0] != null && dist(mouseX, mouseY, controlPoints[0].x, controlPoints[0].y) < 15) {
+  if(ctrlPoints[0] != null && dist(mouseX, mouseY, ctrlPoints[0].x, ctrlPoints[0].y) < 15) {
     selected = 0;
-  } else if(controlPoints[1] != null && dist(mouseX, mouseY, controlPoints[1].x, controlPoints[1].y) < 15) {
+  } else if(ctrlPoints[1] != null && dist(mouseX, mouseY, ctrlPoints[1].x, ctrlPoints[1].y) < 15) {
     selected = 1;
-  } else if (controlPoints[2] != null && dist(mouseX, mouseY, controlPoints[2].x, controlPoints[2].y) < 15) {
+  } else if (ctrlPoints[2] != null && dist(mouseX, mouseY, ctrlPoints[2].x, ctrlPoints[2].y) < 15) {
     selected = 2;
-  } else if (controlPoints[3] != null && dist(mouseX, mouseY, controlPoints[3].x, controlPoints[3].y) < 15) {
+  } else if (ctrlPoints[3] != null && dist(mouseX, mouseY, ctrlPoints[3].x, ctrlPoints[3].y) < 15) {
     selected = 3;
   } else if (!curveExists) {
     // 曲線がまだ存在しない場合のみ、新しく描画開始
@@ -81,25 +80,24 @@ void mouseReleased() {
 
   if (!curveExists && points.size() >= 2) {
     // ベジェ曲線を計算
-    computeEndTangents(tangents);  // 1. 端点の接ベクトルを計算
-    computeParameters();           // 2. パラメータを計算
-    computeEndPoints(endPoints);   // 3. 端点を計算
-    computeControlPoints();        // 4. 制御点を計算
-    curveExists = true;            // 曲線が作成されたことを記録
+    computeEndTangents(tangents);         // 1. 端点の接ベクトルを計算
+    computeParameters();                  // 2. パラメータを計算
+    computeEndPoints(ctrlPoints);      // 3. 端点を計算
+    computectrlPoints(ctrlPoints, tangents);  // 4. 制御点を計算
+
+    // 曲線が作成されたことを記録
+    curveExists = true;
   }
 }
 
 void clearAll() {
   points.clear();
-  uList.clear();
+  params.clear();
   for (int i = 0; i < tangents.length; i++) {
     tangents[i] = null;
   }
-  for (int i = 0; i < endPoints.length; i++) {
-    endPoints[i] = null;
-  }
-  for (int i = 0; i < controlPoints.length; i++) {
-    controlPoints[i] = null;
+  for (int i = 0; i < ctrlPoints.length; i++) {
+    ctrlPoints[i] = null;
   }
   curveExists = false;  // 曲線をクリア
 }

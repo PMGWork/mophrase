@@ -3,14 +3,14 @@
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
 void computeEndTangents(PVector[] tangents) {
   int n = points.size();
-  if(points.size() < 2) return;
+  if(n < 2) return;
 
-  // 始点の接ベクトルを計算
+  // 始点の接ベクトル t_1 を計算
   PVector d1 = points.get(0);
   PVector d2 = points.get(1);
   tangents[0] = UnitTangent(d1, d2);
 
-  // 終点の接ベクトルを計算
+  // 終点の接ベクトル t_2 を計算
   PVector dn_1 = points.get(n - 2);
   PVector dn = points.get(n - 1);
   tangents[1] = UnitTangent(dn, dn_1);
@@ -18,50 +18,47 @@ void computeEndTangents(PVector[] tangents) {
 
 // 2. 点列に対応する曲線のパラメータの位置を計算する
 void computeParameters() {
-  uList.clear();
   int n = points.size();
   if(n < 2) return;
 
-  // u_1 = 0
-  uList.add(new PVector(0, 0));
+  // u_i = 0 (i = 0)
+  params.add(new PVector(0, 0));
 
   // 累積距離を計算
-  float totalLength = 0;
+  float totalDistance = 0;
   for(int j = 1; j < n; j++) {
-    totalLength += PVector.dist(points.get(j), points.get(j - 1));
+    totalDistance += PVector.dist(points.get(j), points.get(j - 1));
   }
 
   // 各 u_i を計算 (i > 1)
-  if (totalLength > 0) {
-    float cumulativeLength = 0;
-    for (int i = 1; i < n; i++) {
-      cumulativeLength += PVector.dist(points.get(i), points.get(i - 1));
-      float u_i = cumulativeLength / totalLength;
-      uList.add(new PVector(u_i, 0));
+  if(totalDistance > 0) {
+    float cumulativeDistance = 0;
+    for(int i = 1; i < n; i++) {
+      cumulativeDistance += PVector.dist(points.get(i), points.get(i - 1));
+      float u_i = cumulativeDistance / totalDistance;
+      params.add(new PVector(u_i, 0));
     }
   }
 }
 
 // 3. 3次ベジェ曲線の始点と終点を定める
-void computeEndPoints(PVector[] endPoints) {
+void computeEndPoints(PVector[] ctrlPoints) {
   int n = points.size();
   if(n < 2) return;
 
-  endPoints[0] = points.get(0);      // V0 = d1
-  endPoints[1] = points.get(n - 1);  // V3 = dn
+  // 始点と終点を設定
+  ctrlPoints[0] = points.get(0).copy();      // V_0 = d_1
+  ctrlPoints[3] = points.get(n - 1).copy();  // V_3 = d_n
 }
 
 // 4. 始点と終点以外の2つ制御点の端点からの距離を求めて、3次ベジェ曲線を決定する
-void computeControlPoints() {
+void computectrlPoints(PVector[] ctrlPoints, PVector[] tangents) {
   int n = points.size();
-  if(n < 2 || tangents[0] == null || tangents[1] == null ||
-      endPoints[0] == null || endPoints[1] == null || uList.size() != n) {
-    return;
-  }
+  if(n < 2 || tangents[0] == null || tangents[1] == null || ctrlPoints[0] == null || ctrlPoints[3] == null || params.size() != n) return;
 
   // 端点と接ベクトル
-  PVector v0 = endPoints[0].copy();
-  PVector v3 = endPoints[1].copy();
+  PVector v0 = ctrlPoints[0].copy();
+  PVector v3 = ctrlPoints[3].copy();
   PVector t1 = tangents[0].copy();
   PVector t2 = tangents[1].copy();
   float chord = PVector.dist(v0, v3);
@@ -74,7 +71,7 @@ void computeControlPoints() {
   float x1 = 0;   // X_1 = Σ a1·C_i
 
   for(int i = 0; i < n; i++) {
-    float u = uList.get(i).x;
+    float u = params.get(i).x;
 
     // バーンスタイン基底関数を計算
     float b0 = bernstein(0, 3, u);
@@ -105,15 +102,6 @@ void computeControlPoints() {
   // det = C_00*C_11 - C_01^2
   float det = c00 * c11 - c01 * c01;
 
-  // det が 0 付近の場合は数値的に不安定になるので簡易近似にフォールバック
-  if (abs(det) < 1e-6) {
-    controlPoints[0] = v0;
-    controlPoints[1] = PVector.add(v0, PVector.mult(t1, chord / 3.0));
-    controlPoints[2] = PVector.add(v3, PVector.mult(t2, chord / 3.0));
-    controlPoints[3] = v3;
-    return;
-  }
-
   float alpha_1 = (c11 * x0 - c01 * x1) / det;
   float alpha_2 = (c00 * x1 - c01 * x0) / det;
 
@@ -124,8 +112,6 @@ void computeControlPoints() {
   float useAlpha2 = alpha2Valid ? alpha_2 : fallbackAlpha;
 
   // 4つの制御点を設定
-  controlPoints[0] = v0;                                          // V0 = d1
-  controlPoints[1] = PVector.add(v0, PVector.mult(t1, useAlpha1));  // V1 = V0 + α_1*t1
-  controlPoints[2] = PVector.add(v3, PVector.mult(t2, useAlpha2));  // V2 = V3 + α_2*t2
-  controlPoints[3] = v3;                                          // V3 = dn
+  ctrlPoints[1] = PVector.add(v0, PVector.mult(t1, useAlpha1));  // V1 = V0 + α_1*t1
+  ctrlPoints[2] = PVector.add(v3, PVector.mult(t2, useAlpha2));  // V2 = V3 + α_2*t2
 }

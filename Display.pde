@@ -7,7 +7,7 @@ color GRAY = #484848;
 color BLACK = #303030;
 
 int pointSize = 8;
-int controlPointSize = 8;
+int ctrlPointSize = 8;
 
 // 入力点の描画
 void drawInputPoints() {
@@ -23,20 +23,14 @@ void drawInputPoints() {
 
 // ベジェ曲線の描画
 void drawBezierCurve() {
-  if (points.size() < 2 || controlPoints[0] == null) return;
+  if (points.size() < 2 || ctrlPoints[0] == null) return;
 
   stroke(WHITE);
   strokeWeight(3);
   noFill();
   beginShape();
   for (float t = 0; t <= 1; t += 0.01) {
-    PVector p = bezierCurve(
-      controlPoints[0],
-      controlPoints[1],
-      controlPoints[2],
-      controlPoints[3],
-      t
-    );
+    PVector p = bezierCurve(ctrlPoints[0], ctrlPoints[1], ctrlPoints[2], ctrlPoints[3], t);
     vertex(p.x, p.y);
   }
   endShape();
@@ -44,49 +38,44 @@ void drawBezierCurve() {
 
 // 制御ポリゴンの描画
 void drawControlPolygon() {
-  if (points.size() < 2 || controlPoints[0] == null) return;
+  if (points.size() < 2 || ctrlPoints[0] == null) return;
 
   stroke(YELLOW);
   strokeWeight(1);
   noFill();
 
   beginShape();
-  vertex(controlPoints[0].x, controlPoints[0].y);
-  vertex(controlPoints[1].x, controlPoints[1].y);
+  vertex(ctrlPoints[0].x, ctrlPoints[0].y);
+  vertex(ctrlPoints[1].x, ctrlPoints[1].y);
   endShape();
 
   beginShape();
-  vertex(controlPoints[2].x, controlPoints[2].y);
-  vertex(controlPoints[3].x, controlPoints[3].y);
+  vertex(ctrlPoints[2].x, ctrlPoints[2].y);
+  vertex(ctrlPoints[3].x, ctrlPoints[3].y);
   endShape();
 }
 
 // 制御点の描画
-void drawControlPoints() {
-  if (points.size() < 2 || controlPoints[0] == null) return;
+void drawctrlPoints() {
+  if (points.size() < 2 || ctrlPoints[0] == null) return;
 
   fill(YELLOW);
   noStroke();
   rectMode(CENTER);
 
   // 端点
-  rect(controlPoints[0].x, controlPoints[0].y, pointSize, pointSize);
-  rect(controlPoints[3].x, controlPoints[3].y, pointSize, pointSize);
+  rect(ctrlPoints[0].x, ctrlPoints[0].y, pointSize, pointSize);
+  rect(ctrlPoints[3].x, ctrlPoints[3].y, pointSize, pointSize);
 
   // ハンドル
-  circle(controlPoints[1].x, controlPoints[1].y, controlPointSize);
-  circle(controlPoints[2].x, controlPoints[2].y, controlPointSize);
+  circle(ctrlPoints[1].x, ctrlPoints[1].y, ctrlPointSize);
+  circle(ctrlPoints[2].x, ctrlPoints[2].y, ctrlPointSize);
 }
 
 // クリアボタンの描画
 void drawClearButton() {
   // ボタンの背景
-  if (mouseX >= clearButtonX && mouseX <= clearButtonX + clearButtonW &&
-      mouseY >= clearButtonY && mouseY <= clearButtonY + clearButtonH) {
-    fill(#606060);  // ホバー時は明るく
-  } else {
-    fill(GRAY);
-  }
+  fill(GRAY);
   stroke(WHITE);
   strokeWeight(2);
   rectMode(CORNER);
