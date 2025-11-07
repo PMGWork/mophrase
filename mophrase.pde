@@ -36,7 +36,16 @@ void mouseDragged() {
   } else if(selected >= 0) {
     // 制御点を移動
     if (selected >= 0 && selected <= 3 && controlPoints[selected] != null) {
+      PVector prevPos = controlPoints[selected].copy();
       controlPoints[selected].set(mouseX, mouseY);
+
+      if (selected == 0 && controlPoints[1] != null) {
+        PVector delta = PVector.sub(controlPoints[0], prevPos);
+        controlPoints[1].add(delta);
+      } else if (selected == 3 && controlPoints[2] != null) {
+        PVector delta = PVector.sub(controlPoints[3], prevPos);
+        controlPoints[2].add(delta);
+      }
     }
   }
 }
