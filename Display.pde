@@ -65,12 +65,36 @@ void drawControlPolygon() {
 void drawControlPoints() {
   if (points.size() < 2 || controlPoints[0] == null) return;
 
-  rectMode(CENTER);
-
   fill(YELLOW);
   noStroke();
+  rectMode(CENTER);
+
+  // 端点
   rect(controlPoints[0].x, controlPoints[0].y, pointSize, pointSize);
   rect(controlPoints[3].x, controlPoints[3].y, pointSize, pointSize);
+
+  // ハンドル
   circle(controlPoints[1].x, controlPoints[1].y, controlPointSize);
   circle(controlPoints[2].x, controlPoints[2].y, controlPointSize);
+}
+
+// クリアボタンの描画
+void drawClearButton() {
+  // ボタンの背景
+  if (mouseX >= clearButtonX && mouseX <= clearButtonX + clearButtonW &&
+      mouseY >= clearButtonY && mouseY <= clearButtonY + clearButtonH) {
+    fill(#606060);  // ホバー時は明るく
+  } else {
+    fill(GRAY);
+  }
+  stroke(WHITE);
+  strokeWeight(2);
+  rectMode(CORNER);
+  rect(clearButtonX, clearButtonY, clearButtonW, clearButtonH, 5);
+
+  // ボタンのテキスト
+  fill(WHITE);
+  textAlign(CENTER, CENTER);
+  textSize(16);
+  text("CLEAR", clearButtonX + clearButtonW/2, clearButtonY + clearButtonH/2);
 }

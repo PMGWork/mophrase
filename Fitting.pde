@@ -1,4 +1,4 @@
-/// フィッティングアルゴリズム
+/// ベジェ曲線フィッティング関連
 
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
 void computeEndTangents(PVector[] tangents) {
