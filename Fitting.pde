@@ -1,5 +1,16 @@
 /// ベジェ曲線フィッティング関連
 
+// 最大誤差の値とインデックスを保持するためのクラス
+class FitErrorResult {
+  final float maxError;
+  final int index;
+
+  FitErrorResult(float maxError, int index) {
+    this.maxError = maxError;
+    this.index = index;
+  }
+}
+
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
 void computeEndTangents(PVector[] tangents) {
   int n = points.size();
@@ -129,22 +140,34 @@ void computeControlPoints(PVector[] control, PVector[] tangents) {
 }
 
 // 5. 求めたベジェ曲線と点列との最大距離を求め、指定誤差と比較する。
-float computeMaxError(PVector[] control) {
+FitErrorResult computeMaxError(PVector[] control) {
   int n = points.size();
-  if(n < 2 || control[0] == null || control[1] == null || control[2] == null || control[3] == null) return Float.MAX_VALUE;
+  if(n < 2 || control[0] == null || control[1] == null || control[2] == null || control[3] == null) {
+    return new FitErrorResult(Float.MAX_VALUE, -1);
+  }
 
   // 端点はベジェ曲線と一致するため、端点以外で最大誤差を探索
-  if(n <= 2) return 0;
+  if(n <= 2) {
+    return new FitErrorResult(0, -1);
+  }
 
   // 最大誤差を計算
-  float maxError = 0;
+  float maxError = -1;
+  int maxIndex = -1;
   for(int i = 1; i < n - 1; i++) {
     float u = params.get(i).x;
     PVector curve = bezierCurve(control[0], control[1], control[2], control[3], u);
     float error = PVector.dist(points.get(i), curve);
-    if(error > maxError) maxError = error;
+    if(error > maxError) {
+      maxError = error;
+      maxIndex = i;
+    }
   }
 
-  return maxError;
+  if(maxIndex < 0) {
+    return new FitErrorResult(Float.MAX_VALUE, -1);
+  }
+
+  return new FitErrorResult(maxError, maxIndex);
 }
 

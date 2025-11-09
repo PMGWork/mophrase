@@ -74,17 +74,17 @@ void drawControlPoints() {
 
 // 誤差判定の表示
 void drawFitStatus() {
-  if (lastMaxError == Float.MAX_VALUE) return;
+  if (lastFitError == null || lastFitError.maxError == Float.MAX_VALUE) return;
 
   fill(WHITE);
   textAlign(LEFT, TOP);
   textSize(14);
 
   String status = "OK";
-  if (lastMaxError > errorTolerance) status = "NG";
+  if (lastFitError.maxError > errTol) status = "NG";
 
-  String maxErrorText = nf(lastMaxError, 1, 2) + "px";
-  String toleranceText = nf(errorTolerance, 1, 2) + "px";
+  String maxErrorText = nf(lastFitError.maxError, 1, 2) + "px";
+  String toleranceText = nf(errTol, 1, 2) + "px";
 
   float infoY = clearButtonY + clearButtonH + 10;
   text("max error: " + maxErrorText + " / tol: " + toleranceText + " [" + status + "]", clearButtonX, infoY);
