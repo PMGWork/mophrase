@@ -1,7 +1,7 @@
 /// メインプログラム
 
 ArrayList<PVector> points = new ArrayList<PVector>();  // 入力した点群
-ArrayList<PVector> params = new ArrayList<PVector>();  // パラメータ
+FloatList params = new FloatList();  // パラメータ
 
 PVector[] control = new PVector[4];   // 制御点
 PVector[] tangents = new PVector[2];  // 端点の接ベクトル
@@ -20,7 +20,7 @@ int clearButtonW = 100;
 int clearButtonH = 40;
 
 void setup() {
-  size(960, 640);
+  size(900, 600);
   background(BLACK);
 }
 
@@ -63,24 +63,6 @@ void mouseReleased() {
   if (!curveExists && points.size() >= 2) {
     fitCurve();
   }
-}
-
-// 入力済みの点群からベジェ曲線を1本フィットする
-void fitCurve() {
-  // ベジェ曲線を計算
-  computeEndTangents(tangents);             // 1. 端点の接ベクトルを計算
-  computeParameters();                      // 2. パラメータを計算
-  computeEndPoints(control);                // 3. 端点を計算
-  computeControlPoints(control, tangents);  // 4. 制御点を計算
-  lastFitError = computeMaxError(control);  // 5. 最大誤差を計算
-
-  // 分割点の接ベクトルを計算
-  if (lastFitError.index > 0 && lastFitError.index < points.size() - 1) {
-    splitTangent = computeSplitTangent(lastFitError.index);
-  }
-
-  // 曲線が作成されたことを記録
-  curveExists = true;
 }
 
 void clearAll() {
