@@ -164,6 +164,7 @@ FitErrorResult computeMaxError(PVector[] control) {
     }
   }
 
+  // 最大誤差が見つからなかった場合の処理
   if(maxIndex < 0) {
     return new FitErrorResult(Float.MAX_VALUE, -1);
   }
