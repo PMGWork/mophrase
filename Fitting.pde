@@ -147,9 +147,7 @@ FitErrorResult computeMaxError(PVector[] control) {
   }
 
   // 端点はベジェ曲線と一致するため、端点以外で最大誤差を探索
-  if(n <= 2) {
-    return new FitErrorResult(0, -1);
-  }
+  if(n <= 2) return new FitErrorResult(0, -1);
 
   // 最大誤差を計算
   float maxError = -1;
@@ -164,11 +162,27 @@ FitErrorResult computeMaxError(PVector[] control) {
     }
   }
 
-  // 最大誤差が見つからなかった場合の処理
-  if(maxIndex < 0) {
-    return new FitErrorResult(Float.MAX_VALUE, -1);
-  }
+  // 最大誤差が見つからなかった場合
+  if(maxIndex < 0) return new FitErrorResult(Float.MAX_VALUE, -1);
 
   return new FitErrorResult(maxError, maxIndex);
 }
 
+// 7. 分割点の接ベクトルを計算する
+PVector computeSplitTangent(int splitIndex) {
+  int n = points.size();
+  if (n < 3) return null;
+
+  // 分割点が端点の場合は接ベクトルを定義できない
+  if (splitIndex <= 0 || splitIndex >= n - 1) {
+    return null;
+  }
+
+  PVector prev = points.get(splitIndex - 1);
+  PVector next = points.get(splitIndex + 1);
+
+  // 前後の点が一致している場合は単位ベクトルを定義できない
+  if (prev.x == next.x && prev.y == next.y) return null;
+
+  return UnitTangent(next, prev);
+}

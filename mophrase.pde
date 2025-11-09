@@ -5,6 +5,7 @@ ArrayList<PVector> params = new ArrayList<PVector>();  // パラメータ
 
 PVector[] control = new PVector[4];   // 制御点
 PVector[] tangents = new PVector[2];  // 端点の接ベクトル
+PVector splitTangent = null;          // 分割点での単位接ベクトル
 
 FitErrorResult lastFitError = new FitErrorResult(Float.MAX_VALUE, -1);  // 直近フィットの最大誤差とインデックス
 
@@ -60,26 +61,33 @@ void mousePressed() {
 
 void mouseReleased() {
   if (!curveExists && points.size() >= 2) {
-    // ベジェ曲線を計算
-    computeEndTangents(tangents);          // 1. 端点の接ベクトルを計算
-    computeParameters();                   // 2. パラメータを計算
-    computeEndPoints(control);             // 3. 端点を計算
-    computeControlPoints(control, tangents);  // 4. 制御点を計算
+    fitCurve();
+  }
+}
+
+// 入力済みの点群からベジェ曲線を1本フィットする
+void fitCurve() {
+  // ベジェ曲線を計算
+  computeEndTangents(tangents);             // 1. 端点の接ベクトルを計算
+  computeParameters();                      // 2. パラメータを計算
+  computeEndPoints(control);                // 3. 端点を計算
+  computeControlPoints(control, tangents);  // 4. 制御点を計算
   lastFitError = computeMaxError(control);  // 5. 最大誤差を計算
 
-    // 曲線が作成されたことを記録
-    curveExists = true;
+  // 分割点の接ベクトルを計算
+  if (lastFitError.index > 0 && lastFitError.index < points.size() - 1) {
+    splitTangent = computeSplitTangent(lastFitError.index);
   }
+
+  // 曲線が作成されたことを記録
+  curveExists = true;
 }
 
 void clearAll() {
   points.clear();
-  for (int i = 0; i < tangents.length; i++) {
-    tangents[i] = null;
-  }
-  for (int i = 0; i < control.length; i++) {
-    control[i] = null;
-  }
+  for (int i = 0; i < tangents.length; i++) tangents[i] = null;
+  for (int i = 0; i < control.length; i++) control[i] = null;
   lastFitError = new FitErrorResult(Float.MAX_VALUE, -1);
+  splitTangent = null;
   curveExists = false;
 }
