@@ -9,6 +9,9 @@ PVector[] tangents = new PVector[2];       // 端点の接ベクトル
 int selected = -1;            // 選択中の制御点
 boolean curveExists = false;  // 曲線が既に存在するかどうか
 
+float errorTolerance = 10.0;           // 許容誤差（ピクセル）
+float lastMaxError = 0;  // 直近フィットの最大誤差
+
 int clearButtonX = 20;
 int clearButtonY = 20;
 int clearButtonW = 100;
@@ -21,11 +24,16 @@ void setup() {
 
 void draw() {
   background(BLACK);
+
+  // ベジェの描画
   drawInputPoints();
   drawBezierCurve();
   drawControlPolygon();
   drawControlPoints();
+
+  // UIの描画
   drawClearButton();
+  drawFitStatus();
 }
 
 void mouseDragged() {
@@ -84,7 +92,7 @@ void mouseReleased() {
     computeParameters();                   // 2. パラメータを計算
     computeEndPoints(control);             // 3. 端点を計算
     computeControlPoints(control, tangents);  // 4. 制御点を計算
-    computeMaxError(control);              // 5. 最大誤差を計算
+    lastMaxError = computeMaxError(control);  // 5. 最大誤差を計算
 
     // 曲線が作成されたことを記録
     curveExists = true;

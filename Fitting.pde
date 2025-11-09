@@ -128,7 +128,7 @@ void computeControlPoints(PVector[] control, PVector[] tangents) {
   control[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
 }
 
-// 5. 求めたベジェ曲線と点列との最大距離 (最大誤差) を求める
+// 5. 求めたベジェ曲線と点列との最大距離を求め、指定誤差と比較する。
 float computeMaxError(PVector[] control) {
   int n = points.size();
   if(n < 2 || control[0] == null || control[1] == null || control[2] == null || control[3] == null) return Float.MAX_VALUE;
@@ -148,8 +148,3 @@ float computeMaxError(PVector[] control) {
   return maxError;
 }
 
-// 指定した許容誤差 ε 以内に収まっているか判定する
-boolean isWithinErrorTolerance(PVector[] control, float epsilon) {
-  float maxError = computeMaxError(control);
-  return maxError <= epsilon;
-}
