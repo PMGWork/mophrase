@@ -53,7 +53,7 @@ void computeEndPoints(PVector[] control) {
 }
 
 // 4. 始点と終点以外の2つ制御点の端点からの距離を求めて、3次ベジェ曲線を決定する
-void computectrlPoints(PVector[] control, PVector[] tangents) {
+void computeCtrlPoints(PVector[] control, PVector[] tangents) {
   int n = points.size();
   if(n < 2 || tangents[0] == null || tangents[1] == null || control[0] == null || control[3] == null || params.size() != n) return;
 
@@ -126,4 +126,30 @@ void computectrlPoints(PVector[] control, PVector[] tangents) {
   // 制御点を設定
   control[1] = PVector.add(v0, PVector.mult(t1, alpha_1));  // V_1 = V_0 + α_1·t_1
   control[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
+}
+
+// 5. 求めたベジェ曲線と点列との最大距離 (最大誤差) を求める
+float computeMaxError(PVector[] control) {
+  int n = points.size();
+  if(n < 2 || control[0] == null || control[1] == null || control[2] == null || control[3] == null) return Float.MAX_VALUE;
+
+  // 端点はベジェ曲線と一致するため、端点以外で最大誤差を探索
+  if(n <= 2) return 0;
+
+  // 最大誤差を計算
+  float maxError = 0;
+  for(int i = 1; i < n - 1; i++) {
+    float u = params.get(i).x;
+    PVector curve = bezierCurve(control[0], control[1], control[2], control[3], u);
+    float error = PVector.dist(points.get(i), curve);
+    if(error > maxError) maxError = error;
+  }
+
+  return maxError;
+}
+
+// 指定した許容誤差 ε 以内に収まっているか判定する
+boolean isWithinErrorTolerance(PVector[] control, float epsilon) {
+  float maxError = computeMaxError(control);
+  return maxError <= epsilon;
 }

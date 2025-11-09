@@ -24,7 +24,7 @@ void draw() {
   drawInputPoints();
   drawBezierCurve();
   drawControlPolygon();
-  drawctrlPoints();
+  drawCtrlPoints();
   drawClearButton();
 }
 
@@ -83,7 +83,8 @@ void mouseReleased() {
     computeEndTangents(tangents);          // 1. 端点の接ベクトルを計算
     computeParameters();                   // 2. パラメータを計算
     computeEndPoints(control);             // 3. 端点を計算
-    computectrlPoints(control, tangents);  // 4. 制御点を計算
+    computeCtrlPoints(control, tangents);  // 4. 制御点を計算
+    computeMaxError(control);              // 5. 最大誤差を計算
 
     // 曲線が作成されたことを記録
     curveExists = true;
