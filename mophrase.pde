@@ -9,8 +9,8 @@ PVector[] tangents = new PVector[2];       // 端点の接ベクトル
 int selected = -1;            // 選択中の制御点
 boolean curveExists = false;  // 曲線が既に存在するかどうか
 
-float errorTolerance = 10.0;           // 許容誤差（ピクセル）
-float lastMaxError = 0;  // 直近フィットの最大誤差
+float errorTolerance = 10.0;  // 許容誤差（ピクセル）
+float lastMaxError = 0;       // 直近フィットの最大誤差
 
 int clearButtonX = 20;
 int clearButtonY = 20;
