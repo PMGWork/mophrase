@@ -56,7 +56,7 @@ void drawControlPolygon() {
 }
 
 // 制御点の描画
-void drawCtrlPoints() {
+void drawControlPoints() {
   if (points.size() < 2 || control[0] == null) return;
 
   fill(YELLOW);

@@ -53,7 +53,7 @@ void computeEndPoints(PVector[] control) {
 }
 
 // 4. 始点と終点以外の2つ制御点の端点からの距離を求めて、3次ベジェ曲線を決定する
-void computeCtrlPoints(PVector[] control, PVector[] tangents) {
+void computeControlPoints(PVector[] control, PVector[] tangents) {
   int n = points.size();
   if(n < 2 || tangents[0] == null || tangents[1] == null || control[0] == null || control[3] == null || params.size() != n) return;
 
