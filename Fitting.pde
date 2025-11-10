@@ -44,26 +44,24 @@ void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTa
     return;
   }
 
-  // 粗めの誤差内にあるが指定誤差を満たさない場合
+  // 粗めの誤差を満たす場合
   if (maxErr <= coarseErrTol) {
-    // パラメータをニュートン法で再計算
-    boolean improved = reparameterizeBezierCurve(localControl, localParams, startIdx, 4);
+    final int maxIterations = 4;
+    for (int iter = 0; iter < maxIterations && maxErr > errTol; iter++) {
+      boolean improved = reparameterizeBezierCurve(localControl, localParams, startIdx);
+      if (!improved) break;
 
-    if (improved) {
-      // パラメータが改善されたので制御点を再計算
       computeControlPointsRange(localControl, startTangent, endTangent, localParams, startIdx, endIdx);
 
-      // 改善後の誤差を確認
       FitErrorResult newError = computeMaxErrorRange(localControl, localParams, startIdx, endIdx);
-      if (newError.maxError <= errTol) {
+      maxErr = newError.maxError;
+      if (maxErr <= errTol) {
         curves.add(localControl);
         return;
       }
-    }
 
-    // 改善できなかったが許容範囲内なので妥協
-    curves.add(localControl);
-    return;
+      error = newError;
+    }
   }
 
   // 粗めの誤差を超える場合
@@ -246,51 +244,26 @@ FitErrorResult computeMaxErrorRange(
   return new FitErrorResult(maxError, maxIndex);
 }
 
-// 6. ニュートン法でパラメータを再計算して改善する
+// 6. ニュートン法でパラメータを1回更新する
 boolean reparameterizeBezierCurve(
-  PVector[] control,  // 制御点
-  FloatList params,   // パラメータ
-  int startIdx,       // 開始インデックス
-  int maxIterations   // 最大反復回数
+  PVector[] control,
+  FloatList params,
+  int startIdx
 ) {
   if (control[0] == null || control[1] == null || control[2] == null || control[3] == null) return false;
 
   boolean improved = false;
 
-  // 各点のパラメータをニュートン法で更新
-  for (int iter = 0; iter < maxIterations; iter++) {
-    for (int i = 1; i < params.size() - 1; i++) {
-      float u = params.get(i);
-      PVector point = points.get(startIdx + i);
+  for (int i = 1; i < params.size() - 1; i++) {
+    float u = params.get(i);
+    PVector point = points.get(startIdx + i);
 
-      // ニュートン法で u を更新
-      float newU = refineBezierParameter(control, point, u);
+    float newU = refineBezierParameter(control, point, u);
+    newU = constrain(newU, 0, 1);
 
-      // u を [0, 1] の範囲に制限
-      newU = constrain(newU, 0, 1);
-
-      // 更新
-      if (abs(newU - u) > 0.0001) improved = true;
-      params.set(i, newU);
-    }
+    if (abs(newU - u) > 0.0001) improved = true;
+    params.set(i, newU);
   }
 
   return improved;
-}
-
-// 分割点の接ベクトルを計算
-PVector computeSplitTangentRange(int splitIndex) {
-  int n = points.size();
-  if (n < 3) return null;
-
-  // 分割点が端点の場合は接ベクトルを定義できない
-  if (splitIndex <= 0 || splitIndex >= n - 1) return null;
-
-  PVector prev = points.get(splitIndex - 1);
-  PVector next = points.get(splitIndex + 1);
-
-  // 前後の点が一致している場合は単位ベクトルを定義できない
-  if (prev.x == next.x && prev.y == next.y) return null;
-
-  return unitTangent(next, prev);
 }

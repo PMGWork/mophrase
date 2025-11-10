@@ -54,7 +54,7 @@ PVector bezierSecondDerivative(PVector v0, PVector v1, PVector v2, PVector v3, f
   return d2;
 }
 
-// ニュートン法の1ステップ
+// ニュートン法によるパラメータの精密化
 float refineBezierParameter(PVector[] control, PVector point, float u) {
   PVector q = bezierCurve(control[0], control[1], control[2], control[3], u);
   PVector qPrime = bezierDerivative(control[0], control[1], control[2], control[3], u);
@@ -66,3 +66,21 @@ float refineBezierParameter(PVector[] control, PVector point, float u) {
 
   return u - (numerator / denominator);
 }
+
+// 分割点における接ベクトルの計算
+PVector computeSplitTangentRange(int splitIndex) {
+  int n = points.size();
+  if (n < 3) return null;
+
+  // 分割点が端点の場合は接ベクトルを定義できない
+  if (splitIndex <= 0 || splitIndex >= n - 1) return null;
+
+  PVector prev = points.get(splitIndex - 1);
+  PVector next = points.get(splitIndex + 1);
+
+  // 前後の点が一致している場合は単位ベクトルを定義できない
+  if (prev.x == next.x && prev.y == next.y) return null;
+
+  return unitTangent(next, prev);
+}
+
