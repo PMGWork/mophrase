@@ -9,6 +9,11 @@ color BLACK = #303030;
 int pointSize = 8;
 int ctrlPointSize = 8;
 
+// 描画可能かどうかをチェックする共通ガード関数
+boolean canDrawCurves() {
+  return points.size() >= 2 && curves.size() > 0;
+}
+
 // 入力点の描画
 void drawInputPoints() {
   stroke(GRAY);
@@ -23,7 +28,7 @@ void drawInputPoints() {
 
 // ベジェ曲線の描画
 void drawBezierCurve() {
-  if (points.size() < 2 || curves.size() == 0) return;
+  if (!canDrawCurves()) return;
 
   stroke(WHITE);
   strokeWeight(3);
@@ -43,7 +48,7 @@ void drawBezierCurve() {
 
 // 制御ポリゴンの描画
 void drawControlPolygon() {
-  if (points.size() < 2 || curves.size() == 0) return;
+  if (!canDrawCurves()) return;
 
   stroke(YELLOW);
   strokeWeight(1);
@@ -66,7 +71,7 @@ void drawControlPolygon() {
 
 // 制御点の描画
 void drawControlPoints() {
-  if (points.size() < 2 || curves.size() == 0) return;
+  if (!canDrawCurves()) return;
 
   fill(YELLOW);
   noStroke();
