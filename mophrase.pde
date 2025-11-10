@@ -1,19 +1,17 @@
 /// メインプログラム
 
+// データ構造
 ArrayList<PVector> points = new ArrayList<PVector>();  // 入力した点群
-FloatList params = new FloatList();  // パラメータ
-
-PVector[] tangents = new PVector[2];  // 端点の接ベクトル
-
 ArrayList<PVector[]> curves = new ArrayList<PVector[]>();  // フィットした複数のベジェ曲線
+boolean curveExists = false;  // 曲線が既に存在するかどうか
 
+// フィッティング関連
+PVector[] tangents = new PVector[2];  // 端点の接ベクトル
 FitErrorResult lastFitError = new FitErrorResult(Float.MAX_VALUE, -1);  // 直近フィットの最大誤差とインデックス
-
 float errTol = 10.0;               // 許容誤差（ピクセル）
 float coarseErrTol = errTol * 2;   // 粗い許容誤差（ピクセル）
 
-boolean curveExists = false;  // 曲線が既に存在するかどうか
-
+// UI関連
 int clearButtonX = 20;
 int clearButtonY = 20;
 int clearButtonW = 100;
@@ -35,11 +33,10 @@ void draw() {
 
   // UIの描画
   drawClearButton();
-  drawFitStatus();
 }
 
 void mouseDragged() {
-  if(!curveExists) {
+  if (!curveExists) {
     // 点を追加
     points.add(new PVector(mouseX, mouseY));
   }
@@ -47,8 +44,8 @@ void mouseDragged() {
 
 void mousePressed() {
   // クリアボタンのクリック判定
-  if(mouseX >= clearButtonX && mouseX <= clearButtonX + clearButtonW &&
-     mouseY >= clearButtonY && mouseY <= clearButtonY + clearButtonH) {
+  if (mouseX >= clearButtonX && mouseX <= clearButtonX + clearButtonW &&
+      mouseY >= clearButtonY && mouseY <= clearButtonY + clearButtonH) {
     clearAll();
     return;
   }

@@ -8,10 +8,10 @@ float bernstein(int i, int n, float t) {
 
 // 二項係数
 float binomial(int n, int k) {
-  if(k == 0 || k == n) return 1;
+  if (k == 0 || k == n) return 1;
 
   int res = 1;
-  for(int i = 1; i <= k; i++) {
+  for (int i = 1; i <= k; i++) {
     res *= (n - i + 1);
     res /= i;
   }

@@ -17,7 +17,7 @@ void fitCurve() {
   computeEndTangents(tangents);
 
   // 再帰的にフィッティングを開始
-  fitCurveRange(0, points.size() - 1, tangents[0], tangents[1], 0);
+  fitCurveRange(0, points.size() - 1, tangents[0], tangents[1]);
 
   curveExists = true;
 }
@@ -27,8 +27,7 @@ void fitCurveRange(
   int startIndex,
   int endIndex,
   PVector startTangent,
-  PVector endTangent,
-  int depth
+  PVector endTangent
 ) {
   // パラメータを計算
   FloatList tempParams = computeParametersRange(startIndex, endIndex);
@@ -40,8 +39,6 @@ void fitCurveRange(
 
   // 最大誤差を計算
   FitErrorResult errorResult = computeMaxErrorRange(tempControl, tempParams, startIndex, endIndex);
-
-  // 誤差判定と分岐
   float maxError = errorResult.maxError;
 
   // lastFitErrorを更新
@@ -76,15 +73,13 @@ void fitCurveRange(
         return;
       }
 
-      errorResult = newErrorResult;
-
       // 改善が見られなければループを抜ける
       if (!improved) break;
     }
   }
 
   // 粗めの誤差を超える場合、または改善が見込めない場合は分割
-  int splitIndex = errorResult.index;
+  int splitIndex = lastFitError.index;
   if (splitIndex <= startIndex || splitIndex >= endIndex) {
     curves.add(tempControl);
     return;
@@ -98,14 +93,14 @@ void fitCurveRange(
   }
 
   // 再帰的に分割してフィッティング
-  fitCurveRange(startIndex, splitIndex, startTangent, splitTangent, depth + 1);
-  fitCurveRange(splitIndex, endIndex, PVector.mult(splitTangent, -1), endTangent, depth + 1);
+  fitCurveRange(startIndex, splitIndex, startTangent, splitTangent);
+  fitCurveRange(splitIndex, endIndex, PVector.mult(splitTangent, -1), endTangent);
 }
 
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
 void computeEndTangents(PVector[] tangents) {
   int n = points.size();
-  if(n < 2) return;
+  if (n < 2) return;
 
   // 始点の接ベクトル t_1 を計算
   PVector d1 = points.get(0);
@@ -131,7 +126,7 @@ FloatList computeParametersRange(int startIndex, int endIndex) {
   }
 
   float cumulativeDist = 0;
-  for(int i = startIndex + 1; i <= endIndex; i++) {
+  for (int i = startIndex + 1; i <= endIndex; i++) {
     cumulativeDist += PVector.dist(points.get(i), points.get(i - 1));
     float u_i = (totalDist > 0) ? (cumulativeDist / totalDist) : 0;
     tempParams.append(u_i);
@@ -241,7 +236,7 @@ FitErrorResult computeMaxErrorRange(
   }
 
   // 端点はベジェ曲線と一致するため、端点以外で最大誤差を探索
-  if(n <= 2) return new FitErrorResult(0, -1);
+  if (n <= 2) return new FitErrorResult(0, -1);
 
   // 最大誤差を計算
   float maxError = -1;
@@ -256,9 +251,6 @@ FitErrorResult computeMaxErrorRange(
       maxIndex = startIndex + i;
     }
   }
-
-  // 最大誤差が見つからなかった場合
-  if(maxIndex < 0) return new FitErrorResult(Float.MAX_VALUE, -1);
 
   return new FitErrorResult(maxError, maxIndex);
 }

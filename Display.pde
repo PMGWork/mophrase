@@ -7,7 +7,6 @@ color GRAY = #484848;
 color BLACK = #303030;
 
 int pointSize = 8;
-int ctrlPointSize = 8;
 
 // 描画可能かどうかをチェックする共通ガード関数
 boolean canDrawCurves() {
@@ -35,8 +34,6 @@ void drawBezierCurve() {
   noFill();
 
   for (PVector[] curve : curves) {
-    if (curve[0] == null) continue;
-
     beginShape();
     for (float t = 0; t <= 1; t += 0.01) {
       PVector p = bezierCurve(curve[0], curve[1], curve[2], curve[3], t);
@@ -55,8 +52,6 @@ void drawControlPolygon() {
   noFill();
 
   for (PVector[] curve : curves) {
-    if (curve[0] == null) continue;
-
     beginShape();
     vertex(curve[0].x, curve[0].y);
     vertex(curve[1].x, curve[1].y);
@@ -78,34 +73,14 @@ void drawControlPoints() {
   rectMode(CENTER);
 
   for (PVector[] curve : curves) {
-    if (curve[0] == null) continue;
-
     // 端点
     rect(curve[0].x, curve[0].y, pointSize, pointSize);
     rect(curve[3].x, curve[3].y, pointSize, pointSize);
 
     // ハンドル
-    circle(curve[1].x, curve[1].y, ctrlPointSize);
-    circle(curve[2].x, curve[2].y, ctrlPointSize);
+    circle(curve[1].x, curve[1].y, pointSize);
+    circle(curve[2].x, curve[2].y, pointSize);
   }
-}
-
-// 誤差判定の表示
-void drawFitStatus() {
-  if (lastFitError == null || lastFitError.maxError == Float.MAX_VALUE) return;
-
-  fill(WHITE);
-  textAlign(LEFT, TOP);
-  textSize(14);
-
-  String status = "OK";
-  if (lastFitError.maxError > errTol) status = "NG";
-
-  String maxErrorText = nf(lastFitError.maxError, 1, 2) + "px";
-  String toleranceText = nf(errTol, 1, 2) + "px";
-
-  float infoY = clearButtonY + clearButtonH + 10;
-  text("max error: " + maxErrorText + " / tol: " + toleranceText + " [" + status + "]", clearButtonX, infoY);
 }
 
 // クリアボタンの描画
