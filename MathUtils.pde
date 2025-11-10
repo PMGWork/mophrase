@@ -34,3 +34,22 @@ PVector bezierCurve(PVector v0, PVector v1, PVector v2, PVector v3, float t) {
   point.add(PVector.mult(v3, bernstein(3, 3, t)));
   return point;
 }
+
+// 3次ベジェ曲線の1階微分
+PVector bezierDerivative(PVector v0, PVector v1, PVector v2, PVector v3, float t) {
+  PVector d = new PVector(0, 0);
+  d.add(PVector.mult(PVector.sub(v1, v0), 3 * (1 - t) * (1 - t)));
+  d.add(PVector.mult(PVector.sub(v2, v1), 6 * (1 - t) * t));
+  d.add(PVector.mult(PVector.sub(v3, v2), 3 * t * t));
+  return d;
+}
+
+// 3次ベジェ曲線の2階微分
+PVector bezierSecondDerivative(PVector v0, PVector v1, PVector v2, PVector v3, float t) {
+  PVector d2 = new PVector(0, 0);
+  PVector term1 = PVector.sub(PVector.sub(v2, PVector.mult(v1, 2)), PVector.mult(v0, -1));
+  PVector term2 = PVector.sub(PVector.sub(v3, PVector.mult(v2, 2)), PVector.mult(v1, -1));
+  d2.add(PVector.mult(term1, 6 * (1 - t)));
+  d2.add(PVector.mult(term2, 6 * t));
+  return d2;
+}

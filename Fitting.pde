@@ -46,7 +46,23 @@ void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTa
 
   // 粗めの誤差内にあるが指定誤差を満たさない場合
   if (maxErr <= coarseErrTol) {
-    curves.add(localControl);  // 後ほどニュートン法を実装
+    // パラメータをニュートン法で再計算
+    boolean improved = reparameterizeWithNewton(localControl, localParams, startIdx, 4);
+
+    if (improved) {
+      // パラメータが改善されたので制御点を再計算
+      computeControlPointsRange(localControl, startTangent, endTangent, localParams, startIdx, endIdx);
+
+      // 改善後の誤差を確認
+      FitErrorResult newError = computeMaxErrorRange(localControl, localParams, startIdx, endIdx);
+      if (newError.maxError <= errTol) {
+        curves.add(localControl);
+        return;
+      }
+    }
+
+    // 改善できなかったが許容範囲内なので妥協
+    curves.add(localControl);
     return;
   }
 
@@ -228,6 +244,60 @@ FitErrorResult computeMaxErrorRange(
   if(maxIndex < 0) return new FitErrorResult(Float.MAX_VALUE, -1);
 
   return new FitErrorResult(maxError, maxIndex);
+}
+
+// 6. ニュートン法でパラメータを再計算して改善する
+boolean reparameterizeWithNewton(
+  PVector[] control,  // 制御点
+  FloatList params,   // パラメータ
+  int startIdx,       // 開始インデックス
+  int maxIterations   // 最大反復回数
+) {
+  if (control[0] == null || control[1] == null || control[2] == null || control[3] == null) return false;
+
+  boolean improved = false;
+
+  // 各点のパラメータをニュートン法で更新
+  for (int iter = 0; iter < maxIterations; iter++) {
+    for (int i = 1; i < params.size() - 1; i++) {
+      float u = params.get(i);
+      PVector point = points.get(startIdx + i);
+
+      // ニュートン法で u を更新
+      float newU = newtonRaphsonStep(control, point, u);
+
+      // u を [0, 1] の範囲に制限
+      newU = constrain(newU, 0, 1);
+
+      // 更新
+      if (abs(newU - u) > 0.0001) improved = true;
+      params.set(i, newU);
+    }
+  }
+
+  return improved;
+}
+
+// ニュートン法の1ステップ
+float newtonRaphsonStep(PVector[] control, PVector point, float u) {
+  // Q(u): 曲線上の点
+  PVector q = bezierCurve(control[0], control[1], control[2], control[3], u);
+
+  // Q'(u): 1階微分（接線ベクトル）
+  PVector qPrime = bezierDerivative(control[0], control[1], control[2], control[3], u);
+
+  // Q''(u): 2階微分
+  PVector qDoublePrime = bezierSecondDerivative(control[0], control[1], control[2], control[3], u);
+
+  // f(u) = (Q(u) - P) · Q'(u)
+  PVector diff = PVector.sub(q, point);
+  float numerator = PVector.dot(diff, qPrime);
+
+  // f'(u) = ||Q'(u)||^2 + (Q(u) - P) · Q''(u)
+  float denominator = PVector.dot(qPrime, qPrime) + PVector.dot(diff, qDoublePrime);
+
+  // ニュートン法: u_new = u - f(u) / f'(u)
+  return u - (numerator / denominator);
 }
 
 // 分割点の接ベクトルを計算
