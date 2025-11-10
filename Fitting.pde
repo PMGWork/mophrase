@@ -24,53 +24,53 @@ void fitCurve() {
 
 // 再帰的にベジェ曲線をフィットする
 void fitCurveRange(
-  int startIdx,
-  int endIdx,
+  int startIndex,
+  int endIndex,
   PVector startTangent,
   PVector endTangent,
   int depth
 ) {
   // パラメータを計算
-  FloatList localParams = computeParametersRange(startIdx, endIdx);
+  FloatList tempParams = computeParametersRange(startIndex, endIndex);
 
   // 制御点を計算
-  PVector[] localControl = new PVector[4];
-  computeEndPointsRange(localControl, startIdx, endIdx);
-  computeControlPointsRange(localControl, startTangent, endTangent, localParams, startIdx, endIdx);
+  PVector[] tempControl = new PVector[4];
+  computeEndPointsRange(tempControl, startIndex, endIndex);
+  computeControlPointsRange(tempControl, startTangent, endTangent, tempParams, startIndex, endIndex);
 
   // 最大誤差を計算
-  FitErrorResult error = computeMaxErrorRange(localControl, localParams, startIdx, endIdx);
+  FitErrorResult errorResult = computeMaxErrorRange(tempControl, tempParams, startIndex, endIndex);
 
   // 誤差判定と分岐
-  float maxErr = error.maxError;
+  float maxError = errorResult.maxError;
 
   // 許容誤差内にある場合のみ確定
-  if (maxErr <= errTol) {
-    curves.add(localControl);
+  if (maxError <= errTol) {
+    curves.add(tempControl);
     return;
   }
 
   // 粗めの誤差を満たす場合
-  if (maxErr <= coarseErrTol) {
+  if (maxError <= coarseErrTol) {
     int maxIterations = 4;
     for (int iter = 0; iter < maxIterations; iter++) {
       // Newton法でパラメータを再計算
-      boolean improved = reparameterizeBezierCurve(localControl, localParams, startIdx);
+      boolean improved = reparameterizeBezierCurve(tempControl, tempParams, startIndex);
 
       // 制御点を再生成
-      computeControlPointsRange(localControl, startTangent, endTangent, localParams, startIdx, endIdx);
+      computeControlPointsRange(tempControl, startTangent, endTangent, tempParams, startIndex, endIndex);
 
       // 誤差を再評価
-      FitErrorResult newError = computeMaxErrorRange(localControl, localParams, startIdx, endIdx);
-      maxErr = newError.maxError;
+      FitErrorResult newErrorResult = computeMaxErrorRange(tempControl, tempParams, startIndex, endIndex);
+      maxError = newErrorResult.maxError;
 
       // 許容誤差内に収まったら確定
-      if (maxErr <= errTol) {
-        curves.add(localControl);
+      if (maxError <= errTol) {
+        curves.add(tempControl);
         return;
       }
 
-      error = newError;
+      errorResult = newErrorResult;
 
       // 改善が見られなければループを抜ける
       if (!improved) break;
@@ -78,22 +78,22 @@ void fitCurveRange(
   }
 
   // 粗めの誤差を超える場合
-  int splitIndex = error.index;
-  if (splitIndex <= startIdx || splitIndex >= endIdx) {
-    curves.add(localControl);
+  int splitIndex = errorResult.index;
+  if (splitIndex <= startIndex || splitIndex >= endIndex) {
+    curves.add(tempControl);
     return;
   }
 
   // 分割点の接ベクトルを計算
   PVector splitTangent = computeSplitTangentRange(splitIndex);
   if (splitTangent == null) {
-    curves.add(localControl);
+    curves.add(tempControl);
     return;
   }
 
   // 再帰的に分割してフィッティング
-  fitCurveRange(startIdx, splitIndex, startTangent, splitTangent, depth + 1);
-  fitCurveRange(splitIndex, endIdx, PVector.mult(splitTangent, -1), endTangent, depth + 1);
+  fitCurveRange(startIndex, splitIndex, startTangent, splitTangent, depth + 1);
+  fitCurveRange(splitIndex, endIndex, PVector.mult(splitTangent, -1), endTangent, depth + 1);
 }
 
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
@@ -113,47 +113,47 @@ void computeEndTangents(PVector[] tangents) {
 }
 
 // 2. 点列に対応する曲線のパラメータの位置を計算する
-FloatList computeParametersRange(int startIdx, int endIdx) {
-  FloatList localParams = new FloatList();
-  localParams.append(0);
+FloatList computeParametersRange(int startIndex, int endIndex) {
+  FloatList tempParams = new FloatList();
+  tempParams.append(0);
 
-  if (endIdx - startIdx < 1) return localParams;
+  if (endIndex - startIndex < 1) return tempParams;
 
   float totalDist = 0;
-  for (int j = startIdx + 1; j <= endIdx; j++) {
+  for (int j = startIndex + 1; j <= endIndex; j++) {
     totalDist += PVector.dist(points.get(j), points.get(j - 1));
   }
 
   float cumulativeDist = 0;
-  for(int i = startIdx + 1; i <= endIdx; i++) {
+  for(int i = startIndex + 1; i <= endIndex; i++) {
     cumulativeDist += PVector.dist(points.get(i), points.get(i - 1));
     float u_i = (totalDist > 0) ? (cumulativeDist / totalDist) : 0;
-    localParams.append(u_i);
+    tempParams.append(u_i);
   }
 
-  return localParams;
+  return tempParams;
 }
 
 // 3. 3次ベジェ曲線の始点と終点を定める
-void computeEndPointsRange(PVector[] localControl, int startIdx, int endIdx) {
-  localControl[0] = points.get(startIdx).copy();  // V_0 = d_1
-  localControl[3] = points.get(endIdx).copy();    // V_3 = d_n
+void computeEndPointsRange(PVector[] tempControl, int startIndex, int endIndex) {
+  tempControl[0] = points.get(startIndex).copy();  // V_0 = d_startIndex
+  tempControl[3] = points.get(endIndex).copy();    // V_3 = d_endIndex
 }
 
 // 4. 始点と終点以外の2つ制御点の端点からの距離を求める
 void computeControlPointsRange(
-  PVector[] localControl,
+  PVector[] tempControl,
   PVector startTangent,
   PVector endTangent,
-  FloatList localParams,
-  int startIdx,
-  int endIdx
+  FloatList tempParams,
+  int startIndex,
+  int endIndex
 ) {
-  int n = endIdx - startIdx + 1;
-  if (n < 2 || localControl[0] == null || localControl[3] == null) return;
+  int n = endIndex - startIndex + 1;
+  if (n < 2 || tempControl[0] == null || tempControl[3] == null) return;
 
-  PVector v0 = localControl[0].copy();
-  PVector v3 = localControl[3].copy();
+  PVector v0 = tempControl[0].copy();
+  PVector v3 = tempControl[3].copy();
   PVector t1 = startTangent.copy();
   PVector t2 = endTangent.copy();
 
@@ -168,8 +168,8 @@ void computeControlPointsRange(
   float x1 = 0;   // X_1 = Σ A1·C_i
   float x2 = 0;   // X_2 = Σ A2·C_i
 
-  for (int i = 0; i < localParams.size(); i++) {
-    float u = localParams.get(i);
+  for (int i = 0; i < tempParams.size(); i++) {
+    float u = tempParams.get(i);
 
     // バーンスタイン基底関数を計算
     float b0 = bernstein(0, 3, u);
@@ -184,7 +184,7 @@ void computeControlPointsRange(
 
     // T_i = d_i - V_0(B_0 + B_1) - V_3(B_2 + B_3)
     PVector tVec = PVector.sub(
-      points.get(startIdx + i),
+      points.get(startIndex + i),
       PVector.add(
         PVector.mult(v0, b0 + b1),
         PVector.mult(v3, b2 + b3)
@@ -208,8 +208,8 @@ void computeControlPointsRange(
 
   // 特異行列の場合はデフォルト値を使用
   if (abs(det) < 1e-6 || chordLength == 0) {
-    localControl[1] = PVector.add(v0, PVector.mult(t1, defaultAlpha));
-    localControl[2] = PVector.add(v3, PVector.mult(t2, defaultAlpha));
+    tempControl[1] = PVector.add(v0, PVector.mult(t1, defaultAlpha));
+    tempControl[2] = PVector.add(v3, PVector.mult(t2, defaultAlpha));
     return;
   }
 
@@ -218,19 +218,19 @@ void computeControlPointsRange(
   float alpha_2 = (c11 * x2 - c12 * x1) / det;
 
   // 制御点を設定
-  localControl[1] = PVector.add(v0, PVector.mult(t1, alpha_1));  // V_1 = V_0 + α_1·t_1
-  localControl[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
+  tempControl[1] = PVector.add(v0, PVector.mult(t1, alpha_1));  // V_1 = V_0 + α_1·t_1
+  tempControl[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
 }
 
 // 5. 求めたベジェ曲線と点列との最大距離を求める
 FitErrorResult computeMaxErrorRange(
-  PVector[] localControl,
-  FloatList localParams,
-  int startIdx,
-  int endIdx
+  PVector[] tempControl,
+  FloatList tempParams,
+  int startIndex,
+  int endIndex
 ) {
-  int n = endIdx - startIdx + 1;
-  if (n < 2 || localControl[0] == null || localControl[1] == null || localControl[2] == null || localControl[3] == null) {
+  int n = endIndex - startIndex + 1;
+  if (n < 2 || tempControl[0] == null || tempControl[1] == null || tempControl[2] == null || tempControl[3] == null) {
     return new FitErrorResult(Float.MAX_VALUE, -1);
   }
 
@@ -241,13 +241,13 @@ FitErrorResult computeMaxErrorRange(
   float maxError = -1;
   int maxIndex = -1;
 
-  for (int i = 1; i < localParams.size() - 1; i++) {
-    float u = localParams.get(i);
-    PVector curve = bezierCurve(localControl[0], localControl[1], localControl[2], localControl[3], u);
-    float error = PVector.dist(points.get(startIdx + i), curve);
+  for (int i = 1; i < tempParams.size() - 1; i++) {
+    float u = tempParams.get(i);
+    PVector curve = bezierCurve(tempControl[0], tempControl[1], tempControl[2], tempControl[3], u);
+    float error = PVector.dist(points.get(startIndex + i), curve);
     if (error > maxError) {
       maxError = error;
-      maxIndex = startIdx + i;
+      maxIndex = startIndex + i;
     }
   }
 
@@ -259,24 +259,24 @@ FitErrorResult computeMaxErrorRange(
 
 // 6. ニュートン法でパラメータを1回更新する
 boolean reparameterizeBezierCurve(
-  PVector[] control,
-  FloatList params,
-  int startIdx
+  PVector[] tempControl,
+  FloatList tempParams,
+  int startIndex
 ) {
-  if (control[0] == null || control[1] == null || control[2] == null || control[3] == null) return false;
+  if (tempControl[0] == null || tempControl[1] == null || tempControl[2] == null || tempControl[3] == null) return false;
 
   boolean improved = false;
 
-  for (int i = 1; i < params.size() - 1; i++) {
-    float u = params.get(i);
-    PVector point = points.get(startIdx + i);
+  for (int i = 1; i < tempParams.size() - 1; i++) {
+    float u = tempParams.get(i);
+    PVector point = points.get(startIndex + i);
 
-    float newU = refineBezierParameter(control, point, u);
+    float newU = refineBezierParameter(tempControl, point, u);
     if (!Float.isFinite(newU)) continue;
     newU = constrain(newU, 0, 1);
 
     if (abs(newU - u) > 0.0001) improved = true;
-    params.set(i, newU);
+    tempParams.set(i, newU);
   }
 
   return improved;
