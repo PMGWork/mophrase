@@ -47,7 +47,7 @@ void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTa
   // 粗めの誤差内にあるが指定誤差を満たさない場合
   if (maxErr <= coarseErrTol) {
     // パラメータをニュートン法で再計算
-    boolean improved = reparameterizeWithNewton(localControl, localParams, startIdx, 4);
+    boolean improved = reparameterizeBezierCurve(localControl, localParams, startIdx, 4);
 
     if (improved) {
       // パラメータが改善されたので制御点を再計算
@@ -93,12 +93,12 @@ void computeEndTangents(PVector[] tangents) {
   // 始点の接ベクトル t_1 を計算
   PVector d1 = points.get(0);
   PVector d2 = points.get(1);
-  tangents[0] = UnitTangent(d1, d2);
+  tangents[0] = unitTangent(d1, d2);
 
   // 終点の接ベクトル t_2 を計算
   PVector dn_1 = points.get(n - 2);
   PVector dn = points.get(n - 1);
-  tangents[1] = UnitTangent(dn, dn_1);
+  tangents[1] = unitTangent(dn, dn_1);
 }
 
 // 2. 点列に対応する曲線のパラメータの位置を計算する
@@ -247,7 +247,7 @@ FitErrorResult computeMaxErrorRange(
 }
 
 // 6. ニュートン法でパラメータを再計算して改善する
-boolean reparameterizeWithNewton(
+boolean reparameterizeBezierCurve(
   PVector[] control,  // 制御点
   FloatList params,   // パラメータ
   int startIdx,       // 開始インデックス
@@ -264,7 +264,7 @@ boolean reparameterizeWithNewton(
       PVector point = points.get(startIdx + i);
 
       // ニュートン法で u を更新
-      float newU = newtonRaphsonStep(control, point, u);
+      float newU = refineBezierParameter(control, point, u);
 
       // u を [0, 1] の範囲に制限
       newU = constrain(newU, 0, 1);
@@ -292,5 +292,5 @@ PVector computeSplitTangentRange(int splitIndex) {
   // 前後の点が一致している場合は単位ベクトルを定義できない
   if (prev.x == next.x && prev.y == next.y) return null;
 
-  return UnitTangent(next, prev);
+  return unitTangent(next, prev);
 }

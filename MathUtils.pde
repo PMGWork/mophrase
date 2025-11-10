@@ -19,7 +19,7 @@ float binomial(int n, int k) {
 }
 
 // 単位接ベクトル
-PVector UnitTangent(PVector d0, PVector d1) {
+PVector unitTangent(PVector d0, PVector d1) {
   PVector tangent = PVector.sub(d1, d0);
   tangent.normalize();
   return tangent;
@@ -55,7 +55,7 @@ PVector bezierSecondDerivative(PVector v0, PVector v1, PVector v2, PVector v3, f
 }
 
 // ニュートン法の1ステップ
-float newtonRaphsonStep(PVector[] control, PVector point, float u) {
+float refineBezierParameter(PVector[] control, PVector point, float u) {
   PVector q = bezierCurve(control[0], control[1], control[2], control[3], u);
   PVector qPrime = bezierDerivative(control[0], control[1], control[2], control[3], u);
   PVector qDoublePrime = bezierSecondDerivative(control[0], control[1], control[2], control[3], u);
