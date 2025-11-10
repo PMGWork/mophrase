@@ -53,3 +53,16 @@ PVector bezierSecondDerivative(PVector v0, PVector v1, PVector v2, PVector v3, f
   d2.add(PVector.mult(term2, 6 * t));
   return d2;
 }
+
+// ニュートン法の1ステップ
+float newtonRaphsonStep(PVector[] control, PVector point, float u) {
+  PVector q = bezierCurve(control[0], control[1], control[2], control[3], u);
+  PVector qPrime = bezierDerivative(control[0], control[1], control[2], control[3], u);
+  PVector qDoublePrime = bezierSecondDerivative(control[0], control[1], control[2], control[3], u);
+
+  PVector diff = PVector.sub(q, point);
+  float numerator = PVector.dot(diff, qPrime);
+  float denominator = PVector.dot(qPrime, qPrime) + PVector.dot(diff, qDoublePrime);
+
+  return u - (numerator / denominator);
+}

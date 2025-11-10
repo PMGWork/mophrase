@@ -278,28 +278,6 @@ boolean reparameterizeWithNewton(
   return improved;
 }
 
-// ニュートン法の1ステップ
-float newtonRaphsonStep(PVector[] control, PVector point, float u) {
-  // Q(u): 曲線上の点
-  PVector q = bezierCurve(control[0], control[1], control[2], control[3], u);
-
-  // Q'(u): 1階微分（接線ベクトル）
-  PVector qPrime = bezierDerivative(control[0], control[1], control[2], control[3], u);
-
-  // Q''(u): 2階微分
-  PVector qDoublePrime = bezierSecondDerivative(control[0], control[1], control[2], control[3], u);
-
-  // f(u) = (Q(u) - P) · Q'(u)
-  PVector diff = PVector.sub(q, point);
-  float numerator = PVector.dot(diff, qPrime);
-
-  // f'(u) = ||Q'(u)||^2 + (Q(u) - P) · Q''(u)
-  float denominator = PVector.dot(qPrime, qPrime) + PVector.dot(diff, qDoublePrime);
-
-  // ニュートン法: u_new = u - f(u) / f'(u)
-  return u - (numerator / denominator);
-}
-
 // 分割点の接ベクトルを計算
 PVector computeSplitTangentRange(int splitIndex) {
   int n = points.size();
