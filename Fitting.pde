@@ -44,6 +44,9 @@ void fitCurveRange(
   // 誤差判定と分岐
   float maxError = errorResult.maxError;
 
+  // lastFitErrorを更新
+  lastFitError = errorResult;
+
   // 許容誤差内にある場合のみ確定
   if (maxError <= errTol) {
     curves.add(tempControl);
@@ -64,6 +67,9 @@ void fitCurveRange(
       FitErrorResult newErrorResult = computeMaxErrorRange(tempControl, tempParams, startIndex, endIndex);
       maxError = newErrorResult.maxError;
 
+      // lastFitErrorを更新
+      lastFitError = newErrorResult;
+
       // 許容誤差内に収まったら確定
       if (maxError <= errTol) {
         curves.add(tempControl);
@@ -77,7 +83,7 @@ void fitCurveRange(
     }
   }
 
-  // 粗めの誤差を超える場合
+  // 粗めの誤差を超える場合、または改善が見込めない場合は分割
   int splitIndex = errorResult.index;
   if (splitIndex <= startIndex || splitIndex >= endIndex) {
     curves.add(tempControl);
@@ -109,7 +115,7 @@ void computeEndTangents(PVector[] tangents) {
   // 終点の接ベクトル t_2 を計算
   PVector dn_1 = points.get(n - 2);
   PVector dn = points.get(n - 1);
-  tangents[1] = unitTangent(dn, dn_1);
+  tangents[1] = PVector.mult(unitTangent(dn_1, dn), -1);
 }
 
 // 2. 点列に対応する曲線のパラメータの位置を計算する
