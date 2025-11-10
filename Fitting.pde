@@ -272,6 +272,7 @@ boolean reparameterizeBezierCurve(
     PVector point = points.get(startIdx + i);
 
     float newU = refineBezierParameter(control, point, u);
+    if (!Float.isFinite(newU)) continue;
     newU = constrain(newU, 0, 1);
 
     if (abs(newU - u) > 0.0001) improved = true;

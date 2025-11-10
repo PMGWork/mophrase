@@ -64,7 +64,16 @@ float refineBezierParameter(PVector[] control, PVector point, float u) {
   float numerator = PVector.dot(diff, qPrime);
   float denominator = PVector.dot(qPrime, qPrime) + PVector.dot(diff, qDoublePrime);
 
-  return u - (numerator / denominator);
+  // 分母が極端に小さい場合は元の値を返して不安定化を防ぐ
+  if (abs(denominator) < 1e-6f) return u;
+
+  float delta = numerator / denominator;
+  float updated = u - delta;
+
+  // 有限な範囲外に飛んだパラメータは採用しない
+  if (!Float.isFinite(updated)) return u;
+
+  return updated;
 }
 
 // 分割点における接ベクトルの計算
@@ -83,4 +92,3 @@ PVector computeSplitTangentRange(int splitIndex) {
 
   return unitTangent(next, prev);
 }
-
