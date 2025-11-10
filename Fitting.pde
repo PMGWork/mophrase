@@ -23,7 +23,13 @@ void fitCurve() {
 }
 
 // 再帰的にベジェ曲線をフィットする
-void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTangent, int depth) {
+void fitCurveRange(
+  int startIdx,
+  int endIdx,
+  PVector startTangent,
+  PVector endTangent,
+  int depth
+) {
   // パラメータを計算
   FloatList localParams = computeParametersRange(startIdx, endIdx);
 
@@ -38,7 +44,7 @@ void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTa
   // 誤差判定と分岐
   float maxErr = error.maxError;
 
-  // 許容誤差内にある場合
+  // 許容誤差内にある場合のみ確定
   if (maxErr <= errTol) {
     curves.add(localControl);
     return;
@@ -46,21 +52,28 @@ void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTa
 
   // 粗めの誤差を満たす場合
   if (maxErr <= coarseErrTol) {
-    final int maxIterations = 4;
-    for (int iter = 0; iter < maxIterations && maxErr > errTol; iter++) {
+    int maxIterations = 4;
+    for (int iter = 0; iter < maxIterations; iter++) {
+      // Newton法でパラメータを再計算
       boolean improved = reparameterizeBezierCurve(localControl, localParams, startIdx);
-      if (!improved) break;
 
+      // 制御点を再生成
       computeControlPointsRange(localControl, startTangent, endTangent, localParams, startIdx, endIdx);
 
+      // 誤差を再評価
       FitErrorResult newError = computeMaxErrorRange(localControl, localParams, startIdx, endIdx);
       maxErr = newError.maxError;
+
+      // 許容誤差内に収まったら確定
       if (maxErr <= errTol) {
         curves.add(localControl);
         return;
       }
 
       error = newError;
+
+      // 改善が見られなければループを抜ける
+      if (!improved) break;
     }
   }
 
