@@ -19,6 +19,9 @@ void fitCurve() {
   // 再帰的にフィッティングを開始
   fitCurveRange(0, points.size() - 1, tangents[0], tangents[1]);
 
+  // 最終的な誤差と分割数を出力
+  println("最終誤差: " + lastFitError.maxError + ", 分割数: " + curves.size());
+
   curveExists = true;
 }
 
