@@ -3,9 +3,9 @@
 ArrayList<PVector> points = new ArrayList<PVector>();  // 入力した点群
 FloatList params = new FloatList();  // パラメータ
 
-PVector[] control = new PVector[4];   // 制御点
 PVector[] tangents = new PVector[2];  // 端点の接ベクトル
-PVector splitTangent = null;          // 分割点での単位接ベクトル
+
+ArrayList<PVector[]> curves = new ArrayList<PVector[]>();  // フィットした複数のベジェ曲線
 
 FitErrorResult lastFitError = new FitErrorResult(Float.MAX_VALUE, -1);  // 直近フィットの最大誤差とインデックス
 
@@ -67,9 +67,8 @@ void mouseReleased() {
 
 void clearAll() {
   points.clear();
+  curves.clear();
   for (int i = 0; i < tangents.length; i++) tangents[i] = null;
-  for (int i = 0; i < control.length; i++) control[i] = null;
   lastFitError = new FitErrorResult(Float.MAX_VALUE, -1);
-  splitTangent = null;
   curveExists = false;
 }

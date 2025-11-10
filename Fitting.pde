@@ -11,38 +11,62 @@ class FitErrorResult {
   }
 }
 
-// 入力済みの点群からベジェ曲線を1本フィットする
+// ベジェ曲線をフィットする関数
 void fitCurve() {
-  // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
+  // 全体の接ベクトルを計算
   computeEndTangents(tangents);
 
-  // 2. 点列に対応する曲線のパラメータの位置を計算する
-  computeParameters();
+  // 再帰的にフィッティングを開始
+  fitCurveRange(0, points.size() - 1, tangents[0], tangents[1], 0);
 
-  // 3. 3次ベジェ曲線の始点と終点を定める
-  computeEndPoints(control);
+  curveExists = true;
+}
 
-  // 4. 始点と終点以外の2つ制御点の端点からの距離を求めて、3次ベジェ曲線を決定する
-  computeControlPoints(control, tangents);
+// 再帰的にベジェ曲線をフィットする
+void fitCurveRange(int startIdx, int endIdx, PVector startTangent, PVector endTangent, int depth) {
+  // パラメータを計算
+  FloatList localParams = computeParametersRange(startIdx, endIdx);
 
-  // 5. 求めたベジェ曲線と点列との最大距離を求め、指定誤差と比較する。
-  lastFitError = computeMaxError(control);
+  // 制御点を計算
+  PVector[] localControl = new PVector[4];
+  computeEndPointsRange(localControl, startIdx, endIdx);
+  computeControlPointsRange(localControl, startTangent, endTangent, localParams, startIdx, endIdx);
 
-  // 最大誤差に基づき、次の処理を決定
-  float maxErr = lastFitError.maxError;
+  // 最大誤差を計算
+  FitErrorResult error = computeMaxErrorRange(localControl, localParams, startIdx, endIdx);
+
+  // 誤差判定と分岐
+  float maxErr = error.maxError;
+
+  // 許容誤差内にある場合
   if (maxErr <= errTol) {
-    // 許容誤差内にある場合
-    curveExists = true;
+    curves.add(localControl);
     return;
   }
 
+  // 粗めの誤差内にあるが指定誤差を満たさない場合
   if (maxErr <= coarseErrTol) {
-    // 6. 粗めの誤差内にあるが指定誤差を満たさない場合
-    handleRefineFit();
-  } else {
-    // 7. 粗めの誤差を超える場合
-    handleSplitFit();
+    curves.add(localControl);  // 後ほどニュートン法を実装
+    return;
   }
+
+  // 粗めの誤差を超える場合
+  int splitIndex = error.index;
+  if (splitIndex <= startIdx || splitIndex >= endIdx) {
+    curves.add(localControl);
+    return;
+  }
+
+  // 分割点の接ベクトルを計算
+  PVector splitTangent = computeSplitTangentRange(splitIndex);
+  if (splitTangent == null) {
+    curves.add(localControl);
+    return;
+  }
+
+  // 再帰的に分割してフィッティング
+  fitCurveRange(startIdx, splitIndex, startTangent, splitTangent, depth + 1);
+  fitCurveRange(splitIndex, endIdx, PVector.mult(splitTangent, -1), endTangent, depth + 1);
 }
 
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
@@ -62,51 +86,49 @@ void computeEndTangents(PVector[] tangents) {
 }
 
 // 2. 点列に対応する曲線のパラメータの位置を計算する
-void computeParameters() {
-  int n = points.size();
-  if(n < 2) return;
+FloatList computeParametersRange(int startIdx, int endIdx) {
+  FloatList localParams = new FloatList();
+  localParams.append(0);
 
-  // パラメータをクリア
-  params.clear();
+  if (endIdx - startIdx < 1) return localParams;
 
-  // u_i = 0 (i = 0)
-  params.append(0);
-
-  // 累積距離を計算
   float totalDist = 0;
-  for(int j = 1; j < n; j++) {
+  for (int j = startIdx + 1; j <= endIdx; j++) {
     totalDist += PVector.dist(points.get(j), points.get(j - 1));
   }
 
-  // 各 u_i を計算 (i > 1)
   float cumulativeDist = 0;
-  for(int i = 1; i < n; i++) {
+  for(int i = startIdx + 1; i <= endIdx; i++) {
     cumulativeDist += PVector.dist(points.get(i), points.get(i - 1));
-    float u_i = cumulativeDist / totalDist;
-    params.append(u_i);
+    float u_i = (totalDist > 0) ? (cumulativeDist / totalDist) : 0;
+    localParams.append(u_i);
   }
+
+  return localParams;
 }
 
 // 3. 3次ベジェ曲線の始点と終点を定める
-void computeEndPoints(PVector[] control) {
-  int n = points.size();
-  if(n < 2) return;
-
-  // 始点と終点を設定
-  control[0] = points.get(0).copy();      // V_0 = d_1
-  control[3] = points.get(n - 1).copy();  // V_3 = d_n
+void computeEndPointsRange(PVector[] localControl, int startIdx, int endIdx) {
+  localControl[0] = points.get(startIdx).copy();  // V_0 = d_1
+  localControl[3] = points.get(endIdx).copy();    // V_3 = d_n
 }
 
-// 4. 始点と終点以外の2つ制御点の端点からの距離を求めて、3次ベジェ曲線を決定する
-void computeControlPoints(PVector[] control, PVector[] tangents) {
-  int n = points.size();
-  if(n < 2 || tangents[0] == null || tangents[1] == null || control[0] == null || control[3] == null || params.size() != n) return;
+// 4. 始点と終点以外の2つ制御点の端点からの距離を求める
+void computeControlPointsRange(
+  PVector[] localControl,
+  PVector startTangent,
+  PVector endTangent,
+  FloatList localParams,
+  int startIdx,
+  int endIdx
+) {
+  int n = endIdx - startIdx + 1;
+  if (n < 2 || localControl[0] == null || localControl[3] == null) return;
 
-  // 端点と接ベクトル
-  PVector v0 = control[0].copy();
-  PVector v3 = control[3].copy();
-  PVector t1 = tangents[0].copy();
-  PVector t2 = tangents[1].copy();
+  PVector v0 = localControl[0].copy();
+  PVector v3 = localControl[3].copy();
+  PVector t1 = startTangent.copy();
+  PVector t2 = endTangent.copy();
 
   // デフォルトのα値（端点からの距離）
   float chordLength = PVector.dist(v0, v3);
@@ -119,8 +141,8 @@ void computeControlPoints(PVector[] control, PVector[] tangents) {
   float x1 = 0;   // X_1 = Σ A1·C_i
   float x2 = 0;   // X_2 = Σ A2·C_i
 
-  for(int i = 0; i < n; i++) {
-    float u = params.get(i);
+  for (int i = 0; i < localParams.size(); i++) {
+    float u = localParams.get(i);
 
     // バーンスタイン基底関数を計算
     float b0 = bernstein(0, 3, u);
@@ -135,7 +157,7 @@ void computeControlPoints(PVector[] control, PVector[] tangents) {
 
     // T_i = d_i - V_0(B_0 + B_1) - V_3(B_2 + B_3)
     PVector tVec = PVector.sub(
-      points.get(i),
+      points.get(startIdx + i),
       PVector.add(
         PVector.mult(v0, b0 + b1),
         PVector.mult(v3, b2 + b3)
@@ -159,8 +181,8 @@ void computeControlPoints(PVector[] control, PVector[] tangents) {
 
   // 特異行列の場合はデフォルト値を使用
   if (abs(det) < 1e-6 || chordLength == 0) {
-    control[1] = PVector.add(v0, PVector.mult(t1, defaultAlpha));
-    control[2] = PVector.add(v3, PVector.mult(t2, defaultAlpha));
+    localControl[1] = PVector.add(v0, PVector.mult(t1, defaultAlpha));
+    localControl[2] = PVector.add(v3, PVector.mult(t2, defaultAlpha));
     return;
   }
 
@@ -169,14 +191,19 @@ void computeControlPoints(PVector[] control, PVector[] tangents) {
   float alpha_2 = (c11 * x2 - c12 * x1) / det;
 
   // 制御点を設定
-  control[1] = PVector.add(v0, PVector.mult(t1, alpha_1));  // V_1 = V_0 + α_1·t_1
-  control[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
+  localControl[1] = PVector.add(v0, PVector.mult(t1, alpha_1));  // V_1 = V_0 + α_1·t_1
+  localControl[2] = PVector.add(v3, PVector.mult(t2, alpha_2));  // V_2 = V_3 + α_2·t_2
 }
 
-// 5. 求めたベジェ曲線と点列との最大距離を求め、指定誤差と比較する。
-FitErrorResult computeMaxError(PVector[] control) {
-  int n = points.size();
-  if(n < 2 || control[0] == null || control[1] == null || control[2] == null || control[3] == null) {
+// 5. 求めたベジェ曲線と点列との最大距離を求める
+FitErrorResult computeMaxErrorRange(
+  PVector[] localControl,
+  FloatList localParams,
+  int startIdx,
+  int endIdx
+) {
+  int n = endIdx - startIdx + 1;
+  if (n < 2 || localControl[0] == null || localControl[1] == null || localControl[2] == null || localControl[3] == null) {
     return new FitErrorResult(Float.MAX_VALUE, -1);
   }
 
@@ -186,13 +213,14 @@ FitErrorResult computeMaxError(PVector[] control) {
   // 最大誤差を計算
   float maxError = -1;
   int maxIndex = -1;
-  for(int i = 1; i < n - 1; i++) {
-    float u = params.get(i);
-    PVector curve = bezierCurve(control[0], control[1], control[2], control[3], u);
-    float error = PVector.dist(points.get(i), curve);
-    if(error > maxError) {
+
+  for (int i = 1; i < localParams.size() - 1; i++) {
+    float u = localParams.get(i);
+    PVector curve = bezierCurve(localControl[0], localControl[1], localControl[2], localControl[3], u);
+    float error = PVector.dist(points.get(startIdx + i), curve);
+    if (error > maxError) {
       maxError = error;
-      maxIndex = i;
+      maxIndex = startIdx + i;
     }
   }
 
@@ -202,27 +230,8 @@ FitErrorResult computeMaxError(PVector[] control) {
   return new FitErrorResult(maxError, maxIndex);
 }
 
-// 6：粗めの誤差内にあるが指定誤差を満たさない場合
-void handleRefineFit() {
-  println("[Fit] 粗め誤差内 → 6.（ニュートン法で再パラメータ化）を実装予定。");
-  curveExists = true;
-}
-
-// 7：粗めの誤差を超える場合
-void handleSplitFit() {
-  int splitIndex = lastFitError.index;
-  if (splitIndex > 0 && splitIndex < points.size() - 1) {
-    splitTangent = computeSplitTangent(splitIndex);
-  } else {
-    splitTangent = null;
-  }
-
-  println("[Fit] 粗め誤差超過 → 7.（分割フィット）を実装予定。");
-  curveExists = true;
-}
-
 // 分割点の接ベクトルを計算
-PVector computeSplitTangent(int splitIndex) {
+PVector computeSplitTangentRange(int splitIndex) {
   int n = points.size();
   if (n < 3) return null;
 
