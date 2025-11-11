@@ -330,5 +330,7 @@ export function fitCurve(
   );
 
   // 最終的な誤差と分割数を出力
-  console.log(`Final error: ${lastFitError.current.maxError}\nNumber of segments: ${curves.length}`);
+  console.log(
+    `Final error: ${lastFitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`
+  );
 }

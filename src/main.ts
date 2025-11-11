@@ -19,16 +19,23 @@ const sketch = (p: p5): void => {
   let dragMode: number = 0;
 
   // フィッティング関連
-  const errorTol = 10.0;              // 許容誤差(ピクセル)
-  const coarseErrTol = errorTol * 2;  // 粗い許容誤差(ピクセル)
+  let errorTol = 10.0;               // 許容誤差(ピクセル)
+  let coarseErrTol = errorTol * 2;   // 粗い許容誤差(ピクセル)
 
   const getButton = (id: string): HTMLButtonElement | null => {
     const element = document.getElementById(id);
     return element instanceof HTMLButtonElement ? element : null;
   };
 
+  const getInput = (id: string): HTMLInputElement | null => {
+    const element = document.getElementById(id);
+    return element instanceof HTMLInputElement ? element : null;
+  };
+
   let handlesButton: HTMLButtonElement | null = null;
   let sketchButton: HTMLButtonElement | null = null;
+  let thresholdSlider: HTMLInputElement | null = null;
+  let thresholdLabel: HTMLElement | null = null;
 
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight);
@@ -41,6 +48,14 @@ const sketch = (p: p5): void => {
     handlesButton?.addEventListener('click', toggleHandles);
     sketchButton = getButton('toggleSketchButton');
     sketchButton?.addEventListener('click', toggleHandDrawn);
+
+    thresholdSlider = getInput('thresholdSlider');
+    thresholdLabel = document.getElementById('thresholdValue');
+    if (thresholdSlider) {
+      thresholdSlider.value = errorTol.toString();
+      thresholdSlider.addEventListener('input', updateThreshold);
+    }
+    updateThreshold();
   };
 
   p.windowResized = () => {
@@ -132,12 +147,27 @@ const sketch = (p: p5): void => {
     handlesButton.textContent = showHandles ? 'Hide Handles' : 'Show Handles';
   }
 
+  // 手書きストロークの表示・非表示を切り替え
   function toggleHandDrawn(): void {
     showHandDrawn = !showHandDrawn;
     if (!sketchButton) return;
     sketchButton.textContent = showHandDrawn ? 'Hide Sketch' : 'Show Sketch';
   }
 
+  // 許容誤差の更新
+  function updateThreshold(): void {
+    if (thresholdSlider) {
+      const parsed = Number(thresholdSlider.value);
+      if (!Number.isNaN(parsed)) {
+        errorTol = parsed;
+        coarseErrTol = errorTol * 2;
+      }
+    }
+
+    if (thresholdLabel) {
+      thresholdLabel.textContent = `${errorTol.toFixed(0)}px`;
+    }
+  }
 };
 
 new p5(sketch);

@@ -12,7 +12,7 @@
   <body class="overflow-hidden font-sans bg-gray-950">
     <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
       <h1 class="text-white text-2xl font-medium">MoPhrase</h1>
-      <div class="flex gap-3">
+      <div class="flex items-center gap-3">
         <button
           id="toggleHandlesButton"
           class="px-4 py-2 bg-gray-800 text-gray-50 text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
@@ -25,6 +25,31 @@
         >
           Hide Sketch
         </button>
+        <div class="flex items-center gap-3 px-4 py-2 bg-gray-800 rounded">
+          <span class="text-sm text-gray-50 font-medium">Threshold</span>
+          <input
+            id="thresholdSlider"
+            type="range"
+            min="2"
+            max="50"
+            step="1"
+            value="10"
+            class="
+              w-20 h-1 bg-gray-700 rounded cursor-grab appearance-none
+              [&::-webkit-slider-thumb]:appearance-none
+              [&::-webkit-slider-thumb]:w-3.5
+              [&::-webkit-slider-thumb]:h-3.5
+              [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-gray-50
+              [&::-moz-range-thumb]:w-3.5
+              [&::-moz-range-thumb]:h-3.5
+              [&::-moz-range-thumb]:rounded-full
+              [&::-moz-range-thumb]:bg-gray-50
+              [&::-moz-range-thumb]:border-0
+            "
+          />
+          <span id="thresholdValue" class="text-sm text-gray-50 font-medium w-8">10px</span>
+        </div>
         <button
           id="clearButton"
           class="px-4 py-2 bg-red-500 text-gray-50 text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
