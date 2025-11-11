@@ -1,3 +1,4 @@
+import '../style.css';
 import p5 from 'p5';
 import type { Vector, FitErrorResult } from './types';
 import {
@@ -6,7 +7,6 @@ import {
   drawBezierCurve,
   drawControlPolygon,
   drawControlPoints,
-  drawClearButton,
 } from './draw';
 import { fitCurve } from './fitting';
 
@@ -23,15 +23,20 @@ const sketch = (p: p5): void => {
   const errorTol = 10.0;              // 許容誤差(ピクセル)
   const coarseErrTol = errorTol * 2;  // 粗い許容誤差(ピクセル)
 
-  // UI関連
-  const clearButtonX = 20;
-  const clearButtonY = 20;
-  const clearButtonW = 100;
-  const clearButtonH = 40;
-
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight);
     p.background(COLORS.BLACK);
+    p.textFont('Helvetica Neue');
+
+    // HTMLボタンのイベントリスナーを設定
+    const clearButton = document.getElementById('clearButton');
+    if (clearButton) {
+      clearButton.addEventListener('click', clearAll);
+    }
+  };
+
+  p.windowResized = () => {
+    p.resizeCanvas(p.windowWidth, p.windowHeight);
   };
 
   p.draw = () => {
@@ -42,9 +47,6 @@ const sketch = (p: p5): void => {
     drawBezierCurve(p, points, curves);
     drawControlPolygon(p, points, curves);
     drawControlPoints(p, points, curves);
-
-    // UIの描画
-    drawClearButton(p, clearButtonX, clearButtonY, clearButtonW, clearButtonH);
   };
 
   p.mouseDragged = () => {
@@ -53,17 +55,6 @@ const sketch = (p: p5): void => {
   };
 
   p.mousePressed = () => {
-    // クリアボタンのクリック判定
-    if (
-      p.mouseX >= clearButtonX &&
-      p.mouseX <= clearButtonX + clearButtonW &&
-      p.mouseY >= clearButtonY &&
-      p.mouseY <= clearButtonY + clearButtonH
-    ) {
-      clearAll();
-      return;
-    }
-
     // 曲線がまだ存在しない場合のみ、クリア
     if (!curveExists) clearAll();
   };

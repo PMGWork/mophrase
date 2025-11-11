@@ -5,11 +5,17 @@ import type { Vector, Colors } from './types';
 import { bezierCurve } from './mathUtils';
 
 // 色定義
+function getCSSVariable(name: string): string {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+}
+
 export const COLORS: Colors = {
-  YELLOW: '#D7B600',
-  WHITE: '#B0B0B0',
-  GRAY: '#484848',
-  BLACK: '#303030',
+  YELLOW: getCSSVariable('--color-yellow'),
+  WHITE: getCSSVariable('--color-white'),
+  GRAY: getCSSVariable('--color-gray'),
+  BLACK: getCSSVariable('--color-black'),
 };
 
 const POINT_SIZE = 8;
