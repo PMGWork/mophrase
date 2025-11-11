@@ -3,11 +3,13 @@ import p5 from 'p5';
 import type { Path } from './types';
 import { fitCurve } from './fitting';
 import { COLORS, drawPoints, drawBezierCurve, drawControls } from './draw';
+import { HandleController } from './handle';
 
 const sketch = (p: p5): void => {
   // データ構造
   let paths: Path[] = [];              // 確定済みのパス群
   let activePath: Path | null = null;  // 現在描画中のパス
+  const handleController = new HandleController(() => paths);
 
   // 表示・非表示の状態
   let showHandles: boolean = true;    // ベジエハンドルの表示状態
@@ -63,11 +65,17 @@ const sketch = (p: p5): void => {
   };
 
   p.mouseDragged = () => {
+    // ドラッグ中のハンドル位置を更新
+    if (handleController.drag(p.mouseX, p.mouseY)) return;
+
     // 描画中のパスに点を追加
     if (activePath) activePath.points.push(p.createVector(p.mouseX, p.mouseY));
   };
 
   p.mousePressed = () => {
+    // ハンドルのドラッグ開始
+    if (handleController.begin(p.mouseX, p.mouseY, showHandles)) return;
+
     // 新しいパスを開始
     activePath = {
       points: [p.createVector(p.mouseX, p.mouseY)],
@@ -79,8 +87,11 @@ const sketch = (p: p5): void => {
   };
 
   p.mouseReleased = () => {
-    if (!activePath) return;
+    // ハンドルのドラッグ終了
+    if (handleController.end()) return;
 
+    if (!activePath) return;
+    
     if (activePath.points.length >= 2) {
       // フィッティングを実行
       fitCurve(
@@ -104,6 +115,7 @@ const sketch = (p: p5): void => {
     activePath = null;
   }
 
+  // ベジエハンドルの表示・非表示を切り替え
   function toggleHandles(): void {
     showHandles = !showHandles;
     if (!handlesButton) return;
@@ -115,6 +127,7 @@ const sketch = (p: p5): void => {
     if (!sketchButton) return;
     sketchButton.textContent = showHandDrawn ? 'Hide Sketch' : 'Show Sketch';
   }
+
 };
 
 new p5(sketch);
