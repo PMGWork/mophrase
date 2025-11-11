@@ -38,17 +38,17 @@ const sketch = (p: p5): void => {
 
     // 確定済みパスの描画
     for (const path of paths) {
-      drawPoints(p, path.points);
-      drawBezierCurve(p, path.points, path.curves);
-      if (showHandles) drawControls(p, path.points, path.curves);
+      drawPoints(p, path.points, COLORS);
+      drawBezierCurve(p, path.curves, COLORS);
+      if (showHandles) drawControls(p, path.curves, COLORS);
     }
 
     // 現在描画中のパスの描画
     if (activePath) {
-      drawPoints(p, activePath.points);
+      drawPoints(p, activePath.points, COLORS);
       if (activePath.curves.length > 0) {
-        drawBezierCurve(p, activePath.points, activePath.curves);
-        if (showHandles) drawControls(p, activePath.points, activePath.curves);
+        drawBezierCurve(p, activePath.curves, COLORS);
+        if (showHandles) drawControls(p, activePath.curves, COLORS);
       }
     }
   };

@@ -5,18 +5,15 @@ import type { Vector, Colors } from './types';
 import { bezierCurve } from './mathUtils';
 
 // 色定義
-function getCSSVariable(name: string): string {
-  return getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-}
-
 export function getColors(): Colors {
+  const styles = getComputedStyle(document.documentElement);
+  const pick = (name: string): string => styles.getPropertyValue(name).trim();
+
   return {
-    HANDLE: getCSSVariable('--color-handle'),
-    CURVE: getCSSVariable('--color-curve'),
-    SKETCH: getCSSVariable('--color-sketch'),
-    BACKGROUND: getCSSVariable('--color-background'),
+    HANDLE: pick('--color-handle'),
+    CURVE: pick('--color-curve'),
+    SKETCH: pick('--color-sketch'),
+    BACKGROUND: pick('--color-background'),
   };
 }
 
@@ -25,13 +22,13 @@ export const COLORS = getColors();
 const POINT_SIZE = 8;
 
 // ベジェ曲線を描画可能か判定
-function canDrawCurves(points: Vector[], curves: Vector[][]): boolean {
-  return points.length >= 2 && curves.length > 0;
+function hasCurves(curves: Vector[][]): boolean {
+  return curves.length > 0;
 }
 
 // 入力点の描画
-export function drawPoints(p: p5, points: Vector[]): void {
-  p.stroke(getColors().SKETCH);
+export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): void {
+  p.stroke(colors.SKETCH);
   p.strokeWeight(2);
   p.noFill();
   p.beginShape();
@@ -42,10 +39,10 @@ export function drawPoints(p: p5, points: Vector[]): void {
 }
 
 // ベジェ曲線の描画
-export function drawBezierCurve(p: p5, points: Vector[], curves: Vector[][]): void {
-  if (!canDrawCurves(points, curves)) return;
+export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
+  if (!hasCurves(curves)) return;
 
-  p.stroke(getColors().CURVE);
+  p.stroke(colors.CURVE);
   p.strokeWeight(2);
   p.noFill();
 
@@ -60,15 +57,11 @@ export function drawBezierCurve(p: p5, points: Vector[], curves: Vector[][]): vo
 }
 
 // 制御点と制御ポリゴンの描画
-export function drawControls(
-  p: p5,
-  points: Vector[],
-  curves: Vector[][]
-): void {
-  if (!canDrawCurves(points, curves)) return;
+export function drawControls(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
+  if (!hasCurves(curves)) return;
 
   // 制御点の描画
-  p.fill(getColors().HANDLE);
+  p.fill(colors.HANDLE);
   p.noStroke();
   p.rectMode(p.CENTER);
 
@@ -83,7 +76,7 @@ export function drawControls(
   }
 
   // 制御ポリゴンの描画
-  p.stroke(getColors().HANDLE);
+  p.stroke(colors.HANDLE);
   p.strokeWeight(1);
   p.noFill();
 
