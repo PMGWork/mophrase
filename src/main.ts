@@ -16,6 +16,9 @@ const sketch = (p: p5): void => {
   let curves: Vector[][] = [];       // フィットした複数のベジェ曲線
   let curveExists: boolean = false;  // 曲線が既に存在するかどうか
 
+  // 表示・非表示の状態
+  let showHandles: boolean = true;   // ベジエハンドルの表示状態
+
   // フィッティング関連
   let lastFitError: { current: FitErrorResult } = {
     current: { maxError: Number.MAX_VALUE, index: -1 },
@@ -33,6 +36,11 @@ const sketch = (p: p5): void => {
     if (clearButton) {
       clearButton.addEventListener('click', clearAll);
     }
+
+    const toggleHandlesButton = document.getElementById('toggleHandlesButton');
+    if (toggleHandlesButton) {
+      toggleHandlesButton.addEventListener('click', toggleHandles);
+    }
   };
 
   p.windowResized = () => {
@@ -42,11 +50,17 @@ const sketch = (p: p5): void => {
   p.draw = () => {
     p.background(COLORS.BACKGROUND);
 
-    // ベジェの描画
+    // 手書き線の描画（常に表示）
     drawInputPoints(p, points);
+
+    // ベジエ曲線の描画（常に表示）
     drawBezierCurve(p, points, curves);
-    drawControlPolygon(p, points, curves);
-    drawControlPoints(p, points, curves);
+
+    // ベジエハンドルの描画（表示状態の場合のみ）
+    if (showHandles) {
+      drawControlPolygon(p, points, curves);
+      drawControlPoints(p, points, curves);
+    }
   };
 
   p.mouseDragged = () => {
@@ -73,6 +87,14 @@ const sketch = (p: p5): void => {
       current: { maxError: Number.MAX_VALUE, index: -1 },
     };
     curveExists = false;
+  }
+
+  function toggleHandles(): void {
+    showHandles = !showHandles;
+    const button = document.getElementById('toggleHandlesButton') as HTMLButtonElement;
+    if (button) {
+      button.textContent = showHandles ? 'Hide Handles' : 'Show Handles';
+    }
   }
 };
 

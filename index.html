@@ -7,12 +7,20 @@
     <link rel="stylesheet" href="/style.css">
   </head>
   <body class="overflow-hidden font-sans bg-background">
-    <button
-      id="clearButton"
-      class="absolute top-6 left-6 px-6 py-3 bg-sketch text-curve text-sm font-semibold cursor-pointer z-10 border-none rounded"
-    >
-      Clear
-    </button>
+    <div class="absolute top-6 left-6 flex gap-3 z-10">
+      <button
+        id="clearButton"
+        class="px-6 py-3 bg-red-500 text-white text-sm font-semibold cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
+      >
+        Clear
+      </button>
+      <button
+        id="toggleHandlesButton"
+        class="px-6 py-3 bg-neutral-700 text-white text-sm font-semibold cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
+      >
+        Hide Handles
+      </button>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
