@@ -25,7 +25,7 @@ const sketch = (p: p5): void => {
 
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight);
-    p.background(COLORS.BLACK);
+    p.background(COLORS.BACKGROUND);
     p.textFont('Helvetica Neue');
 
     // HTMLボタンのイベントリスナーを設定
@@ -40,7 +40,7 @@ const sketch = (p: p5): void => {
   };
 
   p.draw = () => {
-    p.background(COLORS.BLACK);
+    p.background(COLORS.BACKGROUND);
 
     // ベジェの描画
     drawInputPoints(p, points);

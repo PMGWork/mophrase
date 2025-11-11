@@ -10,10 +10,10 @@ export interface FitErrorResult {
 }
 
 export interface Colors {
-  YELLOW: string;
-  WHITE: string;
-  GRAY: string;
-  BLACK: string;
+  HANDLE: string;
+  CURVE: string;
+  SKETCH: string;
+  BACKGROUND: string;
 }
 
 export interface Range {

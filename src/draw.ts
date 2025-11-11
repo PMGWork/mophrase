@@ -11,12 +11,16 @@ function getCSSVariable(name: string): string {
     .trim();
 }
 
-export const COLORS: Colors = {
-  YELLOW: getCSSVariable('--color-handle'),
-  WHITE: getCSSVariable('--color-curve'),
-  GRAY: getCSSVariable('--color-sketch'),
-  BLACK: getCSSVariable('--color-background'),
-};
+export function getColors(): Colors {
+  return {
+    HANDLE: getCSSVariable('--color-handle'),
+    CURVE: getCSSVariable('--color-curve'),
+    SKETCH: getCSSVariable('--color-sketch'),
+    BACKGROUND: getCSSVariable('--color-background'),
+  };
+}
+
+export const COLORS = getColors();
 
 const POINT_SIZE = 8;
 
@@ -27,7 +31,7 @@ function canDrawCurves(points: Vector[], curves: Vector[][]): boolean {
 
 // 入力点の描画
 export function drawInputPoints(p: p5, points: Vector[]): void {
-  p.stroke(COLORS.GRAY);
+  p.stroke(getColors().SKETCH);
   p.strokeWeight(3);
   p.noFill();
   p.beginShape();
@@ -41,7 +45,7 @@ export function drawInputPoints(p: p5, points: Vector[]): void {
 export function drawBezierCurve(p: p5, points: Vector[], curves: Vector[][]): void {
   if (!canDrawCurves(points, curves)) return;
 
-  p.stroke(COLORS.WHITE);
+  p.stroke(getColors().CURVE);
   p.strokeWeight(3);
   p.noFill();
 
@@ -63,7 +67,7 @@ export function drawControlPolygon(
 ): void {
   if (!canDrawCurves(points, curves)) return;
 
-  p.stroke(COLORS.YELLOW);
+  p.stroke(getColors().HANDLE);
   p.strokeWeight(1);
   p.noFill();
 
@@ -88,7 +92,7 @@ export function drawControlPoints(
 ): void {
   if (!canDrawCurves(points, curves)) return;
 
-  p.fill(COLORS.YELLOW);
+  p.fill(getColors().HANDLE);
   p.noStroke();
   p.rectMode(p.CENTER);
 
@@ -102,26 +106,3 @@ export function drawControlPoints(
     p.circle(curve[2].x, curve[2].y, POINT_SIZE);
   }
 }
-
-// クリアボタンの描画
-export function drawClearButton(
-  p: p5,
-  x: number,
-  y: number,
-  w: number,
-  h: number
-): void {
-  // ボタンの背景
-  p.fill(COLORS.GRAY);
-  p.stroke(COLORS.WHITE);
-  p.strokeWeight(2);
-  p.rectMode(p.CORNER);
-  p.rect(x, y, w, h, 5);
-
-  // ボタンのテキスト
-  p.fill(COLORS.WHITE);
-  p.textAlign(p.CENTER, p.CENTER);
-  p.textSize(16);
-  p.text('CLEAR', x + w / 2, y + h / 2);
-}
-
