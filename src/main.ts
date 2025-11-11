@@ -17,20 +17,25 @@ const sketch = (p: p5): void => {
   const errorTol = 10.0;              // 許容誤差(ピクセル)
   const coarseErrTol = errorTol * 2;  // 粗い許容誤差(ピクセル)
 
+  const getButton = (id: string): HTMLButtonElement | null => {
+    const element = document.getElementById(id);
+    return element instanceof HTMLButtonElement ? element : null;
+  };
+
+  let handlesButton: HTMLButtonElement | null = null;
+  let sketchButton: HTMLButtonElement | null = null;
+
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight);
     p.background(COLORS.BACKGROUND);
     p.textFont('Helvetica Neue');
 
     // HTMLボタンのイベントリスナーを設定
-    const clearButton = document.getElementById('clearButton');
-    if (clearButton) clearButton.addEventListener('click', clearAll);
-
-    const toggleHandlesButton = document.getElementById('toggleHandlesButton');
-    if (toggleHandlesButton) toggleHandlesButton.addEventListener('click', toggleHandles);
-
-    const toggleSketchButton = document.getElementById('toggleSketchButton');
-    if (toggleSketchButton) toggleSketchButton.addEventListener('click', toggleHandDrawn);
+    getButton('clearButton')?.addEventListener('click', clearAll);
+    handlesButton = getButton('toggleHandlesButton');
+    handlesButton?.addEventListener('click', toggleHandles);
+    sketchButton = getButton('toggleSketchButton');
+    sketchButton?.addEventListener('click', toggleHandDrawn);
   };
 
   p.windowResized = () => {
@@ -74,7 +79,9 @@ const sketch = (p: p5): void => {
   };
 
   p.mouseReleased = () => {
-    if (activePath && activePath.points.length >= 2) {
+    if (!activePath) return;
+
+    if (activePath.points.length >= 2) {
       // フィッティングを実行
       fitCurve(
         activePath.points,
@@ -86,12 +93,10 @@ const sketch = (p: p5): void => {
 
       // 確定済みパスに追加
       paths.push(activePath);
-
-      // 描画中のパスをリセット
-      activePath = null;
-    } else if (activePath) {
-      activePath = null;
     }
+
+    // 描画中のパスをリセット
+    activePath = null;
   };
 
   function clearAll(): void {
@@ -101,14 +106,14 @@ const sketch = (p: p5): void => {
 
   function toggleHandles(): void {
     showHandles = !showHandles;
-    const button = document.getElementById('toggleHandlesButton') as HTMLButtonElement;
-    if (button) button.textContent = showHandles ? 'Hide Handles' : 'Show Handles';
+    if (!handlesButton) return;
+    handlesButton.textContent = showHandles ? 'Hide Handles' : 'Show Handles';
   }
 
   function toggleHandDrawn(): void {
     showHandDrawn = !showHandDrawn;
-    const button = document.getElementById('toggleSketchButton') as HTMLButtonElement;
-    if (button) button.textContent = showHandDrawn ? 'Hide Sketch' : 'Show Sketch';
+    if (!sketchButton) return;
+    sketchButton.textContent = showHandDrawn ? 'Hide Sketch' : 'Show Sketch';
   }
 };
 

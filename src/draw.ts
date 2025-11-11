@@ -21,11 +21,6 @@ export const COLORS = getColors();
 
 const POINT_SIZE = 8;
 
-// ベジェ曲線を描画可能か判定
-function hasCurves(curves: Vector[][]): boolean {
-  return curves.length > 0;
-}
-
 // 入力点の描画
 export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): void {
   p.stroke(colors.SKETCH);
@@ -40,7 +35,7 @@ export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): vo
 
 // ベジェ曲線の描画
 export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
-  if (!hasCurves(curves)) return;
+  if (curves.length === 0) return;
 
   p.stroke(colors.CURVE);
   p.strokeWeight(2);
@@ -58,7 +53,7 @@ export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLO
 
 // 制御点と制御ポリゴンの描画
 export function drawControls(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
-  if (!hasCurves(curves)) return;
+  if (curves.length === 0) return;
 
   // 制御点の描画
   p.fill(colors.HANDLE);

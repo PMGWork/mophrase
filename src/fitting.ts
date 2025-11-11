@@ -63,18 +63,19 @@ export function extractEndPoints(
 
 // 4. 始点と終点以外の2つ制御点の端点からの距離を求める
 export function fitControlPoints(
-  _controls: Vector[],
-  _params: number[],
+  controls: Vector[],
+  params: number[],
   tangents: Tangents,
   points: Vector[],
   range: Range
 ): void {
-  const { start: startTangent, end: endTangent } = tangents;
   const n = range.end - range.start + 1;
-  if (n < 2 || !_controls[0] || !_controls[3]) return;
+  if (n < 2) return;
 
-  const v0 = _controls[0].copy();
-  const v3 = _controls[3].copy();
+  const { start: startTangent, end: endTangent } = tangents;
+
+  const v0 = controls[0].copy();
+  const v3 = controls[3].copy();
   const t1 = startTangent.copy();
   const t2 = endTangent.copy();
 
@@ -89,8 +90,8 @@ export function fitControlPoints(
   let x1 = 0;   // X_1 = Σ A1·C_i
   let x2 = 0;   // X_2 = Σ A2·C_i
 
-  for (let i = 0; i < _params.length; i++) {
-    const u = _params[i];
+  for (let i = 0; i < params.length; i++) {
+    const u = params[i];
 
     // バーンスタイン基底関数を計算
     const b0 = bernstein(0, 3, u);
@@ -126,8 +127,8 @@ export function fitControlPoints(
 
     // 特異行列の場合はデフォルト値を使用
     if (Math.abs(det) < 1e-6 || chordLength === 0) {
-    _controls[1] = v0.copy().add(t1.copy().mult(defaultAlpha));
-    _controls[2] = v3.copy().add(t2.copy().mult(defaultAlpha));
+    controls[1] = v0.copy().add(t1.copy().mult(defaultAlpha));
+    controls[2] = v3.copy().add(t2.copy().mult(defaultAlpha));
     return;
   }
 
@@ -136,14 +137,14 @@ export function fitControlPoints(
   const alpha_2 = (c11 * x2 - c12 * x1) / det;
 
   // 制御点を設定
-  _controls[1] = v0.copy().add(t1.copy().mult(alpha_1));  // V_1 = V_0 + α_1·t_1
-  _controls[2] = v3.copy().add(t2.copy().mult(alpha_2));  // V_2 = V_3 + α_2·t_2
+  controls[1] = v0.copy().add(t1.copy().mult(alpha_1));  // V_1 = V_0 + α_1·t_1
+  controls[2] = v3.copy().add(t2.copy().mult(alpha_2));  // V_2 = V_3 + α_2·t_2
 }
 
 // 5. 求めたベジェ曲線と点列との最大距離を求める
 export function computeMaxError(
-  _controls: Vector[],
-  _params: number[],
+  controls: Vector[],
+  params: number[],
   points: Vector[],
   range: Range
 ): FitErrorResult {
@@ -151,10 +152,10 @@ export function computeMaxError(
 
   if (
     n < 2 ||
-    !_controls[0] ||
-    !_controls[1] ||
-    !_controls[2] ||
-    !_controls[3]
+    !controls[0] ||
+    !controls[1] ||
+    !controls[2] ||
+    !controls[3]
   ) {
     return { maxError: Number.MAX_VALUE, index: -1 };
   }
@@ -166,13 +167,13 @@ export function computeMaxError(
   let maxError = -1;
   let maxIndex = -1;
 
-  for (let i = 1; i < _params.length - 1; i++) {
-    const u = _params[i];
+  for (let i = 1; i < params.length - 1; i++) {
+    const u = params[i];
     const curve = bezierCurve(
-      _controls[0],
-      _controls[1],
-      _controls[2],
-      _controls[3],
+      controls[0],
+      controls[1],
+      controls[2],
+      controls[3],
       u
     );
     const error = points[range.start + i].dist(curve);
@@ -187,31 +188,24 @@ export function computeMaxError(
 
 // 6. ニュートン法でパラメータを1回更新する
 export function refineParams(
-  _controls: Vector[],
-  _params: number[],
+  controls: Vector[],
+  params: number[],
   points: Vector[],
   startIndex: number
 ): boolean {
-  if (
-    !_controls[0] ||
-    !_controls[1] ||
-    !_controls[2] ||
-    !_controls[3]
-  )
-    return false;
-
+  const cubicControls = controls as [Vector, Vector, Vector, Vector];
   let improved = false;
 
-  for (let i = 1; i < _params.length - 1; i++) {
-    const u = _params[i];
+  for (let i = 1; i < params.length - 1; i++) {
+    const u = params[i];
     const point = points[startIndex + i];
 
-    let newU = refineParameter(_controls, point, u);
+    let newU = refineParameter(cubicControls, point, u);
     if (!Number.isFinite(newU)) continue;
     newU = Math.max(0, Math.min(1, newU)); // constrain
 
     if (Math.abs(newU - u) > 0.0001) improved = true;
-    _params[i] = newU;
+    params[i] = newU;
   }
 
   return improved;
@@ -228,28 +222,23 @@ export function fitCurveRange(
   lastFitError: { current: FitErrorResult }
 ): void {
   // パラメータを計算
-  const _params = parametrizeRange(points, range);
+  const params = parametrizeRange(points, range);
 
   // 制御点を計算
-  const _controls: Vector[] = new Array(4);
+  const controls: Vector[] = new Array(4);
   const [p0, p3] = extractEndPoints(points, range);
-  _controls[0] = p0;
-  _controls[3] = p3;
+  controls[0] = p0;
+  controls[3] = p3;
   fitControlPoints(
-    _controls,
-    _params,
+    controls,
+    params,
     tangents,
     points,
     range
   );
 
   // 最大誤差を計算
-  let errorResult = computeMaxError(
-    _controls,
-    _params,
-    points,
-    range
-  );
+  let errorResult = computeMaxError(controls, params, points, range);
   let maxError = errorResult.maxError;
 
   // lastFitErrorを更新
@@ -257,7 +246,7 @@ export function fitCurveRange(
 
   // 許容誤差内にある場合のみ確定
   if (maxError <= errorTol) {
-    curves.push(_controls);
+    curves.push(controls);
     return;
   }
 
@@ -266,29 +255,13 @@ export function fitCurveRange(
     const maxIterations = 4;
     for (let iter = 0; iter < maxIterations; iter++) {
       // Newton法でパラメータを再計算
-      const improved = refineParams(
-        _controls,
-        _params,
-        points,
-        range.start
-      );
+      const improved = refineParams(controls, params, points, range.start);
 
       // 制御点を再生成
-      fitControlPoints(
-        _controls,
-        _params,
-        tangents,
-        points,
-        range
-      );
+      fitControlPoints(controls, params, tangents, points, range);
 
       // 誤差を再評価
-      const newErrorResult = computeMaxError(
-        _controls,
-        _params,
-        points,
-        range
-      );
+      const newErrorResult = computeMaxError(controls, params, points, range);
       maxError = newErrorResult.maxError;
 
       // lastFitErrorを更新
@@ -296,7 +269,7 @@ export function fitCurveRange(
 
       // 許容誤差内に収まったら確定
       if (maxError <= errorTol) {
-        curves.push(_controls);
+        curves.push(controls);
         return;
       }
 
@@ -308,14 +281,14 @@ export function fitCurveRange(
   // 粗めの誤差を超える場合、または改善が見込めない場合は分割
   const splitIndex = lastFitError.current.index;
   if (splitIndex <= range.start || splitIndex >= range.end) {
-    curves.push(_controls);
+    curves.push(controls);
     return;
   }
 
   // 分割点の接ベクトルを計算
   const tangent = splitTangent(points, splitIndex);
   if (tangent === null) {
-    curves.push(_controls);
+    curves.push(controls);
     return;
   }
 
@@ -365,4 +338,3 @@ export function fitCurve(
   // 最終的な誤差と分割数を出力
   console.log(`最終誤差: ${lastFitError.current.maxError}, 分割数: ${curves.length}`);
 }
-
