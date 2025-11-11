@@ -10,7 +10,8 @@ const sketch = (p: p5): void => {
   let activePath: Path | null = null;  // 現在描画中のパス
 
   // 表示・非表示の状態
-  let showHandles: boolean = true;  // ベジエハンドルの表示状態
+  let showHandles: boolean = true;    // ベジエハンドルの表示状態
+  let showHandDrawn: boolean = true;  // 手書きストロークの描画状態
 
   // フィッティング関連
   const errorTol = 10.0;              // 許容誤差(ピクセル)
@@ -27,6 +28,9 @@ const sketch = (p: p5): void => {
 
     const toggleHandlesButton = document.getElementById('toggleHandlesButton');
     if (toggleHandlesButton) toggleHandlesButton.addEventListener('click', toggleHandles);
+
+    const toggleSketchButton = document.getElementById('toggleSketchButton');
+    if (toggleSketchButton) toggleSketchButton.addEventListener('click', toggleHandDrawn);
   };
 
   p.windowResized = () => {
@@ -38,7 +42,7 @@ const sketch = (p: p5): void => {
 
     // 確定済みパスの描画
     for (const path of paths) {
-      drawPoints(p, path.points, COLORS);
+      if (showHandDrawn) drawPoints(p, path.points, COLORS);
       drawBezierCurve(p, path.curves, COLORS);
       if (showHandles) drawControls(p, path.curves, COLORS);
     }
@@ -99,6 +103,12 @@ const sketch = (p: p5): void => {
     showHandles = !showHandles;
     const button = document.getElementById('toggleHandlesButton') as HTMLButtonElement;
     if (button) button.textContent = showHandles ? 'Hide Handles' : 'Show Handles';
+  }
+
+  function toggleHandDrawn(): void {
+    showHandDrawn = !showHandDrawn;
+    const button = document.getElementById('toggleSketchButton') as HTMLButtonElement;
+    if (button) button.textContent = showHandDrawn ? 'Hide Sketch' : 'Show Sketch';
   }
 };
 
