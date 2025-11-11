@@ -35,3 +35,11 @@ export interface HandleSelection {
   curveIndex: number;
   pointIndex: number;
 }
+
+// 色定義
+export interface Colors {
+  HANDLE: string;
+  CURVE: string;
+  SKETCH: string;
+  BACKGROUND: string;
+}
