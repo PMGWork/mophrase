@@ -12,10 +12,10 @@ function getCSSVariable(name: string): string {
 }
 
 export const COLORS: Colors = {
-  YELLOW: getCSSVariable('--color-yellow'),
-  WHITE: getCSSVariable('--color-white'),
-  GRAY: getCSSVariable('--color-gray'),
-  BLACK: getCSSVariable('--color-black'),
+  YELLOW: getCSSVariable('--color-handle'),
+  WHITE: getCSSVariable('--color-curve'),
+  GRAY: getCSSVariable('--color-sketch'),
+  BLACK: getCSSVariable('--color-background'),
 };
 
 const POINT_SIZE = 8;
