@@ -1,13 +1,7 @@
 /// ベジェ曲線フィッティング関連
 
 import type { Vector, FitErrorResult, Range, Tangents } from './types';
-import {
-  bernstein,
-  unitTangent,
-  bezierCurve,
-  refineParameter,
-  splitTangent,
-} from './mathUtils';
+import { bernstein, unitTangent, bezierCurve, refineParameter, splitTangent } from './mathUtils';
 
 // 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
 export function computeEndTangents(points: Vector[]): [Vector, Vector] {
