@@ -7,7 +7,7 @@ import {
   drawControlPolygon,
   drawControlPoints,
   drawClearButton,
-} from './display';
+} from './draw';
 import { fitCurve } from './fitting';
 
 const sketch = (p: p5): void => {
