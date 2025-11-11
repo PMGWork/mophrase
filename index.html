@@ -9,26 +9,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/style.css">
   </head>
-  <body class="overflow-hidden font-sans bg-background">
-    <div class="absolute top-6 left-6 flex gap-3 z-10">
-      <button
-        id="clearButton"
-        class="px-4 py-2 bg-red-500 text-white text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
-      >
-        Clear
-      </button>
-      <button
-        id="toggleHandlesButton"
-        class="px-4 py-2 bg-gray-800 text-white text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
-      >
-        Hide Handles
-      </button>
-      <button
-        id="toggleSketchButton"
-        class="px-4 py-2 bg-gray-800 text-white text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
-      >
-        Hide Sketch
-      </button>
+  <body class="overflow-hidden font-sans bg-gray-950">
+    <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
+      <h1 class="text-white text-2xl font-medium">MoPhrase</h1>
+      <div class="flex gap-3">
+        <button
+          id="toggleHandlesButton"
+          class="px-4 py-2 bg-gray-800 text-gray-50 text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
+        >
+          Hide Handles
+        </button>
+        <button
+          id="toggleSketchButton"
+          class="px-4 py-2 bg-gray-800 text-gray-50 text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
+        >
+          Hide Sketch
+        </button>
+        <button
+          id="clearButton"
+          class="px-4 py-2 bg-red-500 text-gray-50 text-sm font-medium cursor-pointer border-none rounded hover:opacity-80 transition-opacity"
+        >
+          Clear
+        </button>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

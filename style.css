@@ -2,18 +2,13 @@
 
 @theme {
   --font-sans: 'Geist', sans-serif;
-
-  --color-handle: #D7B600;
-  --color-curve: #f0f0f0;
-  --color-sketch: #484848;
-  --color-background: #030712;
 }
 
 :root {
-  --color-handle: #D7B600;
-  --color-curve: #f0f0f0;
-  --color-sketch: #374151;
-  --color-background: #030712;
+  --color-handle: #fbbf24;      /* Amber-400 */
+  --color-curve: #f9fafb;       /* Gray-50 */
+  --color-sketch: #374151;      /* Gray-700 */
+  --color-background: #030712;  /* Gray-950 */
 }
 
 body {

@@ -15,6 +15,9 @@ const sketch = (p: p5): void => {
   let showHandles: boolean = true;    // ベジエハンドルの表示状態
   let showHandDrawn: boolean = true;  // 手書きストロークの描画状態
 
+  // ドラッグモード
+  let dragMode: number = 0;
+
   // フィッティング関連
   const errorTol = 10.0;              // 許容誤差(ピクセル)
   const coarseErrTol = errorTol * 2;  // 粗い許容誤差(ピクセル)
@@ -44,6 +47,12 @@ const sketch = (p: p5): void => {
     p.resizeCanvas(p.windowWidth, p.windowHeight);
   };
 
+  p.keyPressed = () => {
+    if (p.key === 'Shift') {
+      dragMode = 1 - dragMode;
+    }
+  };
+
   p.draw = () => {
     p.background(COLORS.BACKGROUND);
 
@@ -66,7 +75,7 @@ const sketch = (p: p5): void => {
 
   p.mouseDragged = () => {
     // ドラッグ中のハンドル位置を更新
-    const mode = p.keyIsDown(p.SHIFT) ? 1 : 0;
+    const mode = dragMode;
     if (handleController.drag(p.mouseX, p.mouseY, mode)) return;
 
     // 描画中のパスに点を追加
