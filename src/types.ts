@@ -26,3 +26,9 @@ export interface Tangents {
   end: Vector;
 }
 
+export interface Path {
+  points: Vector[];
+  curves: Vector[][];
+  lastFitError: { current: FitErrorResult };
+}
+
