@@ -66,7 +66,8 @@ const sketch = (p: p5): void => {
 
   p.mouseDragged = () => {
     // ドラッグ中のハンドル位置を更新
-    if (handleController.drag(p.mouseX, p.mouseY)) return;
+    const mode = p.keyIsDown(p.SHIFT) ? 1 : 0;
+    if (handleController.drag(p.mouseX, p.mouseY, mode)) return;
 
     // 描画中のパスに点を追加
     if (activePath) activePath.points.push(p.createVector(p.mouseX, p.mouseY));
@@ -91,7 +92,7 @@ const sketch = (p: p5): void => {
     if (handleController.end()) return;
 
     if (!activePath) return;
-    
+
     if (activePath.points.length >= 2) {
       // フィッティングを実行
       fitCurve(

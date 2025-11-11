@@ -19,9 +19,9 @@ export class HandleController {
   }
 
   // ドラッグ中の位置更新
-  drag(x: number, y: number): boolean {
+  drag(x: number, y: number, mode: number): boolean {
     if (!this.current) return false;
-    if (this.setHandlePosition(this.current, x, y)) return true;
+    if (this.setHandlePosition(this.current, x, y, mode)) return true;
     this.current = null;
     return false;
   }
@@ -55,7 +55,12 @@ export class HandleController {
   }
 
   // 指定された選択情報のハンドル位置を更新
-  private setHandlePosition(selection: HandleSelection, x: number, y: number): boolean {
+  private setHandlePosition(
+    selection: HandleSelection,
+    x: number,
+    y: number,
+    mode: number
+  ): boolean {
     const path = this.getPaths()[selection.pathIndex];
     const curve = path?.curves[selection.curveIndex];
     const handle = curve?.[selection.pointIndex];
@@ -80,6 +85,32 @@ export class HandleController {
       const nextCurve = path?.curves[selection.curveIndex + 1];
       translate(nextCurve?.[1]);
       nextCurve?.[0]?.set(x, y);
+    } else if (mode === 0 && selection.pointIndex === 1) {
+      const anchor = curve?.[0];
+      const prevCurve = path?.curves[selection.curveIndex - 1];
+      const oppositeHandle = prevCurve?.[2];
+      if (anchor && oppositeHandle) {
+        const toCurrent = handle.copy().sub(anchor);
+        if (toCurrent.magSq() > 0) {
+          const currentDir = toCurrent.copy().mult(-1).normalize();
+          const oppositeLength = oppositeHandle.copy().sub(anchor).mag();
+          const target = currentDir.mult(oppositeLength);
+          oppositeHandle.set(anchor.x + target.x, anchor.y + target.y);
+        }
+      }
+    } else if (mode === 1 && selection.pointIndex === 2) {
+      const anchor = curve?.[3];
+      const nextCurve = path?.curves[selection.curveIndex + 1];
+      const oppositeHandle = nextCurve?.[1];
+      if (anchor && oppositeHandle) {
+        const toCurrent = handle.copy().sub(anchor);
+        if (toCurrent.magSq() > 0) {
+          const currentDir = toCurrent.copy().mult(-1).normalize();
+          const oppositeLength = oppositeHandle.copy().sub(anchor).mag();
+          const target = currentDir.mult(oppositeLength);
+          oppositeHandle.set(anchor.x + target.x, anchor.y + target.y);
+        }
+      }
     }
     return true;
   }
