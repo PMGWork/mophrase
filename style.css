@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: -apple-system, system-ui, Arial, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-sans: 'Geist', sans-serif;
 
   --color-handle: #D7B600;
   --color-curve: #f0f0f0;
   --color-sketch: #484848;
-  --color-background: #101010;
+  --color-background: #030712;
 }
 
 :root {
   --color-handle: #D7B600;
   --color-curve: #f0f0f0;
-  --color-sketch: #484848;
-  --color-background: #101010;
+  --color-sketch: #374151;
+  --color-background: #030712;
 }
 
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-sans);
+  font-family: 'Geist', var(--font-sans);
 }
 
 canvas {
