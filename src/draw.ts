@@ -32,7 +32,7 @@ function canDrawCurves(points: Vector[], curves: Vector[][]): boolean {
 // 入力点の描画
 export function drawInputPoints(p: p5, points: Vector[]): void {
   p.stroke(getColors().SKETCH);
-  p.strokeWeight(3);
+  p.strokeWeight(2);
   p.noFill();
   p.beginShape();
   for (const pt of points) {
@@ -46,7 +46,7 @@ export function drawBezierCurve(p: p5, points: Vector[], curves: Vector[][]): vo
   if (!canDrawCurves(points, curves)) return;
 
   p.stroke(getColors().CURVE);
-  p.strokeWeight(3);
+  p.strokeWeight(2);
   p.noFill();
 
   for (const curve of curves) {
@@ -59,14 +59,30 @@ export function drawBezierCurve(p: p5, points: Vector[], curves: Vector[][]): vo
   }
 }
 
-// 制御ポリゴンの描画
-export function drawControlPolygon(
+// 制御点と制御ポリゴンの描画
+export function drawControls(
   p: p5,
   points: Vector[],
   curves: Vector[][]
 ): void {
   if (!canDrawCurves(points, curves)) return;
 
+  // 制御点の描画
+  p.fill(getColors().HANDLE);
+  p.noStroke();
+  p.rectMode(p.CENTER);
+
+  for (const curve of curves) {
+    // 端点
+    p.rect(curve[0].x, curve[0].y, POINT_SIZE, POINT_SIZE);
+    p.rect(curve[3].x, curve[3].y, POINT_SIZE, POINT_SIZE);
+
+    // ハンドル
+    p.circle(curve[1].x, curve[1].y, POINT_SIZE);
+    p.circle(curve[2].x, curve[2].y, POINT_SIZE);
+  }
+
+  // 制御ポリゴンの描画
   p.stroke(getColors().HANDLE);
   p.strokeWeight(1);
   p.noFill();
@@ -81,28 +97,5 @@ export function drawControlPolygon(
     p.vertex(curve[2].x, curve[2].y);
     p.vertex(curve[3].x, curve[3].y);
     p.endShape();
-  }
-}
-
-// 制御点の描画
-export function drawControlPoints(
-  p: p5,
-  points: Vector[],
-  curves: Vector[][]
-): void {
-  if (!canDrawCurves(points, curves)) return;
-
-  p.fill(getColors().HANDLE);
-  p.noStroke();
-  p.rectMode(p.CENTER);
-
-  for (const curve of curves) {
-    // 端点
-    p.rect(curve[0].x, curve[0].y, POINT_SIZE, POINT_SIZE);
-    p.rect(curve[3].x, curve[3].y, POINT_SIZE, POINT_SIZE);
-
-    // ハンドル
-    p.circle(curve[1].x, curve[1].y, POINT_SIZE);
-    p.circle(curve[2].x, curve[2].y, POINT_SIZE);
   }
 }

@@ -5,8 +5,7 @@ import {
   COLORS,
   drawInputPoints,
   drawBezierCurve,
-  drawControlPolygon,
-  drawControlPoints,
+  drawControls,
 } from './draw';
 import { fitCurve } from './fitting';
 
@@ -50,17 +49,14 @@ const sketch = (p: p5): void => {
   p.draw = () => {
     p.background(COLORS.BACKGROUND);
 
-    // 手書き線の描画（常に表示）
+    // 手書き線の描画
     drawInputPoints(p, points);
 
-    // ベジエ曲線の描画（常に表示）
+    // ベジエ曲線の描画
     drawBezierCurve(p, points, curves);
 
-    // ベジエハンドルの描画（表示状態の場合のみ）
-    if (showHandles) {
-      drawControlPolygon(p, points, curves);
-      drawControlPoints(p, points, curves);
-    }
+    // ベジエハンドルの描画
+    if (showHandles) drawControls(p, points, curves);
   };
 
   p.mouseDragged = () => {
