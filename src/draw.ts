@@ -24,13 +24,13 @@ export const COLORS = getColors();
 
 const POINT_SIZE = 8;
 
-// 描画可能かどうかをチェックする共通ガード関数
+// ベジェ曲線を描画可能か判定
 function canDrawCurves(points: Vector[], curves: Vector[][]): boolean {
   return points.length >= 2 && curves.length > 0;
 }
 
 // 入力点の描画
-export function drawInputPoints(p: p5, points: Vector[]): void {
+export function drawPoints(p: p5, points: Vector[]): void {
   p.stroke(getColors().SKETCH);
   p.strokeWeight(2);
   p.noFill();
