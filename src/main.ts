@@ -36,9 +36,23 @@ const sketch = (p: p5): void => {
   let sketchButton: HTMLButtonElement | null = null;
   let thresholdSlider: HTMLInputElement | null = null;
   let thresholdLabel: HTMLElement | null = null;
+  let canvasContainer: HTMLDivElement | null = null;
+
+  const getCanvasSize = (): { width: number; height: number } => {
+    if (canvasContainer) {
+      return {
+        width: canvasContainer.clientWidth,
+        height: canvasContainer.clientHeight,
+      };
+    }
+    return { width: p.windowWidth, height: p.windowHeight };
+  };
 
   p.setup = () => {
-    p.createCanvas(p.windowWidth, p.windowHeight);
+    canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement | null;
+    const { width, height } = getCanvasSize();
+    const canvas = p.createCanvas(width, height);
+    if (canvasContainer) canvas.parent(canvasContainer);
     p.background(COLORS.BACKGROUND);
     p.textFont('Helvetica Neue');
 
@@ -59,7 +73,8 @@ const sketch = (p: p5): void => {
   };
 
   p.windowResized = () => {
-    p.resizeCanvas(p.windowWidth, p.windowHeight);
+    const { width, height } = getCanvasSize();
+    p.resizeCanvas(width, height);
   };
 
   p.keyPressed = () => {
