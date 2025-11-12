@@ -240,29 +240,23 @@ function fitCurveRange(
 
   // 粗めの誤差を満たす場合
   if (maxError <= coarseErrTol) {
-    const maxIterations = 4;
-    for (let iter = 0; iter < maxIterations; iter++) {
-      // Newton法でパラメータを再計算
-      const improved = refineParams(controls, params, points, range.start);
+    // Newton法でパラメータを再計算
+    const improved = refineParams(controls, params, points, range.start);
 
-      // 制御点を再生成
-      fitControlPoints(controls, params, tangents, points, range);
+    // 制御点を再生成
+    fitControlPoints(controls, params, tangents, points, range);
 
-      // 誤差を再評価
-      const newErrorResult = computeMaxError(controls, params, points, range);
-      maxError = newErrorResult.maxError;
+    // 誤差を再評価
+    const newErrorResult = computeMaxError(controls, params, points, range);
+    maxError = newErrorResult.maxError;
 
-      // fitErrorを更新
-      fitError.current = newErrorResult;
+    // fitErrorを更新
+    fitError.current = newErrorResult;
 
-      // 許容誤差内に収まったら確定
-      if (maxError <= errorTol) {
-        curves.push(controls);
-        return;
-      }
-
-      // 改善が見られなければループを抜ける
-      if (!improved) break;
+    // 許容誤差内に収まったら確定
+    if (maxError <= errorTol) {
+      curves.push(controls);
+      return;
     }
   }
 
