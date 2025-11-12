@@ -1,6 +1,21 @@
+/**
+ * ベジエハンドルの制御 / Bézier Handle Control
+ * 
+ * ベジェ曲線の制御点（ハンドル）のインタラクティブな編集を管理します。
+ * Manages interactive editing of Bézier curve control points (handles).
+ * 
+ * Features / 機能:
+ * - ハンドルのドラッグ検出 / Handle drag detection
+ * - 制御点の位置更新 / Control point position updates
+ * - 対称ハンドルモードのサポート / Symmetric handle mode support
+ * - C1連続性の維持（オプション） / Maintain C1 continuity (optional)
+ */
+
 import type { HandleSelection, Path, Vector } from './types';
 
-// ベジエハンドルの制御クラス
+/**
+ * ベジエハンドルの制御クラス / Bézier Handle Controller Class
+ */
 export class HandleController {
   private getPaths: () => Path[];
   private radius: number;
@@ -11,14 +26,28 @@ export class HandleController {
     this.radius = radius;
   }
 
-  // ドラッグを開始
+  /**
+   * ドラッグを開始 / Begin dragging
+   * 
+   * @param x - マウスX座標 / Mouse X coordinate
+   * @param y - マウスY座標 / Mouse Y coordinate
+   * @param isVisible - ハンドルが表示されているか / Whether handles are visible
+   * @returns ハンドルが選択されたか / Whether a handle was selected
+   */
   begin(x: number, y: number, isVisible: boolean): boolean {
     if (!isVisible) return false;
     this.current = this.findHandleAt(x, y);
     return this.current !== null;
   }
 
-  // ドラッグ中の位置更新
+  /**
+   * ドラッグ中の位置更新 / Update position during drag
+   * 
+   * @param x - マウスX座標 / Mouse X coordinate
+   * @param y - マウスY座標 / Mouse Y coordinate
+   * @param mode - ドラッグモード (0: 非対称, 1: 対称) / Drag mode (0: asymmetric, 1: symmetric)
+   * @returns 更新が成功したか / Whether update was successful
+   */
   drag(x: number, y: number, mode: number): boolean {
     if (!this.current) return false;
     if (this.setHandlePosition(this.current, x, y, mode)) return true;
@@ -26,14 +55,24 @@ export class HandleController {
     return false;
   }
 
-  // ドラッグを終了
+  /**
+   * ドラッグを終了 / End dragging
+   * 
+   * @returns ドラッグ中だったか / Whether was dragging
+   */
   end(): boolean {
     const wasDragging = this.current !== null;
     this.current = null;
     return wasDragging;
   }
 
-  // 指定位置にハンドルがあるかを検索
+  /**
+   * 指定位置にハンドルがあるかを検索 / Find handle at specified position
+   * 
+   * @param x - X座標 / X coordinate
+   * @param y - Y座標 / Y coordinate
+   * @returns ハンドル選択情報（見つからない場合null） / Handle selection (null if not found)
+   */
   private findHandleAt(x: number, y: number): HandleSelection | null {
     const paths = this.getPaths();
     for (let pathIndex = paths.length - 1; pathIndex >= 0; pathIndex--) {
@@ -54,7 +93,22 @@ export class HandleController {
     return null;
   }
 
-  // 指定された選択情報のハンドル位置を更新
+  /**
+   * 指定された選択情報のハンドル位置を更新 / Update handle position for the given selection
+   * 
+   * ベジェ曲線の滑らかさを保つため、以下の処理を行います：
+   * To maintain Bézier curve smoothness:
+   * - 端点を移動すると、接続されたハンドルも移動
+   * - When moving endpoints, connected handles also move
+   * - 特定モードで中間ハンドルを移動すると、反対側も連動
+   * - In certain modes, moving intermediate handles affects opposite side
+   * 
+   * @param selection - ハンドル選択情報 / Handle selection
+   * @param x - 新しいX座標 / New X coordinate
+   * @param y - 新しいY座標 / New Y coordinate
+   * @param mode - ドラッグモード / Drag mode
+   * @returns 更新が成功したか / Whether update was successful
+   */
   private setHandlePosition(
     selection: HandleSelection,
     x: number,

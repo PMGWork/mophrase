@@ -1,14 +1,43 @@
-/// 数式ユーティリティ
+/**
+ * 数式ユーティリティ / Mathematical Utilities
+ * 
+ * ベジェ曲線計算のための数学関数群
+ * Mathematical functions for Bézier curve calculations
+ * 
+ * Contains:
+ * - ベルンシュタイン多項式 / Bernstein polynomials
+ * - ベジェ曲線の評価 / Bézier curve evaluation
+ * - 曲線の微分 / Curve derivatives
+ * - ニュートン法による最適化 / Newton method optimization
+ */
 
 import type { Vector } from './types';
 
-// バーンスタイン多項式
+/**
+ * バーンスタイン多項式 / Bernstein polynomial
+ * 
+ * ベジェ曲線の基底関数。B_{i,n}(t) = C(n,i) * t^i * (1-t)^(n-i)
+ * Basis function for Bézier curves. B_{i,n}(t) = C(n,i) * t^i * (1-t)^(n-i)
+ * 
+ * @param i - インデックス / Index (0 to n)
+ * @param n - 次数 / Degree
+ * @param t - パラメータ / Parameter (0 to 1)
+ * @returns ベルンシュタイン多項式の値 / Bernstein polynomial value
+ */
 export function bernstein(i: number, n: number, t: number): number {
   const coeff = binomial(n, i);
   return coeff * Math.pow(t, i) * Math.pow(1 - t, n - i);
 }
 
-// 二項係数
+/**
+ * 二項係数 / Binomial coefficient
+ * 
+ * C(n,k) = n! / (k! * (n-k)!)
+ * 
+ * @param n - 全体の数 / Total number
+ * @param k - 選択する数 / Number to choose
+ * @returns 二項係数 / Binomial coefficient
+ */
 export function binomial(n: number, k: number): number {
   if (k === 0 || k === n) return 1;
 
@@ -20,14 +49,34 @@ export function binomial(n: number, k: number): number {
   return res;
 }
 
-// 単位接ベクトル
+/**
+ * 単位接ベクトル / Unit tangent vector
+ * 
+ * 2点間の方向を示す正規化されたベクトルを計算
+ * Computes a normalized vector indicating the direction between two points
+ * 
+ * @param d0 - 始点 / Start point
+ * @param d1 - 終点 / End point
+ * @returns 単位接ベクトル / Unit tangent vector
+ */
 export function unitTangent(d0: Vector, d1: Vector): Vector {
   const tangent = d1.copy().sub(d0);
   tangent.normalize();
   return tangent;
 }
 
-// 3次ベジェ曲線
+/**
+ * 3次ベジェ曲線 / Cubic Bézier curve
+ * 
+ * P(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+ * 
+ * @param v0 - 始点 / Start point (P₀)
+ * @param v1 - 第1制御点 / First control point (P₁)
+ * @param v2 - 第2制御点 / Second control point (P₂)
+ * @param v3 - 終点 / End point (P₃)
+ * @param t - パラメータ / Parameter (0 to 1)
+ * @returns 曲線上の点 / Point on curve
+ */
 export function bezierCurve(
   v0: Vector,
   v1: Vector,
@@ -43,7 +92,21 @@ export function bezierCurve(
   return point;
 }
 
-// 3次ベジェ曲線の1階微分
+/**
+ * 3次ベジェ曲線の1階微分 / First derivative of cubic Bézier curve
+ * 
+ * P'(t) = 3(1-t)²(P₁-P₀) + 6(1-t)t(P₂-P₁) + 3t²(P₃-P₂)
+ * 
+ * 曲線の接線ベクトルを表します
+ * Represents the tangent vector of the curve
+ * 
+ * @param v0 - 始点 / Start point
+ * @param v1 - 第1制御点 / First control point
+ * @param v2 - 第2制御点 / Second control point
+ * @param v3 - 終点 / End point
+ * @param t - パラメータ / Parameter (0 to 1)
+ * @returns 1階微分ベクトル / First derivative vector
+ */
 export function bezierDerivative(
   v0: Vector,
   v1: Vector,
@@ -58,7 +121,21 @@ export function bezierDerivative(
   return d;
 }
 
-// 3次ベジェ曲線の2階微分
+/**
+ * 3次ベジェ曲線の2階微分 / Second derivative of cubic Bézier curve
+ * 
+ * P''(t) = 6(1-t)(P₂-2P₁+P₀) + 6t(P₃-2P₂+P₁)
+ * 
+ * 曲線の曲率変化を表します
+ * Represents the curvature change of the curve
+ * 
+ * @param v0 - 始点 / Start point
+ * @param v1 - 第1制御点 / First control point
+ * @param v2 - 第2制御点 / Second control point
+ * @param v3 - 終点 / End point
+ * @param t - パラメータ / Parameter (0 to 1)
+ * @returns 2階微分ベクトル / Second derivative vector
+ */
 export function bezierSecondDerivative(
   v0: Vector,
   v1: Vector,
@@ -74,7 +151,19 @@ export function bezierSecondDerivative(
   return d2;
 }
 
-// ニュートン法によるパラメータの精密化
+/**
+ * ニュートン法によるパラメータの精密化 / Parameter refinement using Newton's method
+ * 
+ * ニュートン・ラフソン法を使用して、点に最も近い曲線上のパラメータを求めます。
+ * Uses Newton-Raphson method to find the parameter on the curve closest to the given point.
+ * 
+ * u_new = u - (Q(u)-P)·Q'(u) / (Q'(u)·Q'(u) + (Q(u)-P)·Q''(u))
+ * 
+ * @param control - ベジェ曲線の制御点配列 / Bézier curve control points
+ * @param point - 対象点 / Target point
+ * @param u - 現在のパラメータ / Current parameter
+ * @returns 改善されたパラメータ / Refined parameter
+ */
 export function refineParameter(
   control: Vector[],
   point: Vector,
@@ -106,7 +195,18 @@ export function refineParameter(
   return updated;
 }
 
-// 分割点における接ベクトルの計算
+/**
+ * 分割点における接ベクトルの計算 / Compute tangent vector at split point
+ * 
+ * 曲線を分割する際の接線方向を計算します。
+ * 前後の点を使用して中心差分で接線を推定します。
+ * Computes tangent direction when subdividing a curve.
+ * Estimates tangent using central difference from neighboring points.
+ * 
+ * @param points - 点列 / Point sequence
+ * @param splitIndex - 分割点のインデックス / Index of split point
+ * @returns 接ベクトル（計算不可の場合はnull） / Tangent vector (null if cannot compute)
+ */
 export function splitTangent(
   points: Vector[],
   splitIndex: number

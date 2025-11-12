@@ -1,9 +1,31 @@
-/// ベジェ曲線フィッティング関連
+/**
+ * ベジェ曲線フィッティング関連 / Bézier Curve Fitting Module
+ * 
+ * このモジュールは、点列から3次ベジェ曲線を自動生成するアルゴリズムを実装しています。
+ * This module implements algorithms for automatically generating cubic Bézier curves from point sequences.
+ * 
+ * Algorithm Overview / アルゴリズムの概要:
+ * 1. 接線ベクトルを計算 / Compute tangent vectors
+ * 2. パラメータ化 / Parameterize points along curve
+ * 3. 最小二乗法で制御点を最適化 / Optimize control points using least squares
+ * 4. 誤差を評価 / Evaluate fitting error
+ * 5. ニュートン法で精密化 / Refine using Newton's method
+ * 6. 必要に応じて再帰的に分割 / Recursively subdivide if needed
+ * 
+ * Based on: "An Algorithm for Automatically Fitting Digitized Curves"
+ * by Philip J. Schneider (Graphics Gems, 1990)
+ */
 
 import type { Vector, FitErrorResult, Range, Tangents } from './types';
 import { bernstein, unitTangent, bezierCurve, refineParameter, splitTangent } from './mathUtils';
 
-// 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
+/**
+ * 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
+ * Compute tangent vectors at the start and end of a cubic Bézier curve
+ * 
+ * @param points - 点列 / Array of points
+ * @returns [始点の接ベクトル, 終点の接ベクトル] / [start tangent, end tangent]
+ */
 export function computeEndTangents(points: Vector[]): [Vector, Vector] {
   const n = points.length;
 
@@ -20,7 +42,14 @@ export function computeEndTangents(points: Vector[]): [Vector, Vector] {
   return [tangent0, tangent1];
 }
 
-// 2. 点列に対応する曲線のパラメータの位置を計算する
+/**
+ * 2. 点列に対応する曲線のパラメータの位置を計算する
+ * Compute parameter positions along the curve for each point (chord-length parameterization)
+ * 
+ * @param points - 点列 / Array of points
+ * @param range - 範囲 / Range of indices to parameterize
+ * @returns パラメータ配列 (0.0～1.0) / Array of parameters (0.0 to 1.0)
+ */
 export function parametrizeRange(
   points: Vector[],
   range: Range
@@ -47,7 +76,14 @@ export function parametrizeRange(
   return _params;
 }
 
-// 3. 3次ベジェ曲線の始点と終点を定める
+/**
+ * 3. 3次ベジェ曲線の始点と終点を定める
+ * Extract the start and end points for the cubic Bézier curve
+ * 
+ * @param points - 点列 / Array of points
+ * @param range - 範囲 / Range of indices
+ * @returns [始点, 終点] / [start point, end point]
+ */
 export function extractEndPoints(
   points: Vector[],
   range: Range
@@ -55,7 +91,19 @@ export function extractEndPoints(
   return [points[range.start].copy(), points[range.end].copy()];
 }
 
-// 4. 始点と終点以外の2つ制御点の端点からの距離を求める
+/**
+ * 4. 始点と終点以外の2つ制御点の端点からの距離を求める
+ * Calculate the two interior control points using least squares method
+ * 
+ * 最小二乗法を使用して、ベジェ曲線の内部制御点を最適化します。
+ * Uses least squares optimization to fit the interior control points of the Bézier curve.
+ * 
+ * @param controls - 制御点配列（更新される） / Control points array (will be updated)
+ * @param params - パラメータ配列 / Parameter array
+ * @param tangents - 接線ベクトル / Tangent vectors
+ * @param points - 元の点列 / Original point sequence
+ * @param range - 範囲 / Range of indices
+ */
 export function fitControlPoints(
   controls: Vector[],
   params: number[],
@@ -135,7 +183,16 @@ export function fitControlPoints(
   controls[2] = v3.copy().add(t2.copy().mult(alpha_2));  // V_2 = V_3 + α_2·t_2
 }
 
-// 5. 求めたベジェ曲線と点列との最大距離を求める
+/**
+ * 5. 求めたベジェ曲線と点列との最大距離を求める
+ * Compute the maximum distance between the fitted Bézier curve and the original points
+ * 
+ * @param controls - ベジェ曲線の制御点 / Bézier curve control points
+ * @param params - パラメータ配列 / Parameter array
+ * @param points - 元の点列 / Original point sequence
+ * @param range - 範囲 / Range of indices
+ * @returns 最大誤差とそのインデックス / Maximum error and its index
+ */
 export function computeMaxError(
   controls: Vector[],
   params: number[],
@@ -180,7 +237,19 @@ export function computeMaxError(
   return { maxError, index: maxIndex };
 }
 
-// 6. ニュートン法でパラメータを1回更新する
+/**
+ * 6. ニュートン法でパラメータを1回更新する
+ * Refine parameters using Newton-Raphson method (one iteration)
+ * 
+ * ニュートン法を使用してパラメータを改善し、フィッティング精度を向上させます。
+ * Improves parameters using Newton's method to enhance fitting accuracy.
+ * 
+ * @param controls - ベジェ曲線の制御点 / Bézier curve control points
+ * @param params - パラメータ配列（更新される） / Parameter array (will be updated)
+ * @param points - 元の点列 / Original point sequence
+ * @param startIndex - 開始インデックス / Starting index
+ * @returns 改善があったかどうか / Whether improvement was made
+ */
 export function refineParams(
   controls: Vector[],
   params: number[],
@@ -205,7 +274,24 @@ export function refineParams(
   return improved;
 }
 
-// 再帰的にベジェ曲線をフィットする
+/**
+ * 再帰的にベジェ曲線をフィットする
+ * Recursively fit Bézier curves to point sequences
+ * 
+ * このアルゴリズムは以下の戦略を使用します：
+ * This algorithm uses the following strategy:
+ * 1. 誤差が許容範囲内なら確定 / If error is within tolerance, accept curve
+ * 2. 誤差が中程度ならニュートン法で改善を試みる / If moderate error, try Newton refinement
+ * 3. 誤差が大きければ曲線を分割して再帰処理 / If error is large, subdivide and recurse
+ * 
+ * @param points - 元の点列 / Original point sequence
+ * @param curves - 結果の曲線配列（追加される） / Result curves array (will be appended to)
+ * @param range - 処理範囲 / Range to process
+ * @param tangents - 端点の接線ベクトル / Tangent vectors at endpoints
+ * @param errorTol - 許容誤差 / Error tolerance
+ * @param coarseErrTol - 粗い許容誤差 / Coarse error tolerance
+ * @param lastFitError - 最後のフィット誤差（更新される） / Last fit error (will be updated)
+ */
 export function fitCurveRange(
   points: Vector[],
   curves: Vector[][],
@@ -307,7 +393,19 @@ export function fitCurveRange(
   );
 }
 
-// ベジェ曲線をフィットする関数
+/**
+ * ベジェ曲線をフィットする関数（メインエントリーポイント）
+ * Main entry point for fitting Bézier curves to point sequences
+ * 
+ * 点列全体に対してベジェ曲線フィッティングを開始します。
+ * Initiates Bézier curve fitting for the entire point sequence.
+ * 
+ * @param points - 元の点列 / Original point sequence
+ * @param curves - 結果の曲線配列（追加される） / Result curves array (will be appended to)
+ * @param errorTol - 許容誤差（ピクセル） / Error tolerance (pixels)
+ * @param coarseErrTol - 粗い許容誤差（ピクセル） / Coarse error tolerance (pixels)
+ * @param lastFitError - 最後のフィット誤差（更新される） / Last fit error (will be updated)
+ */
 export function fitCurve(
   points: Vector[],
   curves: Vector[][],

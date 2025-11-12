@@ -1,3 +1,21 @@
+/**
+ * MoPhrase - Interactive Bézier Curve Fitting Application
+ * 
+ * このアプリケーションは、手描きの曲線を滑らかなベジェ曲線に自動変換します。
+ * This application automatically converts freehand curves into smooth Bézier curves.
+ * 
+ * Main Features / 主な機能:
+ * - Freehand drawing with mouse/touch / マウス・タッチによるフリーハンド描画
+ * - Automatic curve fitting to Bézier curves / ベジェ曲線への自動フィッティング
+ * - Interactive control point editing / 制御点の対話的編集
+ * - Adjustable fitting tolerance / フィッティング精度の調整
+ * 
+ * User Interactions / ユーザー操作:
+ * - Mouse drag: Draw freehand curves / マウスドラッグ: フリーハンド描画
+ * - Mouse drag on handles: Edit curve shape / ハンドルドラッグ: 曲線の形状編集
+ * - Shift key: Toggle symmetric handle mode / Shiftキー: 対称ハンドルモード切替
+ */
+
 import '../style.css';
 import p5 from 'p5';
 import type { Path } from './types';
@@ -6,16 +24,18 @@ import { COLORS, drawPoints, drawBezierCurve, drawControls } from './draw';
 import { HandleController } from './handle';
 
 const sketch = (p: p5): void => {
-  // データ構造
-  let paths: Path[] = [];              // 確定済みのパス群
-  let activePath: Path | null = null;  // 現在描画中のパス
+  // データ構造 / Data structures
+  let paths: Path[] = [];              // 確定済みのパス群 / Finalized paths
+  let activePath: Path | null = null;  // 現在描画中のパス / Currently drawing path
   const handleController = new HandleController(() => paths);
 
-  // 表示・非表示の状態
-  let showHandles: boolean = true;    // ベジエハンドルの表示状態
-  let showHandDrawn: boolean = true;  // 手書きストロークの描画状態
+  // 表示・非表示の状態 / Display state
+  let showHandles: boolean = true;    // ベジエハンドルの表示状態 / Bézier handle visibility
+  let showHandDrawn: boolean = true;  // 手書きストロークの描画状態 / Hand-drawn stroke visibility
 
-  // ドラッグモード
+  // ドラッグモード / Drag mode
+  // 0: 非対称モード (asymmetric mode) - 片側のハンドルのみ移動
+  // 1: 対称モード (symmetric mode) - 反対側のハンドルも連動
   let dragMode: number = 0;
 
   // フィッティング関連

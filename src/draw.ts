@@ -1,10 +1,28 @@
-/// ベジェ曲線の描画
+/**
+ * ベジェ曲線の描画 / Bézier Curve Drawing
+ * 
+ * p5.jsを使用した描画機能を提供します。
+ * Provides drawing functions using p5.js.
+ * 
+ * Features / 機能:
+ * - 入力点列の描画 / Drawing input point sequences
+ * - ベジェ曲線の描画 / Drawing Bézier curves
+ * - 制御点と制御ポリゴンの描画 / Drawing control points and control polygons
+ * - CSS変数からの色の取得 / Color retrieval from CSS variables
+ */
 
 import type p5 from 'p5';
 import type { Vector, Colors } from './types';
 import { bezierCurve } from './mathUtils';
 
-// 色定義
+/**
+ * 色定義 / Color definition
+ * 
+ * CSS変数から色を取得します
+ * Retrieves colors from CSS variables
+ * 
+ * @returns 色定義オブジェクト / Colors object
+ */
 export function getColors(): Colors {
   const styles = getComputedStyle(document.documentElement);
   const pick = (name: string): string => styles.getPropertyValue(name).trim();
@@ -21,7 +39,16 @@ export const COLORS = getColors();
 
 const POINT_SIZE = 8;
 
-// 入力点の描画
+/**
+ * 入力点の描画 / Draw input points
+ * 
+ * ユーザーが描いた元の手描き線を描画します
+ * Draws the original hand-drawn line by the user
+ * 
+ * @param p - p5インスタンス / p5 instance
+ * @param points - 点列 / Array of points
+ * @param colors - 色設定 / Color settings
+ */
 export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): void {
   p.stroke(colors.SKETCH);
   p.strokeWeight(2);
@@ -33,7 +60,16 @@ export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): vo
   p.endShape();
 }
 
-// ベジェ曲線の描画
+/**
+ * ベジェ曲線の描画 / Draw Bézier curves
+ * 
+ * フィッティングされたベジェ曲線を滑らかに描画します
+ * Draws fitted Bézier curves smoothly
+ * 
+ * @param p - p5インスタンス / p5 instance
+ * @param curves - ベジェ曲線の配列 / Array of Bézier curves
+ * @param colors - 色設定 / Color settings
+ */
 export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
   if (curves.length === 0) return;
 
@@ -51,7 +87,19 @@ export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLO
   }
 }
 
-// 制御点と制御ポリゴンの描画
+/**
+ * 制御点と制御ポリゴンの描画 / Draw control points and control polygons
+ * 
+ * ベジェ曲線の制御点（ハンドル）と制御ポリゴンを描画します：
+ * Draws Bézier curve control points (handles) and control polygons:
+ * - 端点：四角形 / Endpoints: squares
+ * - ハンドル：円 / Handles: circles
+ * - 制御ポリゴン：線 / Control polygon: lines
+ * 
+ * @param p - p5インスタンス / p5 instance
+ * @param curves - ベジェ曲線の配列 / Array of Bézier curves
+ * @param colors - 色設定 / Color settings
+ */
 export function drawControls(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
   if (curves.length === 0) return;
 
