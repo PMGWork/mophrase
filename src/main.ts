@@ -7,6 +7,7 @@ import { drawPoints, drawBezierCurve, drawControls } from './draw';
 import { HandleController } from './handle'
 
 const sketch = (p: p5): void => {
+  // #region 変数設定
   // 設定の読み込み
   const config = { ...DEFAULT_CONFIG };
   const colors = { ...DEFAULT_COLORS };
@@ -51,6 +52,7 @@ const sketch = (p: p5): void => {
     return { width: p.windowWidth, height: p.windowHeight };
   };
 
+  // #region セットアップ
   p.setup = () => {
     canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement | null;
     const { width, height } = getCanvasSize();
@@ -81,14 +83,7 @@ const sketch = (p: p5): void => {
     p.resizeCanvas(width, height);
   };
 
-  p.keyPressed = () => {
-    if (p.key === 'Shift') dragMode = 0;
-  };
-
-  p.keyReleased = () => {
-    if (p.key === 'Shift') dragMode = config.defaultDragMode;
-  };
-
+  // #region 描画
   p.draw = () => {
     p.background(colors.background);
 
@@ -117,6 +112,15 @@ const sketch = (p: p5): void => {
         colors.background
       );
     }
+  };
+
+  // #region イベント
+  p.keyPressed = () => {
+    if (p.key === 'Shift') dragMode = 0;
+  };
+
+  p.keyReleased = () => {
+    if (p.key === 'Shift') dragMode = config.defaultDragMode;
   };
 
   p.mouseDragged = () => {
@@ -169,6 +173,8 @@ const sketch = (p: p5): void => {
     activePath = null;
   };
 
+  // #region ユーティリティ
+  // 全てのパスをクリア
   function clearAll(): void {
     paths = [];
     activePath = null;
@@ -181,7 +187,7 @@ const sketch = (p: p5): void => {
     sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
   }
 
-  // 許容誤差の更新
+  // 誤差許容値の更新
   function updateThreshold(): void {
     if (thresholdSlider) {
       const parsed = Number(thresholdSlider.value);
@@ -192,7 +198,23 @@ const sketch = (p: p5): void => {
     }
 
     if (thresholdLabel) {
-      thresholdLabel.textContent = `${errorTol.toFixed(0)}px`;
+      thresholdLabel.textContent = `${errorTol.toFixed(2)}px`;
+    }
+
+    refitExistingPaths();
+  }
+
+  // 既存のパスを再フィッティング
+  function refitExistingPaths(): void {
+    for (const path of paths) {
+      if (path.points.length < 2) {
+        path.curves.length = 0;
+        continue;
+      }
+
+      path.curves.length = 0;
+      path.fitError.current = { maxError: Number.MAX_VALUE, index: -1 };
+      fitCurve(path.points, path.curves, errorTol, coarseErrTol, path.fitError);
     }
   }
 };

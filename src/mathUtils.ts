@@ -120,8 +120,8 @@ export function splitTangent(
   const prev = points[splitIndex - 1];
   const next = points[splitIndex + 1];
 
-  // 前後の点が一致している場合は単位ベクトルを定義できない
-  if (prev.x === next.x && prev.y === next.y) return null;
+  // 前後の点が非常に近い場合は単位ベクトルを定義できない
+  if (prev.dist(next) < 1e-6) return null;
 
   return unitTangent(next, prev);
 }
