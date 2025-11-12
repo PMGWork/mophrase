@@ -144,18 +144,11 @@ export function computeMaxError(
 ): FitErrorResult {
   const n = range.end - range.start + 1;
 
-  if (
-    n < 2 ||
-    !controls[0] ||
-    !controls[1] ||
-    !controls[2] ||
-    !controls[3]
-  ) {
-    return { maxError: Number.MAX_VALUE, index: -1 };
-  }
+  // 点列が3点未満の場合は誤差を計算しない
+  if (n < 3) return { maxError: 0, index: -1 };
 
-  // 端点はベジェ曲線と一致するため、端点以外で最大誤差を探索
-  if (n === 2) return { maxError: 0, index: -1 };
+  // 制御点が不正な場合は誤差を計算しない
+  if (!controls.every(c => c)) return { maxError: Number.MAX_VALUE, index: -1 };
 
   // 最大誤差を計算
   let maxError = -1;
@@ -213,7 +206,7 @@ export function fitCurveRange(
   tangents: Tangents,
   errorTol: number,
   coarseErrTol: number,
-  lastFitError: { current: FitErrorResult }
+  fitError: { current: FitErrorResult }
 ): void {
   // パラメータを計算
   const params = parametrizeRange(points, range);
@@ -235,8 +228,8 @@ export function fitCurveRange(
   let errorResult = computeMaxError(controls, params, points, range);
   let maxError = errorResult.maxError;
 
-  // lastFitErrorを更新
-  lastFitError.current = errorResult;
+  // fitErrorを更新
+  fitError.current = errorResult;
 
   // 許容誤差内にある場合のみ確定
   if (maxError <= errorTol) {
@@ -258,8 +251,8 @@ export function fitCurveRange(
       const newErrorResult = computeMaxError(controls, params, points, range);
       maxError = newErrorResult.maxError;
 
-      // lastFitErrorを更新
-      lastFitError.current = newErrorResult;
+      // fitErrorを更新
+      fitError.current = newErrorResult;
 
       // 許容誤差内に収まったら確定
       if (maxError <= errorTol) {
@@ -273,7 +266,7 @@ export function fitCurveRange(
   }
 
   // 粗めの誤差を超える場合、または改善が見込めない場合は分割
-  const splitIndex = lastFitError.current.index;
+  const splitIndex = fitError.current.index;
   if (splitIndex <= range.start || splitIndex >= range.end) {
     curves.push(controls);
     return;
@@ -294,7 +287,7 @@ export function fitCurveRange(
     { start: tangents.start, end: tangent },
     errorTol,
     coarseErrTol,
-    lastFitError
+    fitError
   );
   fitCurveRange(
     points,
@@ -303,7 +296,7 @@ export function fitCurveRange(
     { start: tangent.copy().mult(-1), end: tangents.end },
     errorTol,
     coarseErrTol,
-    lastFitError
+    fitError
   );
 }
 
@@ -313,7 +306,7 @@ export function fitCurve(
   curves: Vector[][],
   errorTol: number,
   coarseErrTol: number,
-  lastFitError: { current: FitErrorResult }
+  fitError: { current: FitErrorResult }
 ): void {
   // 全体の接ベクトルを計算
   const [tangent0, tangent1] = computeEndTangents(points);
@@ -326,11 +319,11 @@ export function fitCurve(
     { start: tangent0, end: tangent1 },
     errorTol,
     coarseErrTol,
-    lastFitError
+    fitError
   );
 
   // 最終的な誤差と分割数を出力
   console.log(
-    `Final error: ${lastFitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`
+    `Final error: ${fitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`
   );
 }

@@ -4,6 +4,13 @@ import type p5 from 'p5';
 
 export type Vector = p5.Vector;
 
+// 描画パス情報
+export interface Path {
+  points: Vector[];
+  curves: Vector[][];
+  fitError: { current: FitErrorResult };
+}
+
 // フィッティングエラーの結果
 export interface FitErrorResult {
   maxError: number;
@@ -20,13 +27,6 @@ export interface Range {
 export interface Tangents {
   start: Vector;
   end: Vector;
-}
-
-// 描画パス情報
-export interface Path {
-  points: Vector[];
-  curves: Vector[][];
-  lastFitError: { current: FitErrorResult };
 }
 
 // ベジエハンドルの選択情報

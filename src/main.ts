@@ -2,25 +2,28 @@ import '../style.css';
 import p5 from 'p5';
 import type { Path } from './types';
 import { fitCurve } from './fitting';
-import { COLORS, drawPoints, drawBezierCurve, drawControls } from './draw';
+import { getColors, drawPoints, drawBezierCurve, drawControls } from './draw';
 import { HandleController } from './handle';
 
 const sketch = (p: p5): void => {
   // データ構造
   let paths: Path[] = [];              // 確定済みのパス群
   let activePath: Path | null = null;  // 現在描画中のパス
-  const handleController = new HandleController(() => paths);
 
   // 表示・非表示の状態
   let showHandles: boolean = true;    // ベジエハンドルの表示状態
   let showHandDrawn: boolean = true;  // 手書きストロークの描画状態
 
-  // ドラッグモード
-  let dragMode: number = 0;
-
   // フィッティング関連
   let errorTol = 10.0;               // 許容誤差(ピクセル)
   let coarseErrTol = errorTol * 2;   // 粗い許容誤差(ピクセル)
+
+  // ハンドル操作関連
+  const handleController = new HandleController(() => paths);
+  let dragMode: number = 0;
+
+  // 色定義
+  const COLORS = getColors();
 
   const getButton = (id: string): HTMLButtonElement | null => {
     const element = document.getElementById(id);
@@ -54,7 +57,7 @@ const sketch = (p: p5): void => {
     const canvas = p.createCanvas(width, height);
     if (canvasContainer) canvas.parent(canvasContainer);
     p.background(COLORS.BACKGROUND);
-    p.textFont('Helvetica Neue');
+    p.textFont('Geist');
 
     // HTMLボタンのイベントリスナーを設定
     getButton('clearButton')?.addEventListener('click', clearAll);
@@ -120,8 +123,11 @@ const sketch = (p: p5): void => {
     activePath = {
       points: [p.createVector(p.mouseX, p.mouseY)],
       curves: [],
-      lastFitError: {
-        current: { maxError: Number.MAX_VALUE, index: -1 },
+      fitError: {
+        current: {
+          maxError: Number.MAX_VALUE,
+          index: -1
+        },
       },
     };
   };
@@ -139,7 +145,7 @@ const sketch = (p: p5): void => {
         activePath.curves,
         errorTol,
         coarseErrTol,
-        activePath.lastFitError
+        activePath.fitError
       );
 
       // 確定済みパスに追加

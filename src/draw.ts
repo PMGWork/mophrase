@@ -4,7 +4,9 @@ import type p5 from 'p5';
 import type { Vector, Colors } from './types';
 import { bezierCurve } from './mathUtils';
 
-// 色定義
+const POINT_SIZE = 8;
+
+// 色の取得
 export function getColors(): Colors {
   const styles = getComputedStyle(document.documentElement);
   const pick = (name: string): string => styles.getPropertyValue(name).trim();
@@ -17,12 +19,8 @@ export function getColors(): Colors {
   };
 }
 
-export const COLORS = getColors();
-
-const POINT_SIZE = 8;
-
 // 入力点の描画
-export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): void {
+export function drawPoints(p: p5, points: Vector[], colors: Colors): void {
   p.stroke(colors.SKETCH);
   p.strokeWeight(2);
   p.noFill();
@@ -34,7 +32,7 @@ export function drawPoints(p: p5, points: Vector[], colors: Colors = COLORS): vo
 }
 
 // ベジェ曲線の描画
-export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
+export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors): void {
   if (curves.length === 0) return;
 
   p.stroke(colors.CURVE);
@@ -52,7 +50,7 @@ export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors = COLO
 }
 
 // 制御点と制御ポリゴンの描画
-export function drawControls(p: p5, curves: Vector[][], colors: Colors = COLORS): void {
+export function drawControls(p: p5, curves: Vector[][], colors: Colors): void {
   if (curves.length === 0) return;
 
   // 制御点の描画
