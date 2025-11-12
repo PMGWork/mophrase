@@ -1,28 +1,30 @@
 import '../style.css';
 import p5 from 'p5';
 import type { Path } from './types';
+import { DEFAULT_CONFIG, DEFAULT_COLORS } from './config';
 import { fitCurve } from './fitting';
-import { getColors, drawPoints, drawBezierCurve, drawControls } from './draw';
-import { HandleController } from './handle';
+import { drawPoints, drawBezierCurve, drawControls } from './draw';
+import { HandleController } from './handle'
 
 const sketch = (p: p5): void => {
+  // 設定の読み込み
+  const config = { ...DEFAULT_CONFIG };
+  const colors = { ...DEFAULT_COLORS };
+
   // データ構造
   let paths: Path[] = [];              // 確定済みのパス群
   let activePath: Path | null = null;  // 現在描画中のパス
 
   // 表示・非表示の状態
-  let showHandDrawn: boolean = true;  // 手書きストロークの描画状態
+  let showSketch: boolean = config.showSketch;
 
   // フィッティング関連
-  let errorTol = 10.0;               // 許容誤差(ピクセル)
-  let coarseErrTol = errorTol * 2;   // 粗い許容誤差(ピクセル)
+  let errorTol = config.errorTolerance;
+  let coarseErrTol = errorTol * 2;
 
   // ハンドル操作関連
   const handleController = new HandleController(() => paths);
-  let dragMode: number = 1;
-
-  // 色定義
-  const COLORS = getColors();
+  let dragMode: number = config.defaultDragMode;
 
   const getButton = (id: string): HTMLButtonElement | null => {
     const element = document.getElementById(id);
@@ -54,13 +56,16 @@ const sketch = (p: p5): void => {
     const { width, height } = getCanvasSize();
     const canvas = p.createCanvas(width, height);
     if (canvasContainer) canvas.parent(canvasContainer);
-    p.background(COLORS.BACKGROUND);
+    p.background(colors.background);
     p.textFont('Geist');
 
     // HTMLボタンのイベントリスナーを設定
     getButton('clearButton')?.addEventListener('click', clearAll);
     sketchButton = getButton('toggleSketchButton');
     sketchButton?.addEventListener('click', toggleHandDrawn);
+    if (sketchButton) {
+      sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
+    }
 
     thresholdSlider = getInput('thresholdSlider');
     thresholdLabel = document.getElementById('thresholdValue');
@@ -77,33 +82,29 @@ const sketch = (p: p5): void => {
   };
 
   p.keyPressed = () => {
-    if (p.key === 'Shift') {
-      dragMode = 0;
-    }
+    if (p.key === 'Shift') dragMode = 0;
   };
 
   p.keyReleased = () => {
-    if (p.key === 'Shift') {
-      dragMode = 1;
-    }
+    if (p.key === 'Shift') dragMode = config.defaultDragMode;
   };
 
   p.draw = () => {
-    p.background(COLORS.BACKGROUND);
+    p.background(colors.background);
 
     // 確定済みパスの描画
     for (const path of paths) {
-  if (showHandDrawn) drawPoints(p, path.points, COLORS);
-  drawBezierCurve(p, path.curves, COLORS);
-  drawControls(p, path.curves, COLORS);
+      if (showSketch) drawPoints(p, path.points, config.pointSize, colors.sketch);
+      drawBezierCurve(p, path.curves, config.lineWeight, colors.curve);
+      drawControls(p, path.curves, config.pointSize, colors.handle);
     }
 
     // 現在描画中のパスの描画
     if (activePath) {
-      drawPoints(p, activePath.points, COLORS);
+      drawPoints(p, activePath.points, config.lineWeight, colors.sketch);
       if (activePath.curves.length > 0) {
-  drawBezierCurve(p, activePath.curves, COLORS);
-  drawControls(p, activePath.curves, COLORS);
+        drawBezierCurve(p, activePath.curves, config.lineWeight, colors.curve);
+        drawControls(p, activePath.curves, config.pointSize, colors.handle);
       }
     }
   };
@@ -165,9 +166,9 @@ const sketch = (p: p5): void => {
 
   // 手書きストロークの表示・非表示を切り替え
   function toggleHandDrawn(): void {
-    showHandDrawn = !showHandDrawn;
+    showSketch = !showSketch;
     if (!sketchButton) return;
-    sketchButton.textContent = showHandDrawn ? 'Hide Sketch' : 'Show Sketch';
+    sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
   }
 
   // 許容誤差の更新

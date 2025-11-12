@@ -1,28 +1,13 @@
 /// ベジェ曲線の描画
 
 import type p5 from 'p5';
-import type { Vector, Colors } from './types';
+import type { Vector } from './types';
 import { bezierCurve } from './mathUtils';
 
-const POINT_SIZE = 8;
-
-// 色の取得
-export function getColors(): Colors {
-  const styles = getComputedStyle(document.documentElement);
-  const pick = (name: string): string => styles.getPropertyValue(name).trim();
-
-  return {
-    HANDLE: pick('--color-handle'),
-    CURVE: pick('--color-curve'),
-    SKETCH: pick('--color-sketch'),
-    BACKGROUND: pick('--color-background'),
-  };
-}
-
 // 入力点の描画
-export function drawPoints(p: p5, points: Vector[], colors: Colors): void {
-  p.stroke(colors.SKETCH);
-  p.strokeWeight(2);
+export function drawPoints(p: p5, points: Vector[], weight: number, color: string): void {
+  p.stroke(color);
+  p.strokeWeight(weight);
   p.noFill();
   p.beginShape();
   for (const pt of points) {
@@ -32,11 +17,11 @@ export function drawPoints(p: p5, points: Vector[], colors: Colors): void {
 }
 
 // ベジェ曲線の描画
-export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors): void {
+export function drawBezierCurve(p: p5, curves: Vector[][], weight: number, color: string): void {
   if (curves.length === 0) return;
 
-  p.stroke(colors.CURVE);
-  p.strokeWeight(2);
+  p.stroke(color);
+  p.strokeWeight(weight);
   p.noFill();
 
   for (const curve of curves) {
@@ -50,26 +35,26 @@ export function drawBezierCurve(p: p5, curves: Vector[][], colors: Colors): void
 }
 
 // 制御点と制御ポリゴンの描画
-export function drawControls(p: p5, curves: Vector[][], colors: Colors): void {
+export function drawControls(p: p5, curves: Vector[][], size: number, color: string): void {
   if (curves.length === 0) return;
 
   // 制御点の描画
-  p.fill(colors.HANDLE);
+  p.fill(color);
   p.noStroke();
   p.rectMode(p.CENTER);
 
   for (const curve of curves) {
     // 端点
-    p.rect(curve[0].x, curve[0].y, POINT_SIZE, POINT_SIZE);
-    p.rect(curve[3].x, curve[3].y, POINT_SIZE, POINT_SIZE);
+    p.rect(curve[0].x, curve[0].y, size, size);
+    p.rect(curve[3].x, curve[3].y, size, size);
 
     // ハンドル
-    p.circle(curve[1].x, curve[1].y, POINT_SIZE);
-    p.circle(curve[2].x, curve[2].y, POINT_SIZE);
+    p.circle(curve[1].x, curve[1].y, size);
+    p.circle(curve[2].x, curve[2].y, size);
   }
 
   // 制御ポリゴンの描画
-  p.stroke(colors.HANDLE);
+  p.stroke(color);
   p.strokeWeight(1);
   p.noFill();
 
