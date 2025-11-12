@@ -97,7 +97,7 @@ export class HandleController {
           oppositeHandle.set(anchor.x + target.x, anchor.y + target.y);
         }
       }
-    } else if (mode === 1 && selection.pointIndex === 2) {
+    } else if (mode === 0 && selection.pointIndex === 2) {
       const anchor = curve?.[3];
       const nextCurve = path?.curves[selection.curveIndex + 1];
       const oppositeHandle = nextCurve?.[1];

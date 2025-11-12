@@ -19,7 +19,7 @@ const sketch = (p: p5): void => {
 
   // ハンドル操作関連
   const handleController = new HandleController(() => paths);
-  let dragMode: number = 0;
+  let dragMode: number = 1;
 
   // 色定義
   const COLORS = getColors();
@@ -78,7 +78,13 @@ const sketch = (p: p5): void => {
 
   p.keyPressed = () => {
     if (p.key === 'Shift') {
-      dragMode = 1 - dragMode;
+      dragMode = 0;
+    }
+  };
+
+  p.keyReleased = () => {
+    if (p.key === 'Shift') {
+      dragMode = 1;
     }
   };
 
