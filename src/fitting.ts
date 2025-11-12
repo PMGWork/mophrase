@@ -180,9 +180,8 @@ function refineParams(
   params: number[],
   points: Vector[],
   startIndex: number
-): boolean {
+): void {
   const cubicControls = controls as [Vector, Vector, Vector, Vector];
-  let improved = false;
 
   for (let i = 1; i < params.length - 1; i++) {
     const u = params[i];
@@ -192,11 +191,8 @@ function refineParams(
     if (!Number.isFinite(newU)) continue;
     newU = Math.max(0, Math.min(1, newU)); // constrain
 
-    if (Math.abs(newU - u) > 0.0001) improved = true;
     params[i] = newU;
   }
-
-  return improved;
 }
 
 // 再帰的にベジェ曲線をフィットする
@@ -240,8 +236,8 @@ function fitCurveRange(
 
   // 粗めの誤差を満たす場合
   if (maxError <= coarseErrTol) {
-    // Newton法でパラメータを再計算
-    const improved = refineParams(controls, params, points, range.start);
+    // Newton法でパラメータを1回だけ再計算
+    refineParams(controls, params, points, range.start);
 
     // 制御点を再生成
     fitControlPoints(controls, params, tangents, points, range);
@@ -260,7 +256,7 @@ function fitCurveRange(
     }
   }
 
-  // 粗めの誤差を超える場合、または改善が見込めない場合は分割
+  // 分割点で分割する
   const splitIndex = fitError.current.index;
   if (splitIndex <= range.start || splitIndex >= range.end) {
     curves.push(controls);
