@@ -14,7 +14,7 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Geist', var(--font-sans);
+  font-family: var(--font-sans);
 }
 
 canvas {
