@@ -11,7 +11,6 @@ const sketch = (p: p5): void => {
   let activePath: Path | null = null;  // 現在描画中のパス
 
   // 表示・非表示の状態
-  let showHandles: boolean = true;    // ベジエハンドルの表示状態
   let showHandDrawn: boolean = true;  // 手書きストロークの描画状態
 
   // フィッティング関連
@@ -35,7 +34,6 @@ const sketch = (p: p5): void => {
     return element instanceof HTMLInputElement ? element : null;
   };
 
-  let handlesButton: HTMLButtonElement | null = null;
   let sketchButton: HTMLButtonElement | null = null;
   let thresholdSlider: HTMLInputElement | null = null;
   let thresholdLabel: HTMLElement | null = null;
@@ -61,8 +59,6 @@ const sketch = (p: p5): void => {
 
     // HTMLボタンのイベントリスナーを設定
     getButton('clearButton')?.addEventListener('click', clearAll);
-    handlesButton = getButton('toggleHandlesButton');
-    handlesButton?.addEventListener('click', toggleHandles);
     sketchButton = getButton('toggleSketchButton');
     sketchButton?.addEventListener('click', toggleHandDrawn);
 
@@ -91,17 +87,17 @@ const sketch = (p: p5): void => {
 
     // 確定済みパスの描画
     for (const path of paths) {
-      if (showHandDrawn) drawPoints(p, path.points, COLORS);
-      drawBezierCurve(p, path.curves, COLORS);
-      if (showHandles) drawControls(p, path.curves, COLORS);
+  if (showHandDrawn) drawPoints(p, path.points, COLORS);
+  drawBezierCurve(p, path.curves, COLORS);
+  drawControls(p, path.curves, COLORS);
     }
 
     // 現在描画中のパスの描画
     if (activePath) {
       drawPoints(p, activePath.points, COLORS);
       if (activePath.curves.length > 0) {
-        drawBezierCurve(p, activePath.curves, COLORS);
-        if (showHandles) drawControls(p, activePath.curves, COLORS);
+  drawBezierCurve(p, activePath.curves, COLORS);
+  drawControls(p, activePath.curves, COLORS);
       }
     }
   };
@@ -117,7 +113,7 @@ const sketch = (p: p5): void => {
 
   p.mousePressed = () => {
     // ハンドルのドラッグ開始
-    if (handleController.begin(p.mouseX, p.mouseY, showHandles)) return;
+  if (handleController.begin(p.mouseX, p.mouseY)) return;
 
     // 新しいパスを開始
     activePath = {
@@ -159,13 +155,6 @@ const sketch = (p: p5): void => {
   function clearAll(): void {
     paths = [];
     activePath = null;
-  }
-
-  // ベジエハンドルの表示・非表示を切り替え
-  function toggleHandles(): void {
-    showHandles = !showHandles;
-    if (!handlesButton) return;
-    handlesButton.textContent = showHandles ? 'Hide Handles' : 'Show Handles';
   }
 
   // 手書きストロークの表示・非表示を切り替え

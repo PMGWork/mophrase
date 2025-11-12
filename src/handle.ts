@@ -12,8 +12,7 @@ export class HandleController {
   }
 
   // ドラッグを開始
-  begin(x: number, y: number, isVisible: boolean): boolean {
-    if (!isVisible) return false;
+  begin(x: number, y: number): boolean {
     this.current = this.findHandleAt(x, y);
     return this.current !== null;
   }
