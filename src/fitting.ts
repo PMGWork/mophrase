@@ -3,8 +3,9 @@
 import type { Vector, FitErrorResult, Range, Tangents } from './types';
 import { bernstein, unitTangent, bezierCurve, refineParameter, splitTangent } from './mathUtils';
 
-// 1. 3次ベジェ曲線の始点と終点の接ベクトルを計算する
-export function computeEndTangents(points: Vector[]): [Vector, Vector] {
+// #region プライベート関数
+// ベジェ曲線の始点と終点の接ベクトルを計算する
+function computeEndTangents(points: Vector[]): [Vector, Vector] {
   const n = points.length;
 
   // 始点の接ベクトル t_1 を計算
@@ -20,8 +21,8 @@ export function computeEndTangents(points: Vector[]): [Vector, Vector] {
   return [tangent0, tangent1];
 }
 
-// 2. 点列に対応する曲線のパラメータの位置を計算する
-export function parametrizeRange(
+// 点列に対応する曲線のパラメータの位置を計算する
+function parametrizeRange(
   points: Vector[],
   range: Range
 ): number[] {
@@ -47,16 +48,16 @@ export function parametrizeRange(
   return _params;
 }
 
-// 3. 3次ベジェ曲線の始点と終点を定める
-export function extractEndPoints(
+// 3次ベジェ曲線の始点と終点を定める
+function extractEndPoints(
   points: Vector[],
   range: Range
 ): [Vector, Vector] {
   return [points[range.start].copy(), points[range.end].copy()];
 }
 
-// 4. 始点と終点以外の2つ制御点の端点からの距離を求める
-export function fitControlPoints(
+// 始点と終点以外の2つの制御点の端点からの距離を求める
+function fitControlPoints(
   controls: Vector[],
   params: number[],
   tangents: Tangents,
@@ -135,8 +136,8 @@ export function fitControlPoints(
   controls[2] = v3.copy().add(t2.copy().mult(alpha_2));  // V_2 = V_3 + α_2·t_2
 }
 
-// 5. 求めたベジェ曲線と点列との最大距離を求める
-export function computeMaxError(
+// ベジェ曲線と点列との最大距離を求める
+function computeMaxError(
   controls: Vector[],
   params: number[],
   points: Vector[],
@@ -173,8 +174,8 @@ export function computeMaxError(
   return { maxError, index: maxIndex };
 }
 
-// 6. ニュートン法でパラメータを1回更新する
-export function refineParams(
+// ニュートン法でパラメータを1回更新する
+function refineParams(
   controls: Vector[],
   params: number[],
   points: Vector[],
@@ -199,7 +200,7 @@ export function refineParams(
 }
 
 // 再帰的にベジェ曲線をフィットする
-export function fitCurveRange(
+function fitCurveRange(
   points: Vector[],
   curves: Vector[][],
   range: Range,
@@ -300,6 +301,7 @@ export function fitCurveRange(
   );
 }
 
+// #region メイン関数
 // ベジェ曲線をフィットする関数
 export function fitCurve(
   points: Vector[],
