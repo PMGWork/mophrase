@@ -19,8 +19,8 @@ export const DEFAULT_CONFIG: Config = {
   showSketch: false,
   errorTolerance: 10.0,
   defaultDragMode: 1,
-  lineWeight: 2,
-  pointSize: 8,
+  lineWeight: 1,
+  pointSize: 6,
 };
 
 export const DEFAULT_COLORS: Colors = {

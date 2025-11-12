@@ -94,18 +94,28 @@ const sketch = (p: p5): void => {
 
     // 確定済みパスの描画
     for (const path of paths) {
-      if (showSketch) drawPoints(p, path.points, config.pointSize, colors.sketch);
+      if (showSketch) drawPoints(
+        p,
+        path.points,
+        config.lineWeight,
+        config.pointSize - config.lineWeight,
+        colors.curve,
+        colors.background
+      );
       drawBezierCurve(p, path.curves, config.lineWeight, colors.curve);
       drawControls(p, path.curves, config.pointSize, colors.handle);
     }
 
     // 現在描画中のパスの描画
     if (activePath) {
-      drawPoints(p, activePath.points, config.lineWeight, colors.sketch);
-      if (activePath.curves.length > 0) {
-        drawBezierCurve(p, activePath.curves, config.lineWeight, colors.curve);
-        drawControls(p, activePath.curves, config.pointSize, colors.handle);
-      }
+      drawPoints(
+        p,
+        activePath.points,
+        config.lineWeight,
+        config.pointSize - config.lineWeight,
+        colors.curve,
+        colors.background
+      );
     }
   };
 

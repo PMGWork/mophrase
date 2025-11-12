@@ -5,21 +5,51 @@ import type { Vector } from './types';
 import { bezierCurve } from './mathUtils';
 
 // 入力点の描画
-export function drawPoints(p: p5, points: Vector[], weight: number, color: string): void {
-  p.stroke(color);
+export function drawPoints(
+  p: p5,
+  points: Vector[],
+  weight: number,
+  size: number,
+  foreground: string,
+  background: string
+): void {
+  if (points.length === 0) return;
+
+  // 点列の描画
+  p.stroke(foreground);
   p.strokeWeight(weight);
   p.noFill();
   p.beginShape();
+
   for (const pt of points) {
     p.vertex(pt.x, pt.y);
   }
+
   p.endShape();
+
+  // 各点の描画
+  p.fill(background);
+  p.stroke(foreground);
+  p.strokeWeight(1);
+  p.rectMode(p.CENTER);
+
+  for (const pt of points) {
+    p.rect(pt.x, pt.y, size, size);
+  }
+
+  p.rectMode(p.CORNER);
 }
 
 // ベジェ曲線の描画
-export function drawBezierCurve(p: p5, curves: Vector[][], weight: number, color: string): void {
+export function drawBezierCurve(
+  p: p5,
+  curves: Vector[][],
+  weight: number,
+  color: string
+): void {
   if (curves.length === 0) return;
 
+  // 曲線の描画
   p.stroke(color);
   p.strokeWeight(weight);
   p.noFill();
@@ -35,7 +65,12 @@ export function drawBezierCurve(p: p5, curves: Vector[][], weight: number, color
 }
 
 // 制御点と制御ポリゴンの描画
-export function drawControls(p: p5, curves: Vector[][], size: number, color: string): void {
+export function drawControls(
+  p: p5,
+  curves: Vector[][],
+  size: number,
+  color: string
+): void {
   if (curves.length === 0) return;
 
   // 制御点の描画
@@ -44,11 +79,8 @@ export function drawControls(p: p5, curves: Vector[][], size: number, color: str
   p.rectMode(p.CENTER);
 
   for (const curve of curves) {
-    // 端点
     p.rect(curve[0].x, curve[0].y, size, size);
     p.rect(curve[3].x, curve[3].y, size, size);
-
-    // ハンドル
     p.circle(curve[1].x, curve[1].y, size);
     p.circle(curve[2].x, curve[2].y, size);
   }
