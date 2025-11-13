@@ -4,7 +4,8 @@ import type { Path } from './types';
 import { DEFAULT_CONFIG, DEFAULT_COLORS } from './config';
 import { fitCurve } from './fitting';
 import { drawPoints, drawBezierCurve, drawControls } from './draw';
-import { HandleController } from './handle'
+import { HandleManager } from './handle';
+import { SuggestionManager } from './suggestion';
 
 const sketch = (p: p5): void => {
   // #region 変数設定
@@ -13,29 +14,27 @@ const sketch = (p: p5): void => {
   const colors = { ...DEFAULT_COLORS };
 
   // データ構造
-  let paths: Path[] = [];              // 確定済みのパス群
-  let activePath: Path | null = null;  // 現在描画中のパス
+  let paths: Path[] = [];
+  let activePath: Path | null = null;
 
   // 表示・非表示の状態
   let showSketch: boolean = config.showSketch;
 
   // フィッティング関連
   let errorTol = config.errorTolerance;
-  let coarseErrTol = errorTol * 2;
+  let coarseErrTol = errorTol * config.coarseErrorWeight;
 
   // ハンドル操作関連
-  const handleController = new HandleController(() => paths);
+  const handleManager = new HandleManager(() => paths);
   let dragMode: number = config.defaultDragMode;
 
-  const getButton = (id: string): HTMLButtonElement | null => {
-    const element = document.getElementById(id);
-    return element instanceof HTMLButtonElement ? element : null;
-  };
+  // 提案生成関連
+  const suggestionManager = new SuggestionManager(config);
 
-  const getInput = (id: string): HTMLInputElement | null => {
-    const element = document.getElementById(id);
-    return element instanceof HTMLInputElement ? element : null;
-  };
+
+  // #region セットアップ
+  const getElement = <T extends HTMLElement>(id: string) =>
+    document.getElementById(id) as T | null;
 
   let sketchButton: HTMLButtonElement | null = null;
   let thresholdSlider: HTMLInputElement | null = null;
@@ -52,25 +51,26 @@ const sketch = (p: p5): void => {
     return { width: p.windowWidth, height: p.windowHeight };
   };
 
-  // #region セットアップ
   p.setup = () => {
-    canvasContainer = document.getElementById('canvasContainer') as HTMLDivElement | null;
+    // 初期設定
+    canvasContainer = getElement<HTMLDivElement>('canvasContainer');
     const { width, height } = getCanvasSize();
     const canvas = p.createCanvas(width, height);
     if (canvasContainer) canvas.parent(canvasContainer);
     p.background(colors.background);
     p.textFont('Geist');
 
-    // HTMLボタンのイベントリスナーを設定
-    getButton('clearButton')?.addEventListener('click', clearAll);
-    sketchButton = getButton('toggleSketchButton');
-    sketchButton?.addEventListener('click', toggleHandDrawn);
-    if (sketchButton) {
-      sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
-    }
+    // クリアボタンの設定
+    getElement<HTMLButtonElement>('clearButton')?.addEventListener('click', clearAll);
 
-    thresholdSlider = getInput('thresholdSlider');
-    thresholdLabel = document.getElementById('thresholdValue');
+    // スケッチ表示切替ボタンの設定
+    sketchButton = getElement<HTMLButtonElement>('toggleSketchButton');
+    sketchButton?.addEventListener('click', toggleHandDrawn);
+    if (sketchButton) sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
+
+    // しきい値スライダーの設定
+    thresholdSlider = getElement<HTMLInputElement>('thresholdSlider');
+    thresholdLabel = getElement('thresholdValue');
     if (thresholdSlider) {
       thresholdSlider.value = errorTol.toString();
       thresholdSlider.addEventListener('input', updateThreshold);
@@ -82,6 +82,7 @@ const sketch = (p: p5): void => {
     const { width, height } = getCanvasSize();
     p.resizeCanvas(width, height);
   };
+
 
   // #region 描画
   p.draw = () => {
@@ -112,7 +113,10 @@ const sketch = (p: p5): void => {
         colors.background
       );
     }
+
+    suggestionManager.draw(p, colors, paths[paths.length - 1]);
   };
+
 
   // #region イベント
   p.keyPressed = () => {
@@ -126,15 +130,23 @@ const sketch = (p: p5): void => {
   p.mouseDragged = () => {
     // ドラッグ中のハンドル位置を更新
     const mode = dragMode;
-    if (handleController.drag(p.mouseX, p.mouseY, mode)) return;
+    if (handleManager.drag(p.mouseX, p.mouseY, mode)) return;
 
     // 描画中のパスに点を追加
     if (activePath) activePath.points.push(p.createVector(p.mouseX, p.mouseY));
   };
 
   p.mousePressed = () => {
+    const appliedPaths = suggestionManager.trySelectSuggestion(p.mouseX, p.mouseY, p);
+    if (appliedPaths) {
+      paths = appliedPaths;
+      activePath = null;
+      refitExistingPaths();
+      return;
+    }
+
     // ハンドルのドラッグ開始
-  if (handleController.begin(p.mouseX, p.mouseY)) return;
+    if (handleManager.begin(p.mouseX, p.mouseY)) return;
 
     // 新しいパスを開始
     activePath = {
@@ -151,7 +163,7 @@ const sketch = (p: p5): void => {
 
   p.mouseReleased = () => {
     // ハンドルのドラッグ終了
-    if (handleController.end()) return;
+    if (handleManager.end()) return;
 
     if (!activePath) return;
 
@@ -167,17 +179,22 @@ const sketch = (p: p5): void => {
 
       // 確定済みパスに追加
       paths.push(activePath);
+      console.log(paths[paths.length - 1]);
+      suggestionManager.reset();
+      void suggestionManager.generate(paths[paths.length - 1]);
     }
 
     // 描画中のパスをリセット
     activePath = null;
   };
 
+
   // #region ユーティリティ
   // 全てのパスをクリア
   function clearAll(): void {
     paths = [];
     activePath = null;
+    suggestionManager.reset();
   }
 
   // 手書きストロークの表示・非表示を切り替え
@@ -199,22 +216,6 @@ const sketch = (p: p5): void => {
 
     if (thresholdLabel) {
       thresholdLabel.textContent = `${errorTol.toFixed(2)}px`;
-    }
-
-    refitExistingPaths();
-  }
-
-  // 既存のパスを再フィッティング
-  function refitExistingPaths(): void {
-    for (const path of paths) {
-      if (path.points.length < 2) {
-        path.curves.length = 0;
-        continue;
-      }
-
-      path.curves.length = 0;
-      path.fitError.current = { maxError: Number.MAX_VALUE, index: -1 };
-      fitCurve(path.points, path.curves, errorTol, coarseErrTol, path.fitError);
     }
   }
 };

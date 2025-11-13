@@ -1,7 +1,7 @@
 import type { HandleSelection, Path, Vector } from './types';
 
 // ベジエハンドルの制御クラス
-export class HandleController {
+export class HandleManager {
   private getPaths: () => Path[];
   private radius: number;
   private current: HandleSelection | null = null;
@@ -70,37 +70,27 @@ export class HandleController {
     handle.set(x, y);
 
     const translate = (vec?: Vector | null): void => {
-      if (!vec) return;
-      vec.add(dx, dy);
+      if (vec) vec.add(dx, dy);
     };
 
     if (selection.pointIndex === 0) {
+      // 前のカーブの調整
       translate(curve?.[1]);
       const prevCurve = path?.curves[selection.curveIndex - 1];
       translate(prevCurve?.[2]);
       prevCurve?.[3]?.set(x, y);
     } else if (selection.pointIndex === 3) {
+      // 次のカーブの調整
       translate(curve?.[2]);
       const nextCurve = path?.curves[selection.curveIndex + 1];
       translate(nextCurve?.[1]);
       nextCurve?.[0]?.set(x, y);
-    } else if (mode === 0 && selection.pointIndex === 1) {
-      const anchor = curve?.[0];
-      const prevCurve = path?.curves[selection.curveIndex - 1];
-      const oppositeHandle = prevCurve?.[2];
-      if (anchor && oppositeHandle) {
-        const toCurrent = handle.copy().sub(anchor);
-        if (toCurrent.magSq() > 0) {
-          const currentDir = toCurrent.copy().mult(-1).normalize();
-          const oppositeLength = oppositeHandle.copy().sub(anchor).mag();
-          const target = currentDir.mult(oppositeLength);
-          oppositeHandle.set(anchor.x + target.x, anchor.y + target.y);
-        }
-      }
-    } else if (mode === 0 && selection.pointIndex === 2) {
-      const anchor = curve?.[3];
-      const nextCurve = path?.curves[selection.curveIndex + 1];
-      const oppositeHandle = nextCurve?.[1];
+    } else if (mode === 0) {
+      // 反対側のハンドル調整
+      const isStartHandle = selection.pointIndex === 1;
+      const anchor = curve?.[isStartHandle ? 0 : 3];
+      const adjacentCurve = path?.curves[selection.curveIndex + (isStartHandle ? -1 : 1)];
+      const oppositeHandle = adjacentCurve?.[isStartHandle ? 2 : 1];
       if (anchor && oppositeHandle) {
         const toCurrent = handle.copy().sub(anchor);
         if (toCurrent.magSq() > 0) {
