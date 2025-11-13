@@ -13,8 +13,13 @@
     "vite": "^7.2.2"
   },
   "dependencies": {
+    "@google/genai": "^1.29.1",
     "@tailwindcss/vite": "^4.1.17",
+    "groq-sdk": "^0.35.0",
+    "openai": "^6.8.1",
     "p5": "^2.1.1",
-    "tailwindcss": "^4.1.17"
+    "tailwindcss": "^4.1.17",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
   }
 }
