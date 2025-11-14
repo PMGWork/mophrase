@@ -35,8 +35,13 @@ export class SuggestionManager {
     this.setState('loading');
 
     try {
-      // パスをシリアライズして提案を取得
-      const serializedPaths = serializePaths([targetPath]);
+      // パスをシリアライズ
+      const serializedPaths = serializePaths(
+        [targetPath],
+        this.config.includePoints
+      );
+
+      // LLM から提案を取得
       const fetched = await fetchSuggestions(
         serializedPaths,
         () => this.generateId(),
@@ -84,15 +89,15 @@ export class SuggestionManager {
 
   // 提案を選択してパスを取得する
   trySelectSuggestion(x: number, y: number, p: p5): Path[] | null {
+    // ヒットターゲットを検索
     const target = this.hitTargets.find(
       (hit) => x >= hit.x && x <= hit.x + hit.width && y >= hit.y && y <= hit.y + hit.height
     );
     if (!target || target.id === 'loading') return null;
 
+    // 提案データを検索
     const suggestion = this.suggestions.find((entry) => entry.id === target.id);
-    if (!suggestion) return null;
-
-    if (!this.targetPath) return null;
+    if (!suggestion || !this.targetPath) return null;
 
     const restored = deserializePaths([suggestion.path], [this.targetPath], p);
     if (restored.length === 0) {
@@ -127,18 +132,18 @@ export class SuggestionManager {
 
 // #region プライベート関数
 // パス配列をシリアライズする
-function serializePaths(paths: Path[]): SerializedPath[] {
+function serializePaths(paths: Path[], includePoints: boolean): SerializedPath[] {
   return paths.map((path) => ({
-    points: path.points.map((point) => toSerializedVector(point)),
+    points: includePoints ? path.points.map((point) => toSerializedVector(point)) : [],
     curves: path.curves.map((curve) => curve.map((point) => toSerializedVector(point))),
   }));
 }
 
 // パス配列をデシリアライズする
 function deserializePaths(serializedPaths: SerializedPath[], paths: Path[], p: p5): Path[] {
-  return serializedPaths.map((path, index) => ({
-    points: path.points.map((point) => p.createVector(point.x, point.y)),
-    curves: path.curves.map((curve) => curve.map((point) => p.createVector(point.x, point.y))),
+  return serializedPaths.map((serializedPath, index) => ({
+    points: paths[index].points,
+    curves: serializedPath.curves.map((curve) => curve.map((point) => p.createVector(point.x, point.y))),
     fitError: paths[index].fitError
   }));
 }

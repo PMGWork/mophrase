@@ -192,7 +192,6 @@ const sketch = (p: p5): void => {
 
       // 確定済みパスに追加
       paths.push(activePath);
-      console.log(paths[paths.length - 1]);
       suggestionManager.reset();
       void suggestionManager.generate(paths[paths.length - 1]);
     }

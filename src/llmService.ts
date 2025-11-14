@@ -27,7 +27,8 @@ export async function generateStructured<T>(
   schema: z.ZodType<T>,
   provider: LLMProvider
 ): Promise<T> {
-  console.log("Prompt:", prompt);
+  console.log(prompt);
+  console.log(zodToJsonSchema(schema))
   if (provider === "Gemini") {
     return await generateStructuredGemini(prompt, schema);
   } else if (provider === "OpenAI") {
@@ -49,7 +50,7 @@ async function generateStructuredGemini<T>(
     contents: prompt,
     config: {
       responseMimeType: "application/json",
-      responseJsonSchema: zodToJsonSchema(schema, { $refStrategy: "none" }),
+      responseJsonSchema: zodToJsonSchema(schema),
     },
   });
 
@@ -90,7 +91,7 @@ async function generateStructuredGroq<T>(
       type: "json_schema",
       json_schema: {
         name: "schema",
-        schema: zodToJsonSchema(schema, { $refStrategy: "none" }),
+        schema: zodToJsonSchema(schema),
       },
     },
   });
