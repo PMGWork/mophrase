@@ -82,9 +82,7 @@ export const suggestionItemSchema = z.object({
 });
 
 // 提案レスポンス
-export const suggestionResponseSchema = z.object({
-  suggestions: z.array(suggestionItemSchema).max(3).min(3)
-});
+export const suggestionResponseSchema = z.array(suggestionItemSchema).max(3).min(3)
 
 // Typescriptの型に変換
 export type SuggestionItem = z.infer<typeof suggestionItemSchema>;

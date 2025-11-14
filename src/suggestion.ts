@@ -166,7 +166,7 @@ async function fetchSuggestions(
   const prompt = buildPrompt(serializedPaths, basePrompt);
   const result = await generateStructured(prompt, suggestionResponseSchema, 'Groq');
 
-  return result.suggestions.map((suggestion): SuggestionItem => ({
+  return result.map((suggestion): SuggestionItem => ({
     id: generateId(),
     title: suggestion.title,
     curves: suggestion.curves,
