@@ -49,6 +49,7 @@ async function generateStructuredGemini<T>(
     model: "gemini-flash-latest",
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingBudget: 0 },
       responseMimeType: "application/json",
       responseJsonSchema: zodToJsonSchema(schema),
     },
