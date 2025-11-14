@@ -1,6 +1,7 @@
+/// ベジェハンドル操作関連
 import type { HandleSelection, Path, Vector } from './types';
 
-// ベジエハンドルの制御クラス
+// ハンドルの制御クラス
 export class HandleManager {
   private getPaths: () => Path[];
   private radius: number;
