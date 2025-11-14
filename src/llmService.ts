@@ -5,7 +5,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-type LLMProvider = "Gemini" | "OpenAI" | "Groq";
+export type LLMProvider = "Gemini" | "OpenAI" | "Groq";
 
 const genai = new GoogleGenAI({
   apiKey: import.meta.env.VITE_GEMINI_API_KEY,

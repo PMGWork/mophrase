@@ -45,7 +45,8 @@ export class SuggestionManager {
       const fetched = await fetchSuggestions(
         serializedPaths,
         () => this.generateId(),
-        this.config.llmPrompt
+        this.config.llmPrompt,
+        this.config
       );
       this.suggestions = fetched.map(item => ({
         id: item.id,
@@ -161,10 +162,11 @@ function toSerializedVector(vec: p5.Vector): SerializedVector {
 async function fetchSuggestions(
   serializedPaths: SerializedPath[],
   generateId: () => string,
-  basePrompt: string
+  basePrompt: string,
+  config: Config
 ): Promise<SuggestionItem[]> {
   const prompt = buildPrompt(serializedPaths, basePrompt);
-  const result = await generateStructured(prompt, suggestionResponseSchema, 'Groq');
+  const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider);
 
   return result.map((suggestion): SuggestionItem => ({
     id: generateId(),
