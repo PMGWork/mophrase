@@ -16,7 +16,7 @@
     "@google/genai": "^1.29.1",
     "@tailwindcss/vite": "^4.1.17",
     "groq-sdk": "^0.35.0",
-    "openai": "^6.8.1",
+    "openai": "^6.9.0",
     "p5": "^2.1.1",
     "tailwindcss": "^4.1.17",
     "zod": "^3.25.76",
