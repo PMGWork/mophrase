@@ -14,7 +14,7 @@ export class HandleManager {
 
   // ドラッグを開始
   begin(x: number, y: number): boolean {
-    this.current = this.findHandleAt(x, y);
+    this.current = this.findHandle(x, y);
     return this.current !== null;
   }
 
@@ -34,7 +34,7 @@ export class HandleManager {
   }
 
   // 指定位置にハンドルがあるかを検索
-  private findHandleAt(x: number, y: number): HandleSelection | null {
+  private findHandle(x: number, y: number): HandleSelection | null {
     const paths = this.getPaths();
     for (let pathIndex = paths.length - 1; pathIndex >= 0; pathIndex--) {
       const path = paths[pathIndex];
