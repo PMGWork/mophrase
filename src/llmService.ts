@@ -45,7 +45,7 @@ async function generateStructuredGemini(
   schema: z.ZodTypeAny
 ) {
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-flash-latest",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -84,7 +84,7 @@ async function generateStructuredGroq(
 ) {
 
   const response = await groq.chat.completions.create({
-    model: "openai/gpt-oss-120b",
+    model: "moonshotai/kimi-k2-instruct-0905",
     messages: [{role: "user", content: prompt}],
     response_format: {
       type: "json_schema",

@@ -23,7 +23,6 @@ export interface SerializedVector {
 export interface SerializedPath {
   points: SerializedVector[];
   curves: SerializedVector[][];
-  fitError: FitErrorResult;
 }
 
 // フィッティングエラーの結果

@@ -16,8 +16,6 @@ export class SuggestionManager {
   private hitTargets: SuggestionHitTarget[] = [];
   private status: SuggestionState = 'idle';
   private config: Config;
-  private requestIdCounter = 0;
-  private activeRequestId = 0;
   private targetPath: Path | undefined;
 
   constructor(config: Config) {
@@ -33,9 +31,6 @@ export class SuggestionManager {
 
     this.targetPath = targetPath;
 
-    const requestId = ++this.requestIdCounter;
-    this.activeRequestId = requestId;
-
     this.clear();
     this.setState('loading');
 
@@ -45,12 +40,10 @@ export class SuggestionManager {
         () => this.generateId(),
         this.config.llmPrompt
       );
-      if (this.activeRequestId !== requestId) return;
       this.suggestions = fetched;
       this.setState('idle');
     } catch (error) {
       console.error(error);
-      if (this.activeRequestId !== requestId) return;
       this.setState('error');
     }
   }
@@ -58,7 +51,6 @@ export class SuggestionManager {
   // 提案をリセットする
   reset(): void {
     this.clear();
-    this.activeRequestId = ++this.requestIdCounter;
     this.targetPath = undefined;
     this.setState('idle');
   }
@@ -124,24 +116,19 @@ export class SuggestionManager {
 
 // #region プライベート関数
 // パス配列をシリアライズする
-function serializePaths(source: Path[]): SerializedPath[] {
-  return source.map((path) => ({
+function serializePaths(paths: Path[]): SerializedPath[] {
+  return paths.map((path) => ({
     points: path.points.map((point) => toSerializedVector(point)),
     curves: path.curves.map((curve) => curve.map((point) => toSerializedVector(point))),
   }));
 }
 
 // パス配列をデシリアライズする
-function deserializePaths(source: SerializedPath[], originalPaths: Path[], p: p5): Path[] {
-  return source.map((path, index) => ({
+function deserializePaths(serializedPaths: SerializedPath[], paths: Path[], p: p5): Path[] {
+  return serializedPaths.map((path, index) => ({
     points: path.points.map((point) => p.createVector(point.x, point.y)),
     curves: path.curves.map((curve) => curve.map((point) => p.createVector(point.x, point.y))),
-    fitError: originalPaths[index]?.fitError || {
-      current: {
-        maxError: Number.MAX_VALUE,
-        index: -1,
-      },
-    },
+    fitError: paths[index].fitError
   }));
 }
 
