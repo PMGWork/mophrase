@@ -31,7 +31,7 @@ export const DEFAULT_CONFIG: Config = {
   defaultDragMode: 1,
   lineWeight: 1,
   pointSize: 6,
-  llmProvider: 'OpenAI',
+  llmProvider: 'Groq',
   llmPrompt: [
     'あなたは手描き軌跡と自然言語の指示を組み合わせて文脈に沿ったモーション/シェイプパスを補正するアシスタントです。',
     '与えられたパスと意図(例:サイン波、バウンド、螺旋)を分析し、曲線の滑らかさ、制御点、シェイプ変形、拡大/回転など複合パラメータの親和性を改善する提案を3件提示してください。',
