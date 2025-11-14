@@ -33,6 +33,7 @@ const sketch = (p: p5): void => {
 
 
   // #region セットアップ
+  // 要素を定義
   const getElement = <T extends HTMLElement>(id: string) =>
     document.getElementById(id) as T | null;
 
@@ -41,25 +42,8 @@ const sketch = (p: p5): void => {
   let thresholdLabel: HTMLElement | null = null;
   let canvasContainer: HTMLDivElement | null = null;
 
-  const getCanvasSize = (): { width: number; height: number } => {
-    if (canvasContainer) {
-      return {
-        width: canvasContainer.clientWidth,
-        height: canvasContainer.clientHeight,
-      };
-    }
-    return { width: p.windowWidth, height: p.windowHeight };
-  };
-
-  p.setup = () => {
-    // 初期設定
-    canvasContainer = getElement<HTMLDivElement>('canvasContainer');
-    const { width, height } = getCanvasSize();
-    const canvas = p.createCanvas(width, height);
-    if (canvasContainer) canvas.parent(canvasContainer);
-    p.background(colors.background);
-    p.textFont('Geist');
-
+  // UIのセットアップ
+  const setupUI = (): void => {
     // クリアボタンの設定
     getElement<HTMLButtonElement>('clearButton')?.addEventListener('click', clearAll);
 
@@ -76,6 +60,33 @@ const sketch = (p: p5): void => {
       thresholdSlider.addEventListener('input', updateThreshold);
     }
     updateThreshold();
+  };
+
+  // キャンバスサイズを取得
+  const getCanvasSize = (): { width: number; height: number } => {
+    if (canvasContainer) {
+      return {
+        width: canvasContainer.clientWidth,
+        height: canvasContainer.clientHeight,
+      };
+    }
+    return { width: p.windowWidth, height: p.windowHeight };
+  };
+
+  // 位置がキャンバス内かを判定
+  const inCanvas = (x: number, y: number): boolean =>
+    x >= 0 && x <= p.width && y >= 0 && y <= p.height;
+
+  // #region 初期設定
+  p.setup = () => {
+    canvasContainer = getElement<HTMLDivElement>('canvasContainer');
+    const { width, height } = getCanvasSize();
+    const canvas = p.createCanvas(width, height);
+    if (canvasContainer) canvas.parent(canvasContainer);
+    p.background(colors.background);
+    p.textFont('Geist');
+
+    setupUI();
   };
 
   p.windowResized = () => {
@@ -133,20 +144,22 @@ const sketch = (p: p5): void => {
     if (handleManager.drag(p.mouseX, p.mouseY, mode)) return;
 
     // 描画中のパスに点を追加
-    if (activePath) activePath.points.push(p.createVector(p.mouseX, p.mouseY));
+    if (activePath && inCanvas(p.mouseX, p.mouseY)) {
+      activePath.points.push(p.createVector(p.mouseX, p.mouseY));
+    }
   };
 
   p.mousePressed = () => {
     const appliedPaths = suggestionManager.trySelectSuggestion(p.mouseX, p.mouseY, p);
-    if (appliedPaths) {
-      paths = appliedPaths;
+    if (appliedPaths && appliedPaths.length > 0) {
+      paths[paths.length - 1] = appliedPaths[0];
       activePath = null;
-      refitExistingPaths();
       return;
     }
 
     // ハンドルのドラッグ開始
     if (handleManager.begin(p.mouseX, p.mouseY)) return;
+    if (!inCanvas(p.mouseX, p.mouseY)) return;
 
     // 新しいパスを開始
     activePath = {
@@ -210,7 +223,7 @@ const sketch = (p: p5): void => {
       const parsed = Number(thresholdSlider.value);
       if (!Number.isNaN(parsed)) {
         errorTol = parsed;
-        coarseErrTol = errorTol * 2;
+        coarseErrTol = errorTol * config.coarseErrorWeight;
       }
     }
 

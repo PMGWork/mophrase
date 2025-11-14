@@ -22,11 +22,11 @@ const groq = new Groq({
 });
 
 // LLMを使って構造化データを生成する
-export async function generateStructured(
+export async function generateStructured<T>(
   prompt: string,
-  schema: z.ZodTypeAny,
+  schema: z.ZodType<T>,
   provider: LLMProvider
-) {
+): Promise<T> {
   console.log("Prompt:", prompt);
   if (provider === "Gemini") {
     return await generateStructuredGemini(prompt, schema);
@@ -40,10 +40,10 @@ export async function generateStructured(
 }
 
 // Geminiを使って構造化データを生成する
-async function generateStructuredGemini(
+async function generateStructuredGemini<T>(
   prompt: string,
-  schema: z.ZodTypeAny
-) {
+  schema: z.ZodType<T>
+): Promise<T> {
   const response = await genai.models.generateContent({
     model: "gemini-flash-latest",
     contents: prompt,
@@ -58,10 +58,10 @@ async function generateStructuredGemini(
 }
 
 // OpenAIを使って構造化データを生成する
-async function generateStructuredOpenAI(
+async function generateStructuredOpenAI<T>(
   prompt: string,
-  schema: z.ZodTypeAny
-) {
+  schema: z.ZodType<T>
+): Promise<T> {
   const response = await openai.responses.parse({
     model: "gpt-5.1",
     input: [{role: "user", content: prompt}],
@@ -78,10 +78,10 @@ async function generateStructuredOpenAI(
 }
 
 // Groqを使って構造化データを生成する
-async function generateStructuredGroq(
+async function generateStructuredGroq<T>(
   prompt: string,
-  schema: z.ZodTypeAny
-) {
+  schema: z.ZodType<T>
+): Promise<T> {
 
   const response = await groq.chat.completions.create({
     model: "moonshotai/kimi-k2-instruct-0905",

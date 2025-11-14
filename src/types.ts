@@ -54,7 +54,6 @@ export interface HandleSelection {
 export interface Suggestion {
   id: string;
   title: string;
-  description: string;
   path: SerializedPath;
 }
 
@@ -76,7 +75,7 @@ const vectorSchema = z.object({
 });
 
 // 提案アイテム
-const suggestionItemSchema = z.object({
+export const suggestionItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   curves: z.array(z.array(vectorSchema)),
@@ -86,3 +85,7 @@ const suggestionItemSchema = z.object({
 export const suggestionResponseSchema = z.object({
   suggestions: z.array(suggestionItemSchema).max(3).min(3)
 });
+
+// Typescriptの型に変換
+export type SuggestionItem = z.infer<typeof suggestionItemSchema>;
+export type SuggestionResponse = z.infer<typeof suggestionResponseSchema>;

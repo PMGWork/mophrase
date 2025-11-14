@@ -1,5 +1,5 @@
 import p5 from 'p5';
-import type { Path, SerializedPath, SerializedVector, Suggestion, SuggestionHitTarget } from './types';
+import type { Path, SerializedPath, SerializedVector, Suggestion, SuggestionHitTarget, SuggestionItem } from './types';
 import type { Colors, Config } from './config';
 import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
@@ -35,12 +35,21 @@ export class SuggestionManager {
     this.setState('loading');
 
     try {
+      // パスをシリアライズして提案を取得
+      const serializedPaths = serializePaths([targetPath]);
       const fetched = await fetchSuggestions(
-        serializePaths([targetPath]),
+        serializedPaths,
         () => this.generateId(),
         this.config.llmPrompt
       );
-      this.suggestions = fetched;
+      this.suggestions = fetched.map(item => ({
+        id: item.id,
+        title: item.title,
+        path: {
+          points: serializedPaths[0].points,
+          curves: item.curves
+        }
+      }));
       this.setState('idle');
     } catch (error) {
       console.error(error);
@@ -83,7 +92,9 @@ export class SuggestionManager {
     const suggestion = this.suggestions.find((entry) => entry.id === target.id);
     if (!suggestion) return null;
 
-    const restored = deserializePaths([suggestion.path], [this.targetPath!], p);
+    if (!this.targetPath) return null;
+
+    const restored = deserializePaths([suggestion.path], [this.targetPath], p);
     if (restored.length === 0) {
       this.setState('error');
       return null;
@@ -92,6 +103,7 @@ export class SuggestionManager {
     // 提案されたパスを返す
     this.setState('idle');
     this.clear();
+    this.targetPath = undefined;
     return restored;
   }
 
@@ -104,7 +116,6 @@ export class SuggestionManager {
   private clear(): void {
     this.suggestions = [];
     this.hitTargets = [];
-    this.targetPath = undefined;
   }
 
   // 一意な提案IDを生成する
@@ -141,6 +152,22 @@ function toSerializedVector(vec: p5.Vector): SerializedVector {
   };
 }
 
+// LLM から提案を取得する
+async function fetchSuggestions(
+  serializedPaths: SerializedPath[],
+  generateId: () => string,
+  basePrompt: string
+): Promise<SuggestionItem[]> {
+  const prompt = buildPrompt(serializedPaths, basePrompt);
+  const result = await generateStructured(prompt, suggestionResponseSchema, 'Groq');
+
+  return result.suggestions.map((suggestion): SuggestionItem => ({
+    id: generateId(),
+    title: suggestion.title,
+    curves: suggestion.curves,
+  }));
+}
+
 // プロンプトを構築する
 function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string): string {
   return [
@@ -149,21 +176,4 @@ function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string): str
     '入力データ:',
     JSON.stringify({ paths: serializedPaths }, null, 2),
   ].join('\n');
-}
-
-// LLM から提案を取得する
-async function fetchSuggestions(
-  serializedPaths: SerializedPath[],
-  generateId: () => string,
-  basePrompt: string
-): Promise<Suggestion[]> {
-  const prompt = buildPrompt(serializedPaths, basePrompt);
-  const result = await generateStructured(prompt, suggestionResponseSchema, 'Groq');
-
-  return result.suggestions.map((suggestion): Suggestion => ({
-    id: generateId(),
-    title: suggestion.title,
-    description: suggestion.description,
-    path: suggestion.path,
-  }));
 }
