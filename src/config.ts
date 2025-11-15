@@ -11,6 +11,7 @@ export interface Config {
   lineWeight: number;         // 線の太さ
   pointSize: number;          // 制御点のサイズ
   llmProvider: LLMProvider;   // LLMプロバイダ名
+  llmModel: string;           // LLMモデル名
   llmPrompt: string;          // 指示プロンプト
   includePoints: boolean;     // コンテキストに手書きを含めるか
 };
@@ -32,6 +33,7 @@ export const DEFAULT_CONFIG: Config = {
   lineWeight: 1,
   pointSize: 6,
   llmProvider: 'Groq',
+  llmModel: 'moonshotai/kimi-k2-instruct-0905',
   llmPrompt: [
     'あなたは手描き軌跡と自然言語の指示を組み合わせて文脈に沿ったモーション/シェイプパスを補正するアシスタントです。',
     '与えられたパスと意図(例:サイン波、バウンド、螺旋)を分析し、曲線の滑らかさ、制御点、シェイプ変形、拡大/回転など複合パラメータの親和性を改善する提案を3件提示してください。',

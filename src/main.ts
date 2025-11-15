@@ -2,6 +2,7 @@ import '../style.css';
 import p5 from 'p5';
 import type { Path } from './types';
 import { DEFAULT_CONFIG, DEFAULT_COLORS } from './config';
+import { getModelsForProvider } from './llmService';
 import { fitCurve } from './fitting';
 import { drawPoints, drawBezierCurve, drawControls } from './draw';
 import { HandleManager } from './handle';
@@ -41,6 +42,7 @@ const sketch = (p: p5): void => {
   let thresholdSlider: HTMLInputElement | null = null;
   let thresholdLabel: HTMLElement | null = null;
   let llmProviderSelect: HTMLSelectElement | null = null;
+  let llmModelSelect: HTMLSelectElement | null = null;
   let canvasContainer: HTMLDivElement | null = null;
 
   // UIのセットアップ
@@ -54,6 +56,15 @@ const sketch = (p: p5): void => {
       llmProviderSelect.value = config.llmProvider;
       llmProviderSelect.addEventListener('change', updateLLMProvider);
     }
+
+    // モデル選択を初期化
+    llmModelSelect = getElement<HTMLSelectElement>('llmModelSelect');
+    if (llmModelSelect) {
+      populateModelOptions(config.llmProvider);
+      llmModelSelect.value = config.llmModel;
+      llmModelSelect.addEventListener('change', updateLLMModel);
+    }
+
 
     // スケッチ表示切替の設定
     sketchCheckbox = getElement<HTMLInputElement>('toggleSketchCheckbox');
@@ -244,6 +255,32 @@ const sketch = (p: p5): void => {
     }
   }
 
+  // Populate model dropdown based on selected provider
+  function populateModelOptions(provider: import('./llmService').LLMProvider): void {
+    if (!llmModelSelect) return;
+    const models = getModelsForProvider(provider);
+    llmModelSelect.innerHTML = '';
+    for (const mi of models) {
+      const option = document.createElement('option');
+      option.value = mi.id;
+      option.textContent = mi.name ?? mi.id;
+      llmModelSelect.appendChild(option);
+    }
+    // Use current config.llmModel if it exists in the list, otherwise use the first model
+    const currentModelExists = models.some(mi => mi.id === config.llmModel);
+    const defaultModel = currentModelExists ? config.llmModel : (models[0]?.id ?? '');
+    config.llmModel = defaultModel;
+    llmModelSelect.value = defaultModel;
+    suggestionManager.updateConfig(config);
+  }
+
+  function updateLLMModel(): void {
+    if (!llmModelSelect) return;
+    config.llmModel = llmModelSelect.value;
+    suggestionManager.updateConfig(config);
+  }
+
+
   // LLMプロバイダの更新
   function updateLLMProvider(): void {
     if (llmProviderSelect) {
@@ -251,6 +288,8 @@ const sketch = (p: p5): void => {
       config.llmProvider = selected;
       suggestionManager.updateConfig(config);
       console.log(`LLM Provider changed to: ${selected}`);
+      // update available models when provider changes
+      populateModelOptions(selected);
     }
   }
 };

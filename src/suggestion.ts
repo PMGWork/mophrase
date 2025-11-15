@@ -171,7 +171,7 @@ async function fetchSuggestions(
   config: Config
 ): Promise<SuggestionItem[]> {
   const prompt = buildPrompt(serializedPaths, basePrompt);
-  const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider);
+  const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider, config.llmModel);
   return result.map((suggestion): SuggestionItem => ({
     id: generateId(),
     title: suggestion.title,

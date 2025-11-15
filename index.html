@@ -28,6 +28,16 @@
             <option value="OpenAI">OpenAI</option>
             <option value="Groq" selected>Groq</option>
           </select>
+          <select
+            id="llmModelSelect"
+            class="
+              px-4 py-2
+              bg-gray-800 text-gray-50
+              text-sm cursor-pointer rounded
+              hover:opacity-80 transition-opacity
+            "
+          >
+          </select>
           <label class="flex items-center gap-3 px-4 py-2 bg-gray-800 text-gray-50 text-sm rounded cursor-pointer hover:opacity-80 transition-opacity">
             <span class="text-sm text-gray-50">Sketch</span>
             <div class="relative w-4 h-4">
@@ -41,7 +51,7 @@
             </div>
           </label>
           <div class="flex items-center gap-3 px-4 py-2 bg-gray-800 rounded">
-            <span class="text-sm text-gray-50">Threshold</span>
+            <span class="text-sm text-gray-50">Tol</span>
             <input
               id="thresholdSlider"
               type="range"
