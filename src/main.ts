@@ -37,9 +37,10 @@ const sketch = (p: p5): void => {
   const getElement = <T extends HTMLElement>(id: string) =>
     document.getElementById(id) as T | null;
 
-  let sketchButton: HTMLButtonElement | null = null;
+  let sketchCheckbox: HTMLInputElement | null = null;
   let thresholdSlider: HTMLInputElement | null = null;
   let thresholdLabel: HTMLElement | null = null;
+  let llmProviderSelect: HTMLSelectElement | null = null;
   let canvasContainer: HTMLDivElement | null = null;
 
   // UIのセットアップ
@@ -47,16 +48,25 @@ const sketch = (p: p5): void => {
     // クリアボタンの設定
     getElement<HTMLButtonElement>('clearButton')?.addEventListener('click', clearAll);
 
-    // スケッチ表示切替ボタンの設定
-    sketchButton = getElement<HTMLButtonElement>('toggleSketchButton');
-    sketchButton?.addEventListener('click', toggleHandDrawn);
-    if (sketchButton) sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
+    // LLMプロバイダ選択の設定
+    llmProviderSelect = getElement<HTMLSelectElement>('llmProviderSelect');
+    if (llmProviderSelect) {
+      llmProviderSelect.value = config.llmProvider;
+      llmProviderSelect.addEventListener('change', updateLLMProvider);
+    }
+
+    // スケッチ表示切替の設定
+    sketchCheckbox = getElement<HTMLInputElement>('toggleSketchCheckbox');
+    if (sketchCheckbox) {
+      sketchCheckbox.checked = showSketch;
+      sketchCheckbox.addEventListener('change', toggleHandDrawn);
+    }
 
     // しきい値スライダーの設定
     thresholdSlider = getElement<HTMLInputElement>('thresholdSlider');
     thresholdLabel = getElement('thresholdValue');
     if (thresholdSlider) {
-      thresholdSlider.value = errorTol.toString();
+      thresholdSlider.value = Math.round(errorTol).toString();
       thresholdSlider.addEventListener('input', updateThreshold);
     }
     updateThreshold();
@@ -211,9 +221,11 @@ const sketch = (p: p5): void => {
 
   // 手書きストロークの表示・非表示を切り替え
   function toggleHandDrawn(): void {
-    showSketch = !showSketch;
-    if (!sketchButton) return;
-    sketchButton.textContent = showSketch ? 'Hide Sketch' : 'Show Sketch';
+    if (!sketchCheckbox) {
+      showSketch = !showSketch;
+      return;
+    }
+    showSketch = sketchCheckbox.checked;
   }
 
   // 誤差許容値の更新
@@ -227,7 +239,18 @@ const sketch = (p: p5): void => {
     }
 
     if (thresholdLabel) {
-      thresholdLabel.textContent = `${errorTol.toFixed(2)}px`;
+      // 小数部分を表示しない (整数px)
+      thresholdLabel.textContent = `${errorTol.toFixed(0)}px`;
+    }
+  }
+
+  // LLMプロバイダの更新
+  function updateLLMProvider(): void {
+    if (llmProviderSelect) {
+      const selected = llmProviderSelect.value as import('./llmService').LLMProvider;
+      config.llmProvider = selected;
+      suggestionManager.updateConfig(config);
+      console.log(`LLM Provider changed to: ${selected}`);
     }
   }
 };

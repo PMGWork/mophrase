@@ -26,7 +26,7 @@ export interface Colors {
 // デフォルト設定
 export const DEFAULT_CONFIG: Config = {
   showSketch: false,
-  errorTolerance: 10.0,
+  errorTolerance: 10,
   coarseErrorWeight: 2.0,
   defaultDragMode: 1,
   lineWeight: 1,
@@ -38,8 +38,11 @@ export const DEFAULT_CONFIG: Config = {
     '各提案にはループ回数、減衰、コミカル/リアルといった自然言語で調整可能なパラメータと、それらを再編集するための具体的な操作手順を含めてください。',
     'アニメーション原則や関連研究を踏まえつつ、位置だけでなくスケールや回転も含む再利用可能なパス設計の視点を示してください。',
     '英語3単語以内で各提案に修正内容のタイトルを付けてください。',
+    'レスポンスは必ずJSONのみで出力し、余計なテキストを含めないでください。',
+    'curves配列の各要素は[P0, P1, P2, P3]の4点で構成し、P0/P3は入力パスのアンカー座標を変更せずに保持してください。',
+    '制御点の座標は入力パスの境界ボックス±20%以内に収め、NaN/Infinityを出力しないでください。',
   ].join('\n'),
-  includePoints: false,
+  includePoints: true,
 };
 
 export const DEFAULT_COLORS: Colors = {

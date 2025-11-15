@@ -22,6 +22,11 @@ export class SuggestionManager {
     this.config = config;
   }
 
+  // 設定を更新する
+  updateConfig(config: Config): void {
+    this.config = config;
+  }
+
   // 提案を生成する
   async generate(targetPath: Path): Promise<void> {
     if (!targetPath) {
@@ -167,7 +172,6 @@ async function fetchSuggestions(
 ): Promise<SuggestionItem[]> {
   const prompt = buildPrompt(serializedPaths, basePrompt);
   const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider);
-
   return result.map((suggestion): SuggestionItem => ({
     id: generateId(),
     title: suggestion.title,
