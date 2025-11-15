@@ -5,6 +5,7 @@ import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
 import { drawSuggestions } from './suggestionRenderer';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { drawBezierCurve } from './draw';
 
 
 // #region 提案マネージャー
@@ -18,6 +19,7 @@ export class SuggestionManager {
   private status: SuggestionState = 'idle';
   private config: Config;
   private targetPath: Path | undefined;
+  private hoveredSuggestionId: string | null = null;
 
   constructor(config: Config) {
     this.config = config;
@@ -80,6 +82,7 @@ export class SuggestionManager {
   draw(p: p5, colors: Colors, path: Path | undefined): void {
     if (!path) {
       this.hitTargets = [];
+      this.hoveredSuggestionId = null;
       p.cursor('default');
       return;
     }
@@ -87,10 +90,21 @@ export class SuggestionManager {
 
     // マウスカーソルを変更
     if (this.status !== 'loading') {
-      const isOver = this.hitTargets.some(
-        (hit) => p.mouseX >= hit.x && p.mouseX <= hit.x + hit.width && p.mouseY >= hit.y && p.mouseY <= hit.y + hit.height
+      const target = this.hitTargets.find(
+        (hit) =>
+          hit.id !== 'loading' &&
+          p.mouseX >= hit.x &&
+          p.mouseX <= hit.x + hit.width &&
+          p.mouseY >= hit.y &&
+          p.mouseY <= hit.y + hit.height
       );
-      p.cursor(isOver ? 'pointer' : 'default');
+      this.hoveredSuggestionId = target?.id ?? null;
+      if (this.hoveredSuggestionId) {
+        this.drawHoverPreview(p, colors);
+      }
+      p.cursor(this.hoveredSuggestionId ? 'pointer' : 'default');
+    } else {
+      this.hoveredSuggestionId = null;
     }
   }
 
@@ -128,11 +142,34 @@ export class SuggestionManager {
   private clear(): void {
     this.suggestions = [];
     this.hitTargets = [];
+    this.hoveredSuggestionId = null;
   }
 
   // 一意な提案IDを生成する
   private generateId(): string {
     return crypto.randomUUID();
+  }
+
+  // ホバー中の提案プレビューを描画する
+  private drawHoverPreview(p: p5, colors: Colors): void {
+    if (!this.hoveredSuggestionId) return;
+    const suggestion = this.suggestions.find(entry => entry.id === this.hoveredSuggestionId);
+    if (!suggestion || suggestion.path.curves.length === 0) return;
+
+    const curves = suggestion.path.curves.map((curve) =>
+      curve.map((point) => p.createVector(point.x, point.y))
+    );
+    if (curves.length === 0) return;
+
+    const ctx = p.drawingContext as CanvasRenderingContext2D;
+    const previousDash = typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
+    if (typeof ctx.setLineDash === 'function') ctx.setLineDash([6, 4]);
+
+    p.push();
+    drawBezierCurve(p, curves, Math.max(this.config.lineWeight, 1) + 0.5, colors.handle);
+    p.pop();
+
+    if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
   }
 }
 
