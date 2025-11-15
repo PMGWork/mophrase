@@ -4,6 +4,7 @@ import type { Colors, Config } from './config';
 import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
 import { drawSuggestions } from './suggestionRenderer';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 
 // #region 提案マネージャー
@@ -170,9 +171,9 @@ async function fetchSuggestions(
   basePrompt: string,
   config: Config
 ): Promise<SuggestionItem[]> {
-  const prompt = buildPrompt(serializedPaths, basePrompt);
+  const prompt = buildPrompt(serializedPaths, basePrompt, suggestionResponseSchema);
   const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider, config.llmModel);
-  return result.map((suggestion): SuggestionItem => ({
+  return result.suggestions.map((suggestion): SuggestionItem => ({
     id: generateId(),
     title: suggestion.title,
     curves: suggestion.curves,
@@ -180,11 +181,15 @@ async function fetchSuggestions(
 }
 
 // プロンプトを構築する
-function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string): string {
+function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string, schema: any): string {
+  const schemaJson = zodToJsonSchema(schema);
   return [
     basePrompt,
     '',
-    '入力データ:',
+    '## 入力データ:',
     JSON.stringify({ paths: serializedPaths }, null, 2),
+    '',
+    '## 出力スキーマ:',
+    JSON.stringify(schemaJson, null, 2),
   ].join('\n');
 }

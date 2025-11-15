@@ -65,10 +65,13 @@ async function generateStructuredOpenAI<T>(
   schema: z.ZodType<T>,
   model?: string
 ): Promise<T> {
+  const actualModel = model ?? "gpt-5.1";
+  const reasoningEffort = actualModel === "gpt-5.1" ? "none" : "minimal";
+
   const response = await openai.responses.parse({
-    model: model ?? "gpt-5.1",
+    model: actualModel,
     input: [{role: "user", content: prompt}],
-    reasoning: { effort: "none" },
+    reasoning: { effort: reasoningEffort },
     text: {
       format: zodTextFormat(schema, "schema"),
       verbosity: "low"
