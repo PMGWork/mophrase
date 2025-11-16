@@ -126,3 +126,7 @@ export function splitTangent(
   return unitTangent(next, prev);
 }
 
+// 座標を小数点2桁に丸める
+export function roundCoordinate(value: number): number {
+  return Math.round(value * 100) / 100;
+}

@@ -15,6 +15,7 @@
   "dependencies": {
     "@google/genai": "^1.29.1",
     "@tailwindcss/vite": "^4.1.17",
+    "@toon-format/toon": "^1.0.0",
     "groq-sdk": "^0.35.0",
     "openai": "^6.9.0",
     "p5": "^2.1.1",

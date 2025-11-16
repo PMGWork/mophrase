@@ -1,11 +1,13 @@
 import p5 from 'p5';
-import type { Path, SerializedPath, SerializedVector, Suggestion, SuggestionHitTarget, SuggestionItem } from './types';
+import { encode } from '@toon-format/toon'
+
+import type { Path, SerializedPath, Suggestion, SuggestionHitTarget, SuggestionItem } from './types';
 import type { Colors, Config } from './config';
 import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
 import { drawSuggestions } from './suggestionRenderer';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import { drawBezierCurve } from './draw';
+import { deserializeCurves, serializePaths, deserializePaths } from './serialization';
 
 
 // #region 提案マネージャー
@@ -44,24 +46,23 @@ export class SuggestionManager {
 
     try {
       // パスをシリアライズ
-      const serializedPaths = serializePaths(
-        [targetPath],
-        this.config.includePoints
-      );
+      const serializedPaths = serializePaths([targetPath]);
 
       // LLM から提案を取得
       const fetched = await fetchSuggestions(
         serializedPaths,
-        () => this.generateId(),
         this.config.llmPrompt,
         this.config
       );
+
+      // 提案を保存
+      const segments = serializedPaths[0].segments;
       this.suggestions = fetched.map(item => ({
-        id: item.id,
+        id: this.generateId(),
         title: item.title,
         path: {
-          points: serializedPaths[0].points,
-          curves: item.curves
+          anchors: item.anchors,
+          segments: segments
         }
       }));
       this.setState('idle');
@@ -154,11 +155,8 @@ export class SuggestionManager {
   private drawHoverPreview(p: p5, colors: Colors): void {
     if (!this.hoveredSuggestionId) return;
     const suggestion = this.suggestions.find(entry => entry.id === this.hoveredSuggestionId);
-    if (!suggestion || suggestion.path.curves.length === 0) return;
-
-    const curves = suggestion.path.curves.map((curve) =>
-      curve.map((point) => p.createVector(point.x, point.y))
-    );
+    if (!suggestion) return;
+    const curves = deserializeCurves(suggestion.path, p);
     if (curves.length === 0) return;
 
     const ctx = p.drawingContext as CanvasRenderingContext2D;
@@ -175,58 +173,28 @@ export class SuggestionManager {
 
 
 // #region プライベート関数
-// パス配列をシリアライズする
-function serializePaths(paths: Path[], includePoints: boolean): SerializedPath[] {
-  return paths.map((path) => ({
-    points: includePoints ? path.points.map((point) => toSerializedVector(point)) : [],
-    curves: path.curves.map((curve) => curve.map((point) => toSerializedVector(point))),
-  }));
-}
-
-// パス配列をデシリアライズする
-function deserializePaths(serializedPaths: SerializedPath[], paths: Path[], p: p5): Path[] {
-  return serializedPaths.map((serializedPath, index) => ({
-    points: paths[index].points,
-    curves: serializedPath.curves.map((curve) => curve.map((point) => p.createVector(point.x, point.y))),
-    fitError: paths[index].fitError
-  }));
-}
-
-// ベクトルをシリアライズ形式に変換する
-function toSerializedVector(vec: p5.Vector): SerializedVector {
-  const precision = 100;
-  return {
-    x: Math.round(vec.x * precision) / precision,
-    y: Math.round(vec.y * precision) / precision,
-  };
-}
 
 // LLM から提案を取得する
 async function fetchSuggestions(
   serializedPaths: SerializedPath[],
-  generateId: () => string,
   basePrompt: string,
   config: Config
 ): Promise<SuggestionItem[]> {
-  const prompt = buildPrompt(serializedPaths, basePrompt, suggestionResponseSchema);
+  const prompt = buildPrompt(serializedPaths, basePrompt);
   const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider, config.llmModel);
   return result.suggestions.map((suggestion): SuggestionItem => ({
-    id: generateId(),
     title: suggestion.title,
-    curves: suggestion.curves,
+    anchors: suggestion.anchors,
   }));
 }
 
 // プロンプトを構築する
-function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string, schema: any): string {
-  const schemaJson = zodToJsonSchema(schema);
+function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string): string {
   return [
     basePrompt,
     '',
-    '## 入力データ:',
-    JSON.stringify({ paths: serializedPaths }, null, 2),
-    '',
-    '## 出力スキーマ:',
-    JSON.stringify(schemaJson, null, 2),
+    '```toon',
+    encode(serializedPaths),
+    '```',
   ].join('\n');
 }

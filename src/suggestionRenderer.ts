@@ -6,6 +6,7 @@ const boxWidth = 150;
 const boxHeight = 35;
 const boxOffsetX = 20;
 const boxOffsetY = 45;
+const spinnerRadius = 8;
 
 // 提案を描画する
 export function drawSuggestions(
@@ -32,21 +33,7 @@ export function drawSuggestions(
 
   if (isLoading) {
     // ローディング表示
-    for(let i = 0; i < 3; i++) {
-      const offsetY = (i - 1) * boxOffsetY;
-      const boxX = baseX;
-      const boxY = baseY + offsetY - boxHeight/2;
-
-      drawSuggestion(p, colors, boxX, boxY, 'Generating...');
-
-      hitTargets.push({
-        id: 'loading',
-        x: boxX,
-        y: boxY,
-        width: boxWidth,
-        height: boxHeight,
-      });
-    }
+    drawSpinner(p, colors, baseX + spinnerRadius, baseY, spinnerRadius);
   } else {
     // 提案の表示
     suggestions.forEach((suggestion, index) => {
@@ -89,6 +76,28 @@ function drawSuggestion(
   p.fill(colors.curve);
   p.textSize(12);
   p.text(text, boxX + 16, boxY + boxHeight/2 + 1.5);
+}
+
+// ローディングスピナーを描画する
+function drawSpinner(
+  p: p5,
+  colors: Colors,
+  x: number,
+  y: number,
+  radius: number
+): void {
+  p.push();
+  p.noFill();
+  p.stroke(colors.sketch);
+  p.strokeWeight(2);
+  p.strokeCap(p.ROUND);
+
+  const angle = (p.frameCount * 0.1) % (2 * Math.PI);
+
+  // 回転する円弧を描画
+  p.arc(x, y, radius * 2, radius * 2, angle, angle + Math.PI * 1.5);
+
+  p.pop();
 }
 
 // 最新のパスの終点を取得

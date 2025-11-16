@@ -13,16 +13,30 @@ export interface Path {
   fitError: { current: FitErrorResult };
 }
 
-// シリアライズされたベクトル
-export interface SerializedVector {
+// シリアライズされたハンドル情報(極座標)
+export interface SerializedHandlePoint {
+  angle: number;
+  dist: number;
+}
+
+// シリアライズされたアンカーポイント
+export interface SerializedAnchorPoint {
   x: number;
   y: number;
+  in?: SerializedHandlePoint | null;
+  out?: SerializedHandlePoint | null;
+}
+
+// シリアライズされたセグメント
+export interface SerializedSegment {
+  startIndex: number;
+  endIndex: number;
 }
 
 // シリアライズされたパス情報
 export interface SerializedPath {
-  points: SerializedVector[];
-  curves: SerializedVector[][];
+  anchors: SerializedAnchorPoint[];
+  segments: SerializedSegment[];
 }
 
 // フィッティングエラーの結果
@@ -68,17 +82,24 @@ export interface SuggestionHitTarget {
 
 
 // #region Zodスキーマ定義
-// 座標ベクトル
-const vectorSchema = z.object({
+
+// 制御点スキーマ
+const handlePointSchema = z.object({
+  angle: z.number(),
+  dist: z.number(),
+});
+
+const anchorPointSchema = z.object({
   x: z.number(),
   y: z.number(),
+  in: handlePointSchema.nullable().optional(),
+  out: handlePointSchema.nullable().optional(),
 });
 
 // 提案アイテム
 export const suggestionItemSchema = z.object({
-  id: z.string(),
   title: z.string(),
-  curves: z.array(z.array(vectorSchema)),
+  anchors: z.array(anchorPointSchema),
 });
 
 // 提案レスポンス
