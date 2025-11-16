@@ -56,13 +56,14 @@ export class SuggestionManager {
       );
 
       // 提案を保存
-      const segments = serializedPaths[0].segments;
+      const path = serializedPaths[0];
       this.suggestions = fetched.map(item => ({
         id: this.generateId(),
         title: item.title,
         path: {
           anchors: item.anchors,
-          segments: segments
+          segments: path.segments,
+          bbox: path.bbox,
         }
       }));
       this.setState('idle');

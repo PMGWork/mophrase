@@ -13,18 +13,26 @@ export interface Path {
   fitError: { current: FitErrorResult };
 }
 
-// シリアライズされたハンドル情報(極座標)
+// シリアライズされたハンドル情報(極座標、正規化済み)
 export interface SerializedHandlePoint {
   angle: number;
   dist: number;
 }
 
-// シリアライズされたアンカーポイント
+// シリアライズされたアンカーポイント（正規化済み）
 export interface SerializedAnchorPoint {
   x: number;
   y: number;
   in?: SerializedHandlePoint | null;
   out?: SerializedHandlePoint | null;
+}
+
+// シリアライズされたパスのバウンディングボックス
+export interface SerializedBoundingBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 // シリアライズされたセグメント
@@ -37,6 +45,7 @@ export interface SerializedSegment {
 export interface SerializedPath {
   anchors: SerializedAnchorPoint[];
   segments: SerializedSegment[];
+  bbox: SerializedBoundingBox;
 }
 
 // フィッティングエラーの結果
