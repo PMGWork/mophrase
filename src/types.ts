@@ -98,6 +98,7 @@ const handlePointSchema = z.object({
   dist: z.number(),
 });
 
+// アンカーポイントスキーマ
 const anchorPointSchema = z.object({
   x: z.number(),
   y: z.number(),
