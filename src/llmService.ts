@@ -26,7 +26,6 @@ export async function generateStructured<T>(
   provider: LLMProvider,
   model?: string
 ): Promise<T> {
-  console.log(prompt);
   if (provider === "Gemini") {
     return await generateStructuredGemini(prompt, schema, model);
   } else if (provider === "OpenAI") {
@@ -54,7 +53,6 @@ async function generateStructuredGemini<T>(
     },
   });
 
-  console.log("Gemini response:", response.text!);
   return schema.parse(JSON.parse(response.text!));
 }
 
@@ -78,7 +76,6 @@ async function generateStructuredOpenAI<T>(
   });
 
   const content = response.output_text;
-  console.log(JSON.parse(content!));
   return schema.parse(JSON.parse(content!));
 }
 
@@ -102,7 +99,6 @@ async function generateStructuredGroq<T>(
   });
 
   const content = response.choices[0].message.content;
-  console.log(JSON.parse(content!));
   return schema.parse(JSON.parse(content!));
 }
 
@@ -110,8 +106,8 @@ async function generateStructuredGroq<T>(
 export type LLMProvider = "Gemini" | "OpenAI" | "Groq";
 
 // LLMプロバイダごとの利用可能モデル一覧
-export type ModelInfo = { id: string; name?: string };
-export const ProviderModels: Record<LLMProvider, ModelInfo[]> = {
+type ModelInfo = { id: string; name?: string };
+const ProviderModels: Record<LLMProvider, ModelInfo[]> = {
   Gemini: [
     { id: 'gemini-flash-latest', name: 'Gemini Flash' },
     { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite' },
@@ -129,6 +125,7 @@ export const ProviderModels: Record<LLMProvider, ModelInfo[]> = {
   ],
 };
 
+// 指定されたプロバイダの利用可能モデル一覧を取得する
 export function getModelsForProvider(provider: LLMProvider): ModelInfo[] {
   return ProviderModels[provider] ?? [];
 }
