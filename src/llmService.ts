@@ -27,7 +27,6 @@ export async function generateStructured<T>(
   model?: string
 ): Promise<T> {
   console.log(prompt);
-  console.log(zodToJsonSchema(schema))
   if (provider === "Gemini") {
     return await generateStructuredGemini(prompt, schema, model);
   } else if (provider === "OpenAI") {
