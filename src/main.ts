@@ -177,6 +177,7 @@ const sketch = (p: p5): void => {
         },
       },
     };
+    dom.userPromptInput.value = '';
   };
 
   p.mouseReleased = () => {
