@@ -7,6 +7,7 @@ import { fitCurve } from './fitting';
 import { drawPoints, drawBezierCurve, drawControls } from './draw';
 import { HandleManager } from './handle';
 import { SuggestionManager } from './suggestion';
+import { DOMManager } from './dom';
 
 const sketch = (p: p5): void => {
   // #region 変数設定
@@ -29,69 +30,56 @@ const sketch = (p: p5): void => {
   const handleManager = new HandleManager(() => paths);
   let dragMode: number = config.defaultDragMode;
 
+  // UIマネージャー
+  let dom: DOMManager;
+
   // 提案生成関連
-  const suggestionManager = new SuggestionManager(config);
+  const suggestionManager = new SuggestionManager(config, (selectedPaths, targetPath) => {
+    // 提案が選択されたときの処理
+    const updated = selectedPaths[0];
+    if (!updated) return;
+
+    if (targetPath) {
+      const index = paths.findIndex(path => path === targetPath);
+      if (index >= 0) {
+        // 既存パスを置き換えることで元のパスに補正を適用
+        paths[index].points = updated.points;
+        paths[index].curves = updated.curves;
+        paths[index].fitError = updated.fitError;
+        return;
+      }
+    }
+
+    // 対象が見つからない場合は新規追加（フォールバック）
+    paths.push(updated);
+  });
 
 
   // #region セットアップ
-  // 要素を定義
-  const getElement = <T extends HTMLElement>(id: string) =>
-    document.getElementById(id) as T | null;
-
-  let sketchCheckbox: HTMLInputElement | null = null;
-  let thresholdSlider: HTMLInputElement | null = null;
-  let thresholdLabel: HTMLElement | null = null;
-  let llmProviderSelect: HTMLSelectElement | null = null;
-  let llmModelSelect: HTMLSelectElement | null = null;
-  let canvasContainer: HTMLDivElement | null = null;
-
   // UIのセットアップ
   const setupUI = (): void => {
     // クリアボタンの設定
-    getElement<HTMLButtonElement>('clearButton')?.addEventListener('click', clearAll);
+    dom.clearButton.addEventListener('click', clearAll);
 
     // LLMプロバイダ選択の設定
-    llmProviderSelect = getElement<HTMLSelectElement>('llmProviderSelect');
-    if (llmProviderSelect) {
-      llmProviderSelect.value = config.llmProvider;
-      llmProviderSelect.addEventListener('change', updateLLMProvider);
-    }
+    dom.llmProviderSelect.value = config.llmProvider;
+    dom.llmProviderSelect.addEventListener('change', updateLLMProvider);
 
     // モデル選択を初期化
-    llmModelSelect = getElement<HTMLSelectElement>('llmModelSelect');
-    if (llmModelSelect) {
-      populateModelOptions(config.llmProvider);
-      llmModelSelect.value = config.llmModel;
-      llmModelSelect.addEventListener('change', updateLLMModel);
-    }
+    populateModelOptions(config.llmProvider);
 
+    dom.llmModelSelect.addEventListener('change', updateLLMModel);
 
     // スケッチ表示切替の設定
-    sketchCheckbox = getElement<HTMLInputElement>('toggleSketchCheckbox');
-    if (sketchCheckbox) {
-      sketchCheckbox.checked = showSketch;
-      sketchCheckbox.addEventListener('change', toggleHandDrawn);
-    }
+    dom.sketchCheckbox.checked = showSketch;
+    dom.sketchCheckbox.addEventListener('change', toggleHandDrawn);
 
     // しきい値スライダーの設定
-    thresholdSlider = getElement<HTMLInputElement>('thresholdSlider');
-    thresholdLabel = getElement('thresholdValue');
-    if (thresholdSlider) {
-      thresholdSlider.value = Math.round(errorTol).toString();
-      thresholdSlider.addEventListener('input', updateThreshold);
-    }
+    dom.thresholdSlider.value = Math.round(errorTol).toString();
+    dom.thresholdSlider.addEventListener('input', updateThreshold);
     updateThreshold();
-  };
 
-  // キャンバスサイズを取得
-  const getCanvasSize = (): { width: number; height: number } => {
-    if (canvasContainer) {
-      return {
-        width: canvasContainer.clientWidth,
-        height: canvasContainer.clientHeight,
-      };
-    }
-    return { width: p.windowWidth, height: p.windowHeight };
+    setupUserPromptInput();
   };
 
   // 位置がキャンバス内かを判定
@@ -100,10 +88,11 @@ const sketch = (p: p5): void => {
 
   // #region 初期設定
   p.setup = () => {
-    canvasContainer = getElement<HTMLDivElement>('canvasContainer');
-    const { width, height } = getCanvasSize();
+    dom = new DOMManager();
+
+    const { width, height } = dom.getCanvasSize();
     const canvas = p.createCanvas(width, height);
-    if (canvasContainer) canvas.parent(canvasContainer);
+    canvas.parent(dom.canvasContainer);
     p.background(colors.background);
     p.textFont('Geist');
 
@@ -111,7 +100,8 @@ const sketch = (p: p5): void => {
   };
 
   p.windowResized = () => {
-    const { width, height } = getCanvasSize();
+    if (!dom) return;
+    const { width, height } = dom.getCanvasSize();
     p.resizeCanvas(width, height);
   };
 
@@ -146,6 +136,7 @@ const sketch = (p: p5): void => {
       );
     }
 
+    // ホバー中の提案プレビューを描画
     suggestionManager.draw(p, colors, paths[paths.length - 1]);
   };
 
@@ -171,13 +162,6 @@ const sketch = (p: p5): void => {
   };
 
   p.mousePressed = () => {
-    const appliedPaths = suggestionManager.trySelectSuggestion(p.mouseX, p.mouseY, p);
-    if (appliedPaths && appliedPaths.length > 0) {
-      paths[paths.length - 1] = appliedPaths[0];
-      activePath = null;
-      return;
-    }
-
     // ハンドルのドラッグ開始
     if (handleManager.begin(p.mouseX, p.mouseY)) return;
     if (!inCanvas(p.mouseX, p.mouseY)) return;
@@ -232,65 +216,64 @@ const sketch = (p: p5): void => {
 
   // 手書きストロークの表示・非表示を切り替え
   function toggleHandDrawn(): void {
-    if (!sketchCheckbox) {
-      showSketch = !showSketch;
-      return;
-    }
-    showSketch = sketchCheckbox.checked;
+    showSketch = dom.sketchCheckbox.checked;
   }
 
   // 誤差許容値の更新
   function updateThreshold(): void {
-    if (thresholdSlider) {
-      const parsed = Number(thresholdSlider.value);
-      if (!Number.isNaN(parsed)) {
-        errorTol = parsed;
-        coarseErrTol = errorTol * config.coarseErrorWeight;
-      }
+    const parsed = Number(dom.thresholdSlider.value);
+    if (!Number.isNaN(parsed)) {
+      errorTol = parsed;
+      coarseErrTol = errorTol * config.coarseErrorWeight;
     }
 
-    if (thresholdLabel) {
-      // 小数部分を表示しない (整数px)
-      thresholdLabel.textContent = `${errorTol.toFixed(0)}px`;
-    }
+    // 小数部分を表示しない (整数px)
+    dom.thresholdLabel.textContent = `${errorTol.toFixed(0)}px`;
   }
 
-  // Populate model dropdown based on selected provider
+  // ユーザー指示入力欄のセットアップ
+  function setupUserPromptInput(): void {
+    dom.userPromptForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const userPrompt = dom.userPromptInput.value.trim();
+      const latestPath = paths[paths.length - 1];
+      if (!latestPath) return;
+      suggestionManager.reset();
+      void suggestionManager.generate(latestPath, userPrompt);
+    });
+  }
+
+  // LLMモデル選択肢の更新
   function populateModelOptions(provider: import('./llmService').LLMProvider): void {
-    if (!llmModelSelect) return;
     const models = getModelsForProvider(provider);
-    llmModelSelect.innerHTML = '';
+    dom.llmModelSelect.innerHTML = '';
     for (const mi of models) {
       const option = document.createElement('option');
       option.value = mi.id;
       option.textContent = mi.name ?? mi.id;
-      llmModelSelect.appendChild(option);
+      dom.llmModelSelect.appendChild(option);
     }
-    // Use current config.llmModel if it exists in the list, otherwise use the first model
+
     const currentModelExists = models.some(mi => mi.id === config.llmModel);
     const defaultModel = currentModelExists ? config.llmModel : (models[0]?.id ?? '');
     config.llmModel = defaultModel;
-    llmModelSelect.value = defaultModel;
+    dom.llmModelSelect.value = defaultModel;
     suggestionManager.updateConfig(config);
   }
 
   function updateLLMModel(): void {
-    if (!llmModelSelect) return;
-    config.llmModel = llmModelSelect.value;
+    config.llmModel = dom.llmModelSelect.value;
     suggestionManager.updateConfig(config);
   }
 
 
   // LLMプロバイダの更新
   function updateLLMProvider(): void {
-    if (llmProviderSelect) {
-      const selected = llmProviderSelect.value as import('./llmService').LLMProvider;
-      config.llmProvider = selected;
-      suggestionManager.updateConfig(config);
-      console.log(`LLM Provider changed to: ${selected}`);
-      // update available models when provider changes
-      populateModelOptions(selected);
-    }
+    const selected = dom.llmProviderSelect.value as import('./llmService').LLMProvider;
+    config.llmProvider = selected;
+
+    // LLMモデル選択肢の更新
+    populateModelOptions(selected);
   }
 };
 

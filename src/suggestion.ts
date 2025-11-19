@@ -1,30 +1,51 @@
 import p5 from 'p5';
 import { encode } from '@toon-format/toon'
 
-import type { Path, SerializedPath, Suggestion, SuggestionHitTarget, SuggestionItem } from './types';
+import type { Path, SerializedPath, Suggestion, SuggestionItem } from './types';
 import type { Colors, Config } from './config';
 import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
-import { drawSuggestions } from './suggestionRenderer';
 import { drawBezierCurve } from './draw';
 import { deserializeCurves, serializePaths, deserializePaths } from './serialization';
 
 
+// #region ユーティリティ関数
+// 最新のパスの終点を取得
+function getLatestEndPoint(paths: Path[]): p5.Vector | null {
+  for (let pathIndex = paths.length - 1; pathIndex >= 0; pathIndex--) {
+    const path = paths[pathIndex];
+    if (!path) continue;
+    if (path.curves.length > 0) {
+      const lastCurve = path.curves[path.curves.length - 1];
+      const endPoint = lastCurve?.[3];
+      if (endPoint) return endPoint.copy();
+    }
+    if (path.points.length > 0) {
+      const fallback = path.points[path.points.length - 1];
+      if (fallback) return fallback.copy();
+    }
+  }
+  return null;
+}
+
+
 // #region 提案マネージャー
-// 提案の状態
-export type SuggestionState = 'idle' | 'loading' | 'error';
+// 提案の状態（内部でのみ使用）
+type SuggestionState = 'idle' | 'loading' | 'error';
 
 // 提案管理クラス
 export class SuggestionManager {
   private suggestions: Suggestion[] = [];
-  private hitTargets: SuggestionHitTarget[] = [];
   private status: SuggestionState = 'idle';
   private config: Config;
   private targetPath: Path | undefined;
   private hoveredSuggestionId: string | null = null;
+  private onSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
+  private pInstance: p5 | null = null;
 
-  constructor(config: Config) {
+  constructor(config: Config, onSuggestionSelect?: (paths: Path[], targetPath?: Path) => void) {
     this.config = config;
+    this.onSuggestionSelect = onSuggestionSelect;
   }
 
   // 設定を更新する
@@ -33,16 +54,18 @@ export class SuggestionManager {
   }
 
   // 提案を生成する
-  async generate(targetPath: Path): Promise<void> {
+  async generate(targetPath: Path, userPrompt?: string): Promise<void> {
     if (!targetPath) {
       this.setState('error');
       return;
     }
 
     this.targetPath = targetPath;
+    const trimmedUserPrompt = userPrompt?.trim() ?? '';
 
     this.clear();
     this.setState('loading');
+    this.updateUI();
 
     try {
       // パスをシリアライズ
@@ -52,7 +75,8 @@ export class SuggestionManager {
       const fetched = await fetchSuggestions(
         serializedPaths,
         this.config.llmPrompt,
-        this.config
+        this.config,
+        trimmedUserPrompt
       );
 
       // 提案を保存
@@ -67,9 +91,11 @@ export class SuggestionManager {
         }
       }));
       this.setState('idle');
+      this.updateUI();
     } catch (error) {
       console.error(error);
       this.setState('error');
+      this.updateUI();
     }
   }
 
@@ -78,61 +104,20 @@ export class SuggestionManager {
     this.clear();
     this.targetPath = undefined;
     this.setState('idle');
+    this.updateUI();
   }
 
-  // 提案を描画する
+  // 提案を描画する（プレビューのみ）
   draw(p: p5, colors: Colors, path: Path | undefined): void {
-    if (!path) {
-      this.hitTargets = [];
-      this.hoveredSuggestionId = null;
-      p.cursor('default');
+    this.pInstance = p;
+    if (!path || this.status === 'loading') {
       return;
     }
-    this.hitTargets = drawSuggestions(p, colors, path, this.suggestions, this.status === 'loading');
 
-    // マウスカーソルを変更
-    if (this.status !== 'loading') {
-      const target = this.hitTargets.find(
-        (hit) =>
-          hit.id !== 'loading' &&
-          p.mouseX >= hit.x &&
-          p.mouseX <= hit.x + hit.width &&
-          p.mouseY >= hit.y &&
-          p.mouseY <= hit.y + hit.height
-      );
-      this.hoveredSuggestionId = target?.id ?? null;
-      if (this.hoveredSuggestionId) {
-        this.drawHoverPreview(p, colors);
-      }
-      p.cursor(this.hoveredSuggestionId ? 'pointer' : 'default');
-    } else {
-      this.hoveredSuggestionId = null;
+    // ホバー中の提案のプレビューを描画
+    if (this.hoveredSuggestionId) {
+      this.drawHoverPreview(p, colors);
     }
-  }
-
-  // 提案を選択してパスを取得する
-  trySelectSuggestion(x: number, y: number, p: p5): Path[] | null {
-    // ヒットターゲットを検索
-    const target = this.hitTargets.find(
-      (hit) => x >= hit.x && x <= hit.x + hit.width && y >= hit.y && y <= hit.y + hit.height
-    );
-    if (!target || target.id === 'loading') return null;
-
-    // 提案データを検索
-    const suggestion = this.suggestions.find((entry) => entry.id === target.id);
-    if (!suggestion || !this.targetPath) return null;
-
-    const restored = deserializePaths([suggestion.path], [this.targetPath], p);
-    if (restored.length === 0) {
-      this.setState('error');
-      return null;
-    }
-
-    // 提案されたパスを返す
-    this.setState('idle');
-    this.clear();
-    this.targetPath = undefined;
-    return restored;
   }
 
   // 状態を更新する
@@ -143,7 +128,6 @@ export class SuggestionManager {
   // 提案をクリアする
   private clear(): void {
     this.suggestions = [];
-    this.hitTargets = [];
     this.hoveredSuggestionId = null;
   }
 
@@ -170,18 +154,127 @@ export class SuggestionManager {
 
     if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
   }
+
+  // HTML UIを更新する
+  private updateUI(): void {
+    const container = document.getElementById('suggestionContainer');
+    const listContainer = document.getElementById('suggestionList');
+    const loadingElement = document.getElementById('suggestionLoading');
+
+    if (!container || !listContainer || !loadingElement) return;
+
+    if (this.status === 'loading') {
+      // ローディング表示
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      loadingElement.style.display = 'flex';
+      loadingElement.style.alignItems = 'center';
+      loadingElement.style.gap = '0.5rem';
+      this.clearSuggestionItems();
+      this.updateUIPosition();
+    } else if (this.suggestions.length > 0) {
+      // 提案リスト表示
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      loadingElement.style.display = 'none';
+      this.clearSuggestionItems();
+      this.renderSuggestionItems();
+      this.updateUIPosition();
+    } else {
+      // 非表示
+      container.style.display = 'none';
+      loadingElement.style.display = 'none';
+      this.clearSuggestionItems();
+    }
+  }
+
+  // 提案アイテムをレンダリング
+  private renderSuggestionItems(): void {
+    const listContainer = document.getElementById('suggestionList');
+    if (!listContainer) return;
+
+    this.suggestions.forEach((suggestion) => {
+      const item = document.createElement('button');
+      item.className = 'suggestion-item px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer';
+      item.textContent = suggestion.title;
+      item.dataset.suggestionId = suggestion.id;
+
+      // ホバー時のプレビュー
+      item.addEventListener('mouseenter', () => {
+        this.hoveredSuggestionId = suggestion.id;
+      });
+
+      item.addEventListener('mouseleave', () => {
+        this.hoveredSuggestionId = null;
+      });
+
+      // クリック時の選択
+      item.addEventListener('click', () => {
+        this.selectSuggestionById(suggestion.id);
+      });
+
+      listContainer.appendChild(item);
+    });
+  }
+
+  // 提案アイテムをクリア
+  private clearSuggestionItems(): void {
+    const listContainer = document.getElementById('suggestionList');
+    if (!listContainer) return;
+
+    const items = listContainer.querySelectorAll('.suggestion-item');
+    items.forEach(item => item.remove());
+  }
+
+  // UIの位置を更新
+  private updateUIPosition(): void {
+    const container = document.getElementById('suggestionContainer');
+    if (!container || !this.targetPath) return;
+
+    const anchor = getLatestEndPoint([this.targetPath]);
+    if (!anchor) return;
+
+    const left = anchor.x + 20;
+    const top = anchor.y - 20;
+
+    container.style.left = `${left}px`;
+    container.style.top = `${top}px`;
+  }
+
+  // IDで提案を選択
+  private selectSuggestionById(id: string): void {
+    const suggestion = this.suggestions.find(s => s.id === id);
+    if (!suggestion || !this.targetPath || !this.pInstance) return;
+
+    const restored = deserializePaths([suggestion.path], [this.targetPath], this.pInstance);
+    if (restored.length === 0) {
+      this.setState('error');
+      return;
+    }
+
+    // コールバックを呼び出す
+    if (this.onSuggestionSelect) {
+      this.onSuggestionSelect(restored, this.targetPath);
+    }
+
+    // リセット
+    this.clear();
+    this.targetPath = undefined;
+    this.setState('idle');
+    this.updateUI();
+  }
 }
 
 
 // #region プライベート関数
-
 // LLM から提案を取得する
 async function fetchSuggestions(
   serializedPaths: SerializedPath[],
   basePrompt: string,
-  config: Config
+  config: Config,
+  userPrompt?: string
 ): Promise<SuggestionItem[]> {
-  const prompt = buildPrompt(serializedPaths, basePrompt);
+  const prompt = buildPrompt(serializedPaths, basePrompt, userPrompt);
   const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider, config.llmModel);
   return result.suggestions.map((suggestion): SuggestionItem => ({
     title: suggestion.title,
@@ -190,12 +283,13 @@ async function fetchSuggestions(
 }
 
 // プロンプトを構築する
-function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string): string {
-  return [
-    basePrompt,
-    '',
-    '```toon',
-    encode(serializedPaths),
-    '```',
-  ].join('\n');
+function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string, userPrompt?: string): string {
+  const promptParts = [basePrompt];
+  const trimmedUserPrompt = userPrompt?.trim();
+  if (trimmedUserPrompt) {
+    promptParts.push('', '## 追加のユーザー指示', trimmedUserPrompt);
+  }
+  promptParts.push('', '```toon', encode(serializedPaths), '```');
+
+  return promptParts.join('\n');
 }

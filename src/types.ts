@@ -80,18 +80,8 @@ export interface Suggestion {
   path: SerializedPath;
 }
 
-// 提案のヒットターゲット情報
-export interface SuggestionHitTarget {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 
 // #region Zodスキーマ定義
-
 // 制御点スキーマ
 const handlePointSchema = z.object({
   angle: z.number(),
@@ -107,7 +97,7 @@ const anchorPointSchema = z.object({
 });
 
 // 提案アイテム
-export const suggestionItemSchema = z.object({
+const suggestionItemSchema = z.object({
   title: z.string(),
   anchors: z.array(anchorPointSchema),
 });
@@ -119,4 +109,3 @@ export const suggestionResponseSchema = z.object({
 
 // Typescriptの型に変換
 export type SuggestionItem = z.infer<typeof suggestionItemSchema>;
-export type SuggestionResponse = z.infer<typeof suggestionResponseSchema>;
