@@ -162,6 +162,9 @@ const sketch = (p: p5): void => {
   };
 
   p.mousePressed = () => {
+    // 左クリックのみを処理
+    if (!p.mouseButton.left) return;
+
     // ハンドルのドラッグ開始
     if (handleManager.begin(p.mouseX, p.mouseY)) return;
     if (!inCanvas(p.mouseX, p.mouseY)) return;
