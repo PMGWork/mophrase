@@ -126,7 +126,14 @@ export function splitTangent(
   return unitTangent(next, prev);
 }
 
-// 正規化された値を小数第3位まで丸める
+// 正規化値を丸める
 export function roundNormalizedValue(value: number): number {
   return Math.round(value * 1000) / 1000;
+}
+
+// 曲線の長さ
+export function curveLength(c: Vector[]): number {
+  const chord = c[0].dist(c[3]);
+  const cont_net = c[0].dist(c[1]) + c[1].dist(c[2]) + c[2].dist(c[3]);
+  return (chord + cont_net) / 2;
 }

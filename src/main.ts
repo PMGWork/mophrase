@@ -5,9 +5,11 @@ import { DEFAULT_CONFIG, DEFAULT_COLORS } from './config';
 import { getModelsForProvider } from './llmService';
 import { fitCurve } from './fitting';
 import { drawPoints, drawBezierCurve, drawControls } from './draw';
-import { HandleManager } from './handle';
+import { HandleManager } from './handleManager';
 import { SuggestionManager } from './suggestion';
 import { DOMManager } from './dom';
+import { MotionManager } from './motion';
+import { GraphEditor } from './graphEditor';
 
 const sketch = (p: p5): void => {
   // #region 変数設定
@@ -23,8 +25,8 @@ const sketch = (p: p5): void => {
   let showSketch: boolean = config.showSketch;
 
   // フィッティング関連
-  let errorTol = config.errorTolerance;
-  let coarseErrTol = errorTol * config.coarseErrorWeight;
+  let sketchFitTolerance = config.sketchFitTolerance;
+  let coarseErrTol = sketchFitTolerance * config.coarseErrorWeight;
 
   // ハンドル操作関連
   const handleManager = new HandleManager(() => paths);
@@ -32,6 +34,10 @@ const sketch = (p: p5): void => {
 
   // UIマネージャー
   let dom: DOMManager;
+
+  // モーションマネージャー
+  let motionManager: MotionManager;
+  let graphEditor: GraphEditor;
 
   // 提案生成関連
   const suggestionManager = new SuggestionManager(config, (selectedPaths, targetPath) => {
@@ -61,6 +67,24 @@ const sketch = (p: p5): void => {
     // クリアボタンの設定
     dom.clearButton.addEventListener('click', clearAll);
 
+    // モーション操作の設定
+    dom.playButton.addEventListener('click', () => {
+      if (activePath) return;
+      const target = paths[paths.length - 1];
+      if (target) motionManager.play(target);
+    });
+
+    dom.editMotionButton.addEventListener('click', () => {
+      graphEditor.toggle();
+      // エディタが表示されたら最新のパスをセット
+      const target = paths[paths.length - 1];
+      if (target) graphEditor.setPath(target);
+    });
+
+    dom.closeGraphEditorButton.addEventListener('click', () => {
+      graphEditor.toggle();
+    });
+
     // LLMプロバイダ選択の設定
     dom.llmProviderSelect.value = config.llmProvider;
     dom.llmProviderSelect.addEventListener('change', updateLLMProvider);
@@ -75,9 +99,14 @@ const sketch = (p: p5): void => {
     dom.sketchCheckbox.addEventListener('change', toggleHandDrawn);
 
     // しきい値スライダーの設定
-    dom.thresholdSlider.value = Math.round(errorTol).toString();
+    dom.thresholdSlider.value = Math.round(sketchFitTolerance).toString();
     dom.thresholdSlider.addEventListener('input', updateThreshold);
     updateThreshold();
+
+    // グラフ許容値スライダーの設定
+    dom.graphThresholdSlider.value = config.graphFitTolerance.toString();
+    dom.graphThresholdSlider.addEventListener('input', updateGraphThreshold);
+    updateGraphThreshold();
 
     setupUserPromptInput();
   };
@@ -89,6 +118,8 @@ const sketch = (p: p5): void => {
   // #region 初期設定
   p.setup = () => {
     dom = new DOMManager();
+    motionManager = new MotionManager(p);
+    graphEditor = new GraphEditor(dom.graphEditorContainer);
 
     const { width, height } = dom.getCanvasSize();
     const canvas = p.createCanvas(width, height);
@@ -138,6 +169,9 @@ const sketch = (p: p5): void => {
 
     // ホバー中の提案プレビューを描画
     suggestionManager.draw(p, colors, paths[paths.length - 1]);
+
+    // モーション再生
+    motionManager.update();
   };
 
 
@@ -158,6 +192,7 @@ const sketch = (p: p5): void => {
     // 描画中のパスに点を追加
     if (activePath && inCanvas(p.mouseX, p.mouseY)) {
       activePath.points.push(p.createVector(p.mouseX, p.mouseY));
+      activePath.times.push(p.millis());
     }
   };
 
@@ -172,7 +207,9 @@ const sketch = (p: p5): void => {
     // 新しいパスを開始
     activePath = {
       points: [p.createVector(p.mouseX, p.mouseY)],
+      times: [p.millis()],
       curves: [],
+      timeCurve: [],
       fitError: {
         current: {
           maxError: Number.MAX_VALUE,
@@ -194,15 +231,24 @@ const sketch = (p: p5): void => {
       fitCurve(
         activePath.points,
         activePath.curves,
-        errorTol,
+        sketchFitTolerance,
         coarseErrTol,
         activePath.fitError
       );
+
+      // タイミング曲線のフィッティング
+      // グラフの描画領域は正規化座標(0-1)で計算
+      // 許容値はパーセント指定なので、100で割って正規化
+      const normalizedTol = config.graphFitTolerance / 100;
+      motionManager.fitTiming(activePath, p, normalizedTol);
 
       // 確定済みパスに追加
       paths.push(activePath);
       suggestionManager.reset();
       void suggestionManager.generate(paths[paths.length - 1]);
+
+      // エディタにも反映
+      graphEditor.setPath(paths[paths.length - 1]);
     }
 
     // 描画中のパスをリセット
@@ -227,12 +273,23 @@ const sketch = (p: p5): void => {
   function updateThreshold(): void {
     const parsed = Number(dom.thresholdSlider.value);
     if (!Number.isNaN(parsed)) {
-      errorTol = parsed;
-      coarseErrTol = errorTol * config.coarseErrorWeight;
+      sketchFitTolerance = parsed;
+      coarseErrTol = sketchFitTolerance * config.coarseErrorWeight;
     }
 
     // 小数部分を表示しない (整数px)
-    dom.thresholdLabel.textContent = `${errorTol.toFixed(0)}px`;
+    dom.thresholdLabel.textContent = `${sketchFitTolerance.toFixed(0)}px`;
+  }
+
+  // グラフ許容値の更新
+  function updateGraphThreshold(): void {
+    const parsed = Number(dom.graphThresholdSlider.value);
+    if (!Number.isNaN(parsed)) {
+      config.graphFitTolerance = parsed;
+    }
+
+    // パーセント表示
+    dom.graphThresholdLabel.textContent = `${config.graphFitTolerance.toFixed(0)}%`;
   }
 
   // ユーザー指示入力欄のセットアップ

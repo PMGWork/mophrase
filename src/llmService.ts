@@ -67,7 +67,7 @@ async function generateStructuredOpenAI<T>(
 
   const response = await openai.responses.parse({
     model: actualModel,
-    input: [{role: "user", content: prompt}],
+    input: [{ role: "user", content: prompt }],
     reasoning: { effort: reasoningEffort },
     text: {
       format: zodTextFormat(schema, "schema"),
@@ -88,7 +88,7 @@ async function generateStructuredGroq<T>(
 
   const response = await groq.chat.completions.create({
     model: model ?? "moonshotai/kimi-k2-instruct-0905",
-    messages: [{role: "user", content: prompt}],
+    messages: [{ role: "user", content: prompt }],
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -108,15 +108,14 @@ export type LLMProvider = "Gemini" | "OpenAI" | "Groq";
 // LLMプロバイダごとの利用可能モデル一覧
 type ModelInfo = { id: string; name?: string };
 const ProviderModels: Record<LLMProvider, ModelInfo[]> = {
-  Gemini: [
-    { id: 'gemini-flash-latest', name: 'Gemini Flash' },
-    { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite' },
-  ],
   OpenAI: [
     { id: 'gpt-5.1', name: 'GPT-5.1' },
     { id: 'gpt-5', name: 'GPT-5' },
     { id: 'gpt-5-mini', name: 'GPT-5 mini' },
-    { id: 'gpt-5-nano', name: 'GPT-5 nano' },
+  ],
+  Gemini: [
+    { id: 'gemini-flash-latest', name: 'Gemini Flash' },
+    { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite' },
   ],
   Groq: [
     { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },

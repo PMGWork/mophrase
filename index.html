@@ -1,65 +1,59 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MoPhrase</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-  </head>
-  <body class="h-screen overflow-hidden font-sans bg-gray-950 text-gray-50">
-    <div class="h-screen flex flex-col">
-      <header class="w-full px-6 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <h1 class="text-2xl font-medium">MoPhrase</h1>
-        <div class="flex flex-wrap items-center gap-3">
-          <select
-            id="llmProviderSelect"
-            class="
-              px-4 py-2
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoPhrase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="h-screen overflow-hidden font-sans bg-gray-950 text-gray-50">
+  <div class="h-screen flex flex-col">
+    <header class="w-full px-6 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <h1 class="text-2xl font-medium">MoPhrase</h1>
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- LLM Settings -->
+        <select id="llmProviderSelect" class="
+              px-4 py-2 h-9
               bg-gray-800 text-gray-50
               text-sm cursor-pointer rounded
-              hover:opacity-80 transition-opacity
-            "
-          >
-            <option value="Gemini">Gemini</option>
-            <option value="OpenAI">OpenAI</option>
-            <option value="Groq">Groq</option>
-          </select>
-          <select
-            id="llmModelSelect"
-            class="
-              px-4 py-2
+              hover:bg-gray-700 transition-colors
+              focus:outline-none focus:ring-1 focus:ring-gray-700
+            ">
+          <option value="OpenAI">OpenAI</option>
+          <option value="Gemini">Gemini</option>
+          <option value="Groq">Groq</option>
+        </select>
+        <select id="llmModelSelect" class="
+              px-4 py-2 h-9
               bg-gray-800 text-gray-50
               text-sm cursor-pointer rounded
-              hover:opacity-80 transition-opacity
-            "
-          >
-          </select>
-          <label class="flex items-center gap-3 px-4 py-2 bg-gray-800 text-gray-50 text-sm rounded cursor-pointer hover:opacity-80 transition-opacity">
-            <span>Sketch</span>
-            <div class="relative w-4 h-4">
-              <input
-                id="toggleSketchCheckbox"
-                type="checkbox"
-                aria-label="Toggle sketch visibility"
-                class="peer w-4 h-4 rounded cursor-pointer appearance-none bg-gray-700 border-0 checked:bg-gray-50 transition-colors"
-              />
-              <i data-lucide="check" class="absolute inset-0 w-4 h-4 text-gray-950 opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
-            </div>
-          </label>
-          <div class="flex items-center gap-3 px-4 py-2 bg-gray-800 text-gray-50 text-sm rounded">
-            <span>Tol</span>
-            <input
-              id="thresholdSlider"
-              type="range"
-              min="5"
-              max="50"
-              step="1"
-              value="10"
-              class="
+              hover:bg-gray-700 transition-colors
+              focus:outline-none focus:ring-1 focus:ring-gray-700
+            ">
+        </select>
+
+        <div class="w-px h-6 bg-gray-800 mx-2"></div>
+
+        <!-- View Settings -->
+        <label
+          class="flex items-center gap-3 px-4 py-2 h-9 bg-gray-800 text-gray-50 text-sm rounded cursor-pointer hover:bg-gray-700 transition-colors">
+          <span>Sketch</span>
+          <div class="relative w-4 h-4">
+            <input id="toggleSketchCheckbox" type="checkbox" aria-label="Toggle sketch visibility"
+              class="peer w-4 h-4 rounded cursor-pointer appearance-none bg-gray-700 border-0 checked:bg-gray-50 transition-colors" />
+            <i data-lucide="check"
+              class="absolute inset-0 w-4 h-4 text-gray-950 opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
+          </div>
+        </label>
+        <div class="flex items-center gap-3 px-4 py-2 h-9 bg-gray-800 text-gray-50 text-sm rounded">
+          <span>Tol</span>
+          <input id="thresholdSlider" type="range" min="5" max="50" step="1" value="10" class="
                 w-16 h-1 bg-gray-700 rounded cursor-grab appearance-none
                 [&::-webkit-slider-thumb]:appearance-none
                 [&::-webkit-slider-thumb]:w-3
@@ -71,64 +65,108 @@
                 [&::-moz-range-thumb]:rounded-full
                 [&::-moz-range-thumb]:bg-gray-50
                 [&::-moz-range-thumb]:border-0
-              "
-            />
-            <span id="thresholdValue" class="w-8">10px</span>
-          </div>
-          <button
-            id="clearButton"
-            class="
-              h-9 w-9
-              bg-red-500 text-gray-50
-              text-sm cursor-pointer rounded
-              hover:opacity-80 transition-opacity
-              flex items-center justify-center
-            "
-            aria-label="Clear all"
-          >
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+              " />
+          <span id="thresholdValue" class="w-8">10px</span>
         </div>
-      </header>
-      <main
-        id="canvasContainer"
-        class="flex-1 overflow-hidden mx-4 mb-4 rounded-xl border border-gray-800 relative"
-      >
-        <div
-          id="suggestionContainer"
-          class="absolute z-10 bg-gray-950 border border-gray-800 rounded min-w-60"
-          style="display: none;"
-        >
-            <form id="userPromptForm" class="flex items-center">
-            <input
-              id="userPromptInput"
-              type="text"
-              placeholder="Enter instructions..."
+
+        <div class="w-px h-6 bg-gray-800 mx-2"></div>
+
+        <!-- Actions -->
+        <button id="editMotionButton" class="
+              px-4 py-2 h-9
+              bg-gray-800 text-gray-50
+              text-sm cursor-pointer rounded
+              hover:bg-gray-700 transition-colors
+              flex items-center gap-2
+            ">
+          <i data-lucide="activity" class="w-4 h-4"></i>
+          <span>Graph</span>
+        </button>
+        <button id="playButton" class="
+              px-4 py-2 h-9
+              bg-blue-900/50 text-blue-50
+              text-sm cursor-pointer rounded
+              hover:bg-blue-900 transition-colors
+              flex items-center gap-2
+            ">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          <span>Play</span>
+        </button>
+        <button id="clearButton" class="
+              px-4 py-2 h-9
+              bg-red-900/50 text-red-50
+              text-sm cursor-pointer rounded
+              hover:bg-red-900 transition-colors
+              flex items-center gap-2
+            ">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          <span>Clear</span>
+        </button>
+      </div>
+    </header>
+    <div class="flex-1 flex overflow-hidden mx-4 mb-4 gap-4">
+      <main id="canvasContainer"
+        class="flex-1 rounded-xl border border-gray-800 relative bg-gray-950 min-w-0 overflow-hidden">
+        <div id="suggestionContainer" class="absolute z-10 bg-gray-950 border border-gray-800 rounded min-w-60"
+          style="display: none;">
+          <form id="userPromptForm" class="flex items-center">
+            <input id="userPromptInput" type="text" placeholder="Enter instructions..."
               class="flex-1 p-3 text-sm bg-gray-950 text-gray-50 placeholder:text-gray-500 focus:outline-none focus:ring-gray-700"
-              autocomplete="off"
-            />
+              autocomplete="off" />
             <button type="submit" class="p-3 cursor-pointer">
               <i data-lucide="send" class="w-4 h-4"></i>
             </button>
           </form>
 
-          <div
-            id="suggestionList"
-            class="flex flex-col *:border-t *:border-gray-800"
-          >
-            <div id="suggestionLoading" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400" style="display: none;">
+          <div id="suggestionList" class="flex flex-col *:border-t *:border-gray-800">
+            <div id="suggestionLoading" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-400"
+              style="display: none;">
               <div class="w-3 h-3 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin"></div>
               <span>Generating...</span>
             </div>
           </div>
         </div>
       </main>
+      <aside id="graphEditorContainer"
+        class="w-[400px] bg-gray-950 rounded-xl border border-gray-800 flex flex-col hidden transition-all duration-300 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50">
+          <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
+          <button id="closeGraphEditorButton"
+            class="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-gray-200 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div id="graphEditorCanvas" class="w-full aspect-square border-b border-gray-800 relative">
+          <!-- Motion Editor Canvas will be injected here -->
+        </div>
+        <div class="flex-1 p-4 text-sm text-gray-400 flex flex-col gap-4">
+          <div class="flex items-center gap-3">
+            <span>Tolerance</span>
+            <input id="graphThresholdSlider" type="range" min="1" max="20" step="1" value="3" class="
+                  flex-1 h-1 bg-gray-700 rounded cursor-grab appearance-none
+                  [&::-webkit-slider-thumb]:appearance-none
+                  [&::-webkit-slider-thumb]:w-3
+                  [&::-webkit-slider-thumb]:h-3
+                  [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:bg-gray-50
+                  [&::-moz-range-thumb]:w-3
+                  [&::-moz-range-thumb]:h-3
+                  [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:bg-gray-50
+                  [&::-moz-range-thumb]:border-0
+                " />
+            <span id="graphThresholdLabel" class="w-12 text-right">3%</span>
+          </div>
+        </div>
+      </aside>
     </div>
-    <script type="module" src="/src/main.ts"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-      });
-    </script>
-  </body>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+
 </html>

@@ -103,10 +103,12 @@ export function serializePaths(paths: Path[]): SerializedPath[] {
 export function deserializePaths(serializedPaths: SerializedPath[], paths: Path[], p: p5): Path[] {
   return serializedPaths.map((serializedPath, index) => ({
     points: paths[index].points,
+    times: paths[index].times,
     curves: deserializeCurves(
       serializedPath.bbox ? serializedPath : { ...serializedPath, bbox: calculateBoundingBox(paths[index].curves) },
       p
     ),
+    timeCurve: paths[index].timeCurve,
     fitError: paths[index].fitError,
   }));
 }

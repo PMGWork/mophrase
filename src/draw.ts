@@ -69,7 +69,8 @@ export function drawControls(
   p: p5,
   curves: Vector[][],
   size: number,
-  color: string
+  color: string,
+  transform: (v: Vector) => Vector = (v) => v
 ): void {
   if (curves.length === 0) return;
 
@@ -79,10 +80,15 @@ export function drawControls(
   p.rectMode(p.CENTER);
 
   for (const curve of curves) {
-    p.rect(curve[0].x, curve[0].y, size, size);
-    p.rect(curve[3].x, curve[3].y, size, size);
-    p.circle(curve[1].x, curve[1].y, size);
-    p.circle(curve[2].x, curve[2].y, size);
+    const p0 = transform(curve[0].copy());
+    const p1 = transform(curve[1].copy());
+    const p2 = transform(curve[2].copy());
+    const p3 = transform(curve[3].copy());
+
+    p.rect(p0.x, p0.y, size, size);
+    p.rect(p3.x, p3.y, size, size);
+    p.circle(p1.x, p1.y, size);
+    p.circle(p2.x, p2.y, size);
   }
 
   // 制御ポリゴンの描画
@@ -91,14 +97,19 @@ export function drawControls(
   p.noFill();
 
   for (const curve of curves) {
+    const p0 = transform(curve[0].copy());
+    const p1 = transform(curve[1].copy());
+    const p2 = transform(curve[2].copy());
+    const p3 = transform(curve[3].copy());
+
     p.beginShape();
-    p.vertex(curve[0].x, curve[0].y);
-    p.vertex(curve[1].x, curve[1].y);
+    p.vertex(p0.x, p0.y);
+    p.vertex(p1.x, p1.y);
     p.endShape();
 
     p.beginShape();
-    p.vertex(curve[2].x, curve[2].y);
-    p.vertex(curve[3].x, curve[3].y);
+    p.vertex(p2.x, p2.y);
+    p.vertex(p3.x, p3.y);
     p.endShape();
   }
 }

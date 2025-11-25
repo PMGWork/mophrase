@@ -2,23 +2,37 @@ export class DOMManager {
   public readonly sketchCheckbox: HTMLInputElement;
   public readonly thresholdSlider: HTMLInputElement;
   public readonly thresholdLabel: HTMLElement;
+  public readonly graphThresholdSlider: HTMLInputElement;
+  public readonly graphThresholdLabel: HTMLElement;
   public readonly llmProviderSelect: HTMLSelectElement;
   public readonly llmModelSelect: HTMLSelectElement;
   public readonly canvasContainer: HTMLDivElement;
   public readonly userPromptForm: HTMLFormElement;
   public readonly userPromptInput: HTMLInputElement;
   public readonly clearButton: HTMLButtonElement;
+  public readonly playButton: HTMLButtonElement;
+  public readonly editMotionButton: HTMLButtonElement;
+  public readonly closeGraphEditorButton: HTMLButtonElement;
+  public readonly graphEditorContainer: HTMLDivElement;
+  public readonly graphEditorCanvas: HTMLDivElement;
 
   constructor() {
     this.sketchCheckbox = this.getElement('toggleSketchCheckbox');
     this.thresholdSlider = this.getElement('thresholdSlider');
     this.thresholdLabel = this.getElement('thresholdValue');
+    this.graphThresholdSlider = this.getElement('graphThresholdSlider');
+    this.graphThresholdLabel = this.getElement('graphThresholdLabel');
     this.llmProviderSelect = this.getElement('llmProviderSelect');
     this.llmModelSelect = this.getElement('llmModelSelect');
     this.canvasContainer = this.getElement('canvasContainer');
     this.userPromptForm = this.getElement('userPromptForm');
     this.userPromptInput = this.getElement('userPromptInput');
     this.clearButton = this.getElement('clearButton');
+    this.playButton = this.getElement('playButton');
+    this.editMotionButton = this.getElement('editMotionButton');
+    this.closeGraphEditorButton = this.getElement('closeGraphEditorButton');
+    this.graphEditorContainer = this.getElement('graphEditorContainer');
+    this.graphEditorCanvas = this.getElement('graphEditorCanvas');
   }
 
   private getElement<T extends HTMLElement>(id: string): T {

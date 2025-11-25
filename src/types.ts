@@ -6,14 +6,21 @@ export type Vector = p5.Vector;
 
 
 // #region スキーマ定義
+// カーブ情報
+export interface Curve {
+  curves: Vector[][];
+}
+
 // 描画パス情報
 export interface Path {
   points: Vector[];
+  times: number[];
   curves: Vector[][];
+  timeCurve: Vector[][];
   fitError: { current: FitErrorResult };
 }
 
-// シリアライズされたハンドル情報(極座標、正規化済み)
+// シリアライズされたハンドル情報（正規化済み）
 export interface SerializedHandlePoint {
   angle: number;
   dist: number;

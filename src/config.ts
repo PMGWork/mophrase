@@ -6,7 +6,8 @@ import prompt from './prompt.md?raw';
 // スキーマ定義
 export interface Config {
   showSketch: boolean;        // ストロークの初期表示状態
-  errorTolerance: number;     // 許容誤差(ピクセル)
+  sketchFitTolerance: number; // ビュー許容誤差(ピクセル)
+  graphFitTolerance: number;  // グラフ許容誤差(パーセント)
   coarseErrorWeight: number;  // 粗い誤差の倍数
   defaultDragMode: number;    // デフォルトのドラッグモード
   lineWeight: number;         // 線の太さ
@@ -27,7 +28,8 @@ export interface Colors {
 // デフォルト設定
 export const DEFAULT_CONFIG: Config = {
   showSketch: false,
-  errorTolerance: 20,
+  sketchFitTolerance: 20,
+  graphFitTolerance: 3,
   coarseErrorWeight: 2.0,
   defaultDragMode: 1,
   lineWeight: 1,
