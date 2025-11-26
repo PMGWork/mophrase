@@ -7,7 +7,7 @@ import { SuggestionManager } from './suggestion';
 import { HandleManager } from './handleManager';
 
 import { DOMManager } from './dom';
-import { MotionManager } from './motion';
+import { MotionManager } from './motionManager';
 
 export class SketchEditor {
   private dom: DOMManager;
