@@ -4,6 +4,7 @@ export class DOMManager {
   public readonly thresholdLabel: HTMLElement;
   public readonly graphThresholdSlider: HTMLInputElement;
   public readonly graphThresholdLabel: HTMLElement;
+  public readonly durationInput: HTMLInputElement;
   public readonly llmProviderSelect: HTMLSelectElement;
   public readonly llmModelSelect: HTMLSelectElement;
   public readonly canvasContainer: HTMLDivElement;
@@ -22,6 +23,7 @@ export class DOMManager {
     this.thresholdLabel = this.getElement('thresholdValue');
     this.graphThresholdSlider = this.getElement('graphThresholdSlider');
     this.graphThresholdLabel = this.getElement('graphThresholdLabel');
+    this.durationInput = this.getElement('durationInput');
     this.llmProviderSelect = this.getElement('llmProviderSelect');
     this.llmModelSelect = this.getElement('llmModelSelect');
     this.canvasContainer = this.getElement('canvasContainer');

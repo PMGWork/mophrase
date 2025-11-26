@@ -27,6 +27,8 @@ export class GraphEditor {
     this.colors = colors;
 
     this.init();
+
+    this.dom.durationInput.addEventListener('change', () => this.updateDuration());
   }
 
   // グラフの表示/非表示
@@ -41,6 +43,26 @@ export class GraphEditor {
   // パスの設定
   public setPath(path: Path | null): void {
     this.activePath = path;
+    if (path && path.times.length > 0) {
+      const duration = path.times[path.times.length - 1] - path.times[0];
+      this.dom.durationInput.value = Math.round(duration).toString();
+    }
+  }
+
+  // Durationの更新
+  private updateDuration(): void {
+    if (!this.activePath || this.activePath.times.length === 0) return;
+
+    const newDuration = Number(this.dom.durationInput.value);
+    if (Number.isNaN(newDuration) || newDuration <= 0) return;
+
+    const oldDuration = this.activePath.times[this.activePath.times.length - 1] - this.activePath.times[0];
+    if (oldDuration === 0) return;
+
+    const scale = newDuration / oldDuration;
+    const startTime = this.activePath.times[0];
+
+    this.activePath.times = this.activePath.times.map(t => startTime + (t - startTime) * scale);
   }
 
   // p5.jsの初期化

@@ -141,7 +141,7 @@
         </div>
         <div class="flex-1 p-4 text-sm text-gray-400 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <span>Tolerance</span>
+            <span class="w-16">Tolerance</span>
             <input id="graphThresholdSlider" type="range" min="1" max="20" step="1" value="3" class="
                   flex-1 h-1 bg-gray-700 rounded cursor-grab appearance-none
                   [&::-webkit-slider-thumb]:appearance-none
@@ -156,6 +156,15 @@
                   [&::-moz-range-thumb]:border-0
                 " />
             <span id="graphThresholdLabel" class="w-12 text-right">3%</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-16">Duration</span>
+            <input id="durationInput" type="number" min="100" step="100" value="2000" class="
+                  flex-1 px-2 py-1 bg-gray-800 text-gray-50 text-sm rounded
+                  focus:outline-none focus:ring-1 focus:ring-gray-700
+                  appearance-none
+                " />
+            <span class="w-12 text-right">ms</span>
           </div>
         </div>
       </aside>
