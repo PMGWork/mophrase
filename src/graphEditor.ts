@@ -1,41 +1,41 @@
 import p5 from 'p5';
 import type { Path, Vector } from './types';
 import { drawBezierCurve, drawControls } from './draw';
-import { DEFAULT_COLORS } from './config';
+import type { Config, Colors } from './config';
 import { HandleManager } from './handleManager';
+import { DOMManager } from './dom';
 
 export class GraphEditor {
-  private p: p5 | null = null;
-  private container: HTMLElement;
-  private canvasContainer: HTMLElement;
+  private dom: DOMManager;
   private isVisible: boolean = false;
   private activePath: Path | null = null;
+
+  // マネージャー
   private handleManager: HandleManager | null = null;
+
+  // 設定
+  private config: Config;
+  private colors: Colors;
 
   // グラフ描画領域の設定
   private readonly margin = { top: 40, right: 40, bottom: 40, left: 40 };
 
   // コンストラクタ
-  constructor(container: HTMLElement) {
-    this.container = container;
-    const canvasContainer = container.querySelector('#graphEditorCanvas');
-    if (!canvasContainer) throw new Error('GraphEditor: #graphEditorCanvas not found in container');
-    this.canvasContainer = canvasContainer as HTMLElement;
+  constructor(dom: DOMManager, config: Config, colors: Colors) {
+    this.dom = dom;
+    this.config = config;
+    this.colors = colors;
+
+    this.init();
   }
 
   // グラフの表示/非表示
   public toggle(): void {
     this.isVisible = !this.isVisible;
-    this.container.classList.toggle('hidden', !this.isVisible);
-    this.container.classList.toggle('flex', this.isVisible);
+    this.dom.graphEditorContainer.classList.toggle('hidden', !this.isVisible);
+    this.dom.graphEditorContainer.classList.toggle('flex', this.isVisible);
 
     window.dispatchEvent(new Event('resize'));
-
-    if (this.isVisible) {
-      this.p ? this.p.loop() : requestAnimationFrame(() => this.init());
-    } else {
-      this.p?.noLoop();
-    }
   }
 
   // パスの設定
@@ -46,12 +46,9 @@ export class GraphEditor {
   // p5.jsの初期化
   private init(): void {
     const sketch = (p: p5) => {
-      this.p = p;
-
-      // HandleManagerの初期化
       this.handleManager = new HandleManager(
         () => this.activePath && this.activePath.timeCurve ? [{ curves: this.activePath.timeCurve }] : [],
-        (x, y) => this.getNormalizedMousePos(p, x, y) || { x: 0, y: 0 },
+        (x, y) => this.getNormalizedMousePos(p, x, y),
         (x, y) => {
           const graphW = p.width - this.margin.left - this.margin.right;
           const graphH = p.height - this.margin.top - this.margin.bottom;
@@ -63,20 +60,20 @@ export class GraphEditor {
       );
 
       p.setup = () => {
-        const { width, height } = this.canvasContainer.getBoundingClientRect();
+        const { width, height } = this.dom.getGraphCanvasSize();
         const size = Math.min(width, height);
-        p.createCanvas(size, size).parent(this.canvasContainer);
+        p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
         p.textFont('Geist');
       };
 
       p.windowResized = () => {
-        const { width, height } = this.canvasContainer.getBoundingClientRect();
+        const { width, height } = this.dom.getGraphCanvasSize();
         const size = Math.min(width, height);
         p.resizeCanvas(size, size);
       };
 
       p.draw = () => {
-        p.background(DEFAULT_COLORS.background);
+        p.background(this.colors.background);
 
         if (!this.activePath || !this.activePath.timeCurve) return;
 
@@ -98,31 +95,35 @@ export class GraphEditor {
         p.scale(graphW, graphH);
         p.translate(0, 1);
         p.scale(1, -1);
-        drawBezierCurve(p, this.activePath.timeCurve, 2 / Math.min(graphW, graphH), DEFAULT_COLORS.curve);
+        drawBezierCurve(p, this.activePath.timeCurve, 2 / Math.min(graphW, graphH), this.colors.curve);
         p.pop();
 
         // コントロールの描画
         const transform = (v: Vector) => {
           return p.createVector(v.x * graphW, (1 - v.y) * graphH);
         };
-        drawControls(p, this.activePath.timeCurve, 6, DEFAULT_COLORS.handle, transform);
+        drawControls(p, this.activePath.timeCurve, this.config.pointSize, this.colors.handle, transform);
 
         p.pop();
       };
 
       p.mousePressed = () => {
+        // 左クリックのみを処理
+        const isLeftClick = (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
+        if (!isLeftClick) return;
+
         if (this.isMouseInGraph(p)) {
-          this.handleManager?.begin(p.mouseX, p.mouseY);
+          if (this.handleManager?.begin(p.mouseX, p.mouseY)) return;
         }
       };
 
       p.mouseDragged = () => {
-        const mode = p.keyIsDown(p.SHIFT) ? 1 : 0;
+        const mode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
         this.handleManager?.drag(p.mouseX, p.mouseY, mode);
       };
 
       p.mouseReleased = () => {
-        this.handleManager?.end();
+        if (this.handleManager?.end()) return;
       };
     };
 
@@ -132,7 +133,7 @@ export class GraphEditor {
   // グリッドの描画
   private drawGrid(p: p5, w: number, h: number): void {
     p.noFill();
-    p.stroke(DEFAULT_COLORS.border);
+    p.stroke(this.colors.border);
     p.strokeWeight(1);
     p.rect(0, 0, w, h);
   }
@@ -149,7 +150,7 @@ export class GraphEditor {
   }
 
   // 正規化座標からスクリーン座標への変換
-  private getNormalizedMousePos(p: p5, x: number, y: number): { x: number, y: number } | null {
+  private getNormalizedMousePos(p: p5, x: number, y: number): { x: number, y: number } {
     const mouseX = x - this.margin.left;
     const mouseY = y - this.margin.top;
 

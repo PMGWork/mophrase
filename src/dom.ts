@@ -49,4 +49,11 @@ export class DOMManager {
       height: this.canvasContainer.clientHeight,
     };
   }
+
+  public getGraphCanvasSize(): { width: number; height: number } {
+    return {
+      width: this.graphEditorCanvas.clientWidth,
+      height: this.graphEditorCanvas.clientHeight,
+    };
+  }
 }
