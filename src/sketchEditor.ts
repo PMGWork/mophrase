@@ -6,11 +6,11 @@ import { drawPoints, drawBezierCurve, drawControls } from './draw';
 import { SuggestionManager } from './suggestion';
 import { HandleManager } from './handleManager';
 
-import { DOMManager } from './dom';
+import { DOMManager } from './domManager';
 import { MotionManager } from './motionManager';
 
 export class SketchEditor {
-  private dom: DOMManager;
+  private domManager: DOMManager;
   private onPathCreated: (path: Path) => void;
 
   // データ構造
@@ -27,8 +27,8 @@ export class SketchEditor {
   private colors: Colors;
 
   // コンストラクタ
-  constructor(dom: DOMManager, config: Config, colors: Colors, onPathCreated: (path: Path) => void) {
-    this.dom = dom;
+  constructor(domManager: DOMManager, config: Config, colors: Colors, onPathCreated: (path: Path) => void) {
+    this.domManager = domManager;
     this.config = config;
     this.colors = colors;
     this.onPathCreated = onPathCreated;
@@ -61,9 +61,9 @@ export class SketchEditor {
   private init(): void {
     const sketch = (p: p5) => {
       p.setup = () => {
-        const { width, height } = this.dom.getCanvasSize();
+        const { width, height } = this.domManager.getCanvasSize();
         const canvas = p.createCanvas(width, height);
-        canvas.parent(this.dom.canvasContainer);
+        canvas.parent(this.domManager.canvasContainer);
         p.background(this.colors.background);
         p.textFont('Geist');
 
@@ -71,7 +71,7 @@ export class SketchEditor {
       };
 
       p.windowResized = () => {
-        const { width, height } = this.dom.getCanvasSize();
+        const { width, height } = this.domManager.getCanvasSize();
         p.resizeCanvas(width, height);
       };
 
@@ -147,7 +147,7 @@ export class SketchEditor {
         };
 
         // ユーザー指示入力欄をクリア
-        this.dom.userPromptInput.value = '';
+        this.domManager.userPromptInput.value = '';
       };
 
       p.mouseReleased = () => {

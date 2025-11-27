@@ -3,7 +3,7 @@ import type { Path, Vector } from './types';
 import { drawBezierCurve, drawControls } from './draw';
 import type { Config, Colors } from './config';
 import { HandleManager } from './handleManager';
-import { DOMManager } from './dom';
+import { DOMManager } from './domManager';
 
 export class GraphEditor {
   private dom: DOMManager;
