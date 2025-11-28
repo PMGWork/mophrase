@@ -6,7 +6,7 @@ import { HandleManager } from './handleManager';
 import { DOMManager } from './domManager';
 
 export class GraphEditor {
-  private dom: DOMManager;
+  private domManager: DOMManager;
   private isVisible: boolean = false;
   private activePath: Path | null = null;
 
@@ -21,21 +21,21 @@ export class GraphEditor {
   private readonly margin = { top: 40, right: 40, bottom: 40, left: 40 };
 
   // コンストラクタ
-  constructor(dom: DOMManager, config: Config, colors: Colors) {
-    this.dom = dom;
+  constructor(domManager: DOMManager, config: Config, colors: Colors) {
+    this.domManager = domManager;
     this.config = config;
     this.colors = colors;
 
     this.init();
 
-    this.dom.durationInput.addEventListener('change', () => this.updateDuration());
+    this.domManager.durationInput.addEventListener('change', () => this.updateDuration());
   }
 
   // グラフの表示/非表示
   public toggle(): void {
     this.isVisible = !this.isVisible;
-    this.dom.graphEditorContainer.classList.toggle('hidden', !this.isVisible);
-    this.dom.graphEditorContainer.classList.toggle('flex', this.isVisible);
+    this.domManager.graphEditorContainer.classList.toggle('hidden', !this.isVisible);
+    this.domManager.graphEditorContainer.classList.toggle('flex', this.isVisible);
 
     window.dispatchEvent(new Event('resize'));
   }
@@ -45,7 +45,7 @@ export class GraphEditor {
     this.activePath = path;
     if (path && path.times.length > 0) {
       const duration = path.times[path.times.length - 1] - path.times[0];
-      this.dom.durationInput.value = Math.round(duration).toString();
+      this.domManager.durationInput.value = Math.round(duration).toString();
     }
   }
 
@@ -53,7 +53,7 @@ export class GraphEditor {
   private updateDuration(): void {
     if (!this.activePath || this.activePath.times.length === 0) return;
 
-    const newDuration = Number(this.dom.durationInput.value);
+    const newDuration = Number(this.domManager.durationInput.value);
     if (Number.isNaN(newDuration) || newDuration <= 0) return;
 
     const oldDuration = this.activePath.times[this.activePath.times.length - 1] - this.activePath.times[0];
@@ -82,14 +82,14 @@ export class GraphEditor {
       );
 
       p.setup = () => {
-        const { width, height } = this.dom.getGraphCanvasSize();
+        const { width, height } = this.domManager.getGraphCanvasSize();
         const size = Math.min(width, height);
-        p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
+        p.createCanvas(size, size).parent(this.domManager.graphEditorCanvas);
         p.textFont('Geist');
       };
 
       p.windowResized = () => {
-        const { width, height } = this.dom.getGraphCanvasSize();
+        const { width, height } = this.domManager.getGraphCanvasSize();
         const size = Math.min(width, height);
         p.resizeCanvas(size, size);
       };
