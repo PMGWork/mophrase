@@ -16,6 +16,9 @@ export class DOMManager {
   public readonly closeGraphEditorButton: HTMLButtonElement;
   public readonly graphEditorContainer: HTMLDivElement;
   public readonly graphEditorCanvas: HTMLDivElement;
+  public readonly graphUserPromptForm: HTMLFormElement;
+  public readonly graphUserPromptInput: HTMLInputElement;
+  public readonly graphSuggestionList: HTMLDivElement;
 
   constructor() {
     this.sketchCheckbox = this.getElement('toggleSketchCheckbox');
@@ -35,6 +38,9 @@ export class DOMManager {
     this.closeGraphEditorButton = this.getElement('closeGraphEditorButton');
     this.graphEditorContainer = this.getElement('graphEditorContainer');
     this.graphEditorCanvas = this.getElement('graphEditorCanvas');
+    this.graphUserPromptForm = this.getElement('graphUserPromptForm');
+    this.graphUserPromptInput = this.getElement('graphUserPromptInput');
+    this.graphSuggestionList = this.getElement('graphSuggestionList');
   }
 
   private getElement<T extends HTMLElement>(id: string): T {

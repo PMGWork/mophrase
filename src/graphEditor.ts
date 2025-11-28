@@ -4,9 +4,11 @@ import { drawBezierCurve, drawControls } from './draw';
 import type { Config, Colors } from './config';
 import { HandleManager } from './handleManager';
 import { DOMManager } from './domManager';
+import { SuggestionManager } from './suggestion';
 
 export class GraphEditor {
   private domManager: DOMManager;
+  private suggestionManager: SuggestionManager;
   private isVisible: boolean = false;
   private activePath: Path | null = null;
 
@@ -26,9 +28,20 @@ export class GraphEditor {
     this.config = config;
     this.colors = colors;
 
+    this.suggestionManager = new SuggestionManager(config, {
+      onGraphSuggestionSelect: (curves) => {
+        this.applySuggestion(curves);
+      }
+    });
+
     this.init();
 
     this.domManager.durationInput.addEventListener('change', () => this.updateDuration());
+    this.domManager.graphUserPromptForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      console.log('GraphEditor: Submit button clicked');
+      this.generateSuggestion();
+    });
   }
 
   // グラフの表示/非表示
@@ -63,6 +76,34 @@ export class GraphEditor {
     const startTime = this.activePath.times[0];
 
     this.activePath.times = this.activePath.times.map(t => startTime + (t - startTime) * scale);
+  }
+
+  // 提案の生成
+  private async generateSuggestion(): Promise<void> {
+    console.log('GraphEditor: generateSuggestion called');
+    if (!this.activePath || !this.activePath.timeCurve) {
+      console.log('GraphEditor: No active path or time curve', this.activePath);
+      return;
+    }
+
+    const userPrompt = this.domManager.graphUserPromptInput.value;
+    console.log('GraphEditor: User prompt:', userPrompt);
+    // 現在のカーブを取得 (p0, p1, p2, p3)
+    // activePath.timeCurve は Vector[][]
+    const currentCurves = this.activePath.timeCurve;
+
+    // UIの位置を設定 (入力欄の下)
+    const rect = this.domManager.graphUserPromptInput.getBoundingClientRect();
+    this.suggestionManager.setPosition(rect.left, rect.bottom + 10);
+
+    await this.suggestionManager.generateGraphSuggestion(currentCurves, userPrompt);
+  }
+
+  // 提案の適用
+  private applySuggestion(curves: Vector[][]): void {
+    if (!this.activePath) return;
+    // カーブを更新
+    this.activePath.timeCurve = curves;
   }
 
   // p5.jsの初期化
@@ -125,6 +166,16 @@ export class GraphEditor {
           return p.createVector(v.x * graphW, (1 - v.y) * graphH);
         };
         drawControls(p, this.activePath.timeCurve, this.config.pointSize, this.colors.handle, transform);
+
+        // 提案のプレビュー描画
+        p.push();
+        p.translate(0, graphH);
+        p.scale(graphW, -graphH);
+
+        // 線幅の補正 (逆スケール)
+        const scaleFactor = 1 / Math.min(graphW, graphH);
+        this.suggestionManager.draw(p, this.colors, { strokeScale: scaleFactor });
+        p.pop();
 
         p.pop();
       };

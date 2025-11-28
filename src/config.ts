@@ -1,7 +1,8 @@
 /// アプリケーション設定
 
 import type { LLMProvider } from './llmService';
-import prompt from './prompt.md?raw';
+import sketchPrompt from './sketchPrompt.md?raw';
+import graphPrompt from './graphPrompt.md?raw';
 
 // スキーマ定義
 export interface Config {
@@ -14,7 +15,8 @@ export interface Config {
   pointSize: number;          // 制御点のサイズ
   llmProvider: LLMProvider;   // LLMプロバイダ名
   llmModel: string;           // LLMモデル名
-  llmPrompt: string;          // 指示プロンプト
+  sketchPrompt: string;       // スケッチ指示プロンプト
+  graphPrompt: string;        // グラフ指示プロンプト
 };
 
 export interface Colors {
@@ -36,7 +38,8 @@ export const DEFAULT_CONFIG: Config = {
   pointSize: 6,
   llmProvider: 'OpenAI',
   llmModel: 'gpt-5.1',
-  llmPrompt: prompt,
+  sketchPrompt: sketchPrompt,
+  graphPrompt: graphPrompt,
 };
 
 export const DEFAULT_COLORS: Colors = {

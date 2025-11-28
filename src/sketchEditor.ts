@@ -37,21 +37,23 @@ export class SketchEditor {
     this.handleManager = new HandleManager(() => this.paths);
 
     // 提案マネージャー
-    this.suggestionManager = new SuggestionManager(this.config, (selectedPaths, targetPath) => {
-      const updated = selectedPaths[0];
-      if (!updated) return;
+    this.suggestionManager = new SuggestionManager(this.config, {
+      onSuggestionSelect: (selectedPaths, targetPath) => {
+        const updated = selectedPaths[0];
+        if (!updated) return;
 
-      if (targetPath) {
-        const index = this.paths.findIndex(path => path === targetPath);
-        if (index >= 0) {
-          this.paths[index].points = updated.points;
-          this.paths[index].curves = updated.curves;
-          this.paths[index].fitError = updated.fitError;
-          return;
+        if (targetPath) {
+          const index = this.paths.findIndex(path => path === targetPath);
+          if (index >= 0) {
+            this.paths[index].points = updated.points;
+            this.paths[index].curves = updated.curves;
+            this.paths[index].fitError = updated.fitError;
+            return;
+          }
         }
-      }
 
-      this.paths.push(updated);
+        this.paths.push(updated);
+      }
     });
 
     this.init();
@@ -105,7 +107,7 @@ export class SketchEditor {
         }
 
         // 提案プレビューの描画
-        this.suggestionManager.draw(p, this.colors, this.paths[this.paths.length - 1]);
+        this.suggestionManager.draw(p, this.colors);
 
         // モーションの更新
         this.motionManager?.update();
