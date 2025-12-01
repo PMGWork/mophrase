@@ -1,8 +1,8 @@
 /// アプリケーション設定
 
 import type { LLMProvider } from './llmService';
-import sketchPrompt from './sketchPrompt.md?raw';
-import graphPrompt from './graphPrompt.md?raw';
+import sketchPrompt from './prompts/sketchPrompt.md?raw';
+import graphPrompt from './prompts/graphPrompt.md?raw';
 
 // スキーマ定義
 export interface Config {
@@ -31,7 +31,7 @@ export interface Colors {
 export const DEFAULT_CONFIG: Config = {
   showSketch: false,
   sketchFitTolerance: 20,
-  graphFitTolerance: 3,
+  graphFitTolerance: 5,
   coarseErrorWeight: 2.0,
   defaultDragMode: 1,
   lineWeight: 1,
