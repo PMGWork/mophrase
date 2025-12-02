@@ -9,7 +9,7 @@ import { SuggestionManager } from './suggestion';
 export class GraphEditor {
   private domManager: DOMManager;
   private suggestionManager: SuggestionManager;
-  private isVisible: boolean = false;
+  private isVisible: boolean = true;
   private activePath: Path | null = null;
 
   // マネージャー
