@@ -92,7 +92,7 @@ export class GraphEditor {
     // activePath.timeCurve は Vector[][]
     const currentCurves = this.activePath.timeCurve;
 
-    await this.suggestionManager.generateGraphSuggestion(currentCurves, userPrompt);
+    await this.suggestionManager.generateGraphSuggestions(currentCurves, userPrompt);
   }
 
   // 提案の適用

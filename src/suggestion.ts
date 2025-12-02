@@ -119,7 +119,7 @@ export class SuggestionManager {
   }
 
   // グラフカーブの提案を生成する
-  async generateGraphSuggestion(currentCurves: p5.Vector[][], userPrompt?: string): Promise<void> {
+  async generateGraphSuggestions(currentCurves: p5.Vector[][], userPrompt?: string): Promise<void> {
     if (!currentCurves || currentCurves.length === 0) {
       this.setState('error');
       return;
@@ -205,7 +205,7 @@ export class SuggestionManager {
     return crypto.randomUUID();
   }
 
-  // ホバー中の提案プレビューを描画する
+  // ホバー中のプレビューを描画する
   private drawPreview(p: p5, colors: Colors, transform?: (v: p5.Vector) => p5.Vector): void {
     if (!this.hoveredId) return;
     const suggestion = this.suggestions.find(entry => entry.id === this.hoveredId);
@@ -265,7 +265,7 @@ export class SuggestionManager {
 
 
 // #region 汎用関数
-// LLM から提案を取得する (共通)
+// LLM から提案を取得する
 async function fetchSuggestions(
   serializedPaths: SerializedPath[],
   basePrompt: string,
