@@ -4,6 +4,9 @@ import { z } from 'zod';
 
 export type Vector = p5.Vector;
 
+// エディタモード
+export type SketchMode = 'draw' | 'select';
+
 
 // #region スキーマ定義
 // カーブ情報
@@ -89,7 +92,7 @@ export interface Suggestion {
 }
 
 // 提案の状態
-export type SuggestionState = 'idle' | 'generating' | 'error' | 'awaiting_input';
+export type SuggestionState = 'idle' | 'generating' | 'error' | 'input';
 
 
 // #region Zodスキーマ定義

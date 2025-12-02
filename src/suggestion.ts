@@ -119,7 +119,7 @@ export class SuggestionManager {
   // 入力ウィンドウを表示する
   showInput(targetPath: Path): void {
     this.targetPath = targetPath;
-    this.setState('awaiting_input');
+    this.setState('input');
     this.sketchUI.update(this.status, this.suggestions, this.targetPath);
   }
 

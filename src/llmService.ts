@@ -71,7 +71,6 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     defaultModel: 'gemini-flash-latest',
     models: [
       { id: 'gemini-flash-latest', name: 'Gemini Flash' },
-      { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite' },
     ],
     generate: async (prompt, schema, model) => {
       const response = await genai.models.generateContent({
@@ -92,7 +91,6 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     models: [
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
       { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct' },
-      { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', name: 'Llama 4 Maverick' },
     ],
     generate: async (prompt, schema, model) => {
       const response = await groq.chat.completions.create({

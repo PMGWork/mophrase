@@ -12,6 +12,8 @@ export class DOMManager {
   public readonly userPromptInput!: HTMLInputElement;
   public readonly clearButton!: HTMLButtonElement;
   public readonly playButton!: HTMLButtonElement;
+  public readonly drawModeButton!: HTMLButtonElement;
+  public readonly selectModeButton!: HTMLButtonElement;
   public readonly editMotionButton!: HTMLButtonElement;
   public readonly closeGraphEditorButton!: HTMLButtonElement;
   public readonly graphEditorContainer!: HTMLDivElement;
@@ -35,6 +37,8 @@ export class DOMManager {
       userPromptInput: 'userPromptInput',
       clearButton: 'clearButton',
       playButton: 'playButton',
+      drawModeButton: 'drawModeButton',
+      selectModeButton: 'selectModeButton',
       editMotionButton: 'editMotionButton',
       closeGraphEditorButton: 'closeGraphEditorButton',
       graphEditorContainer: 'graphEditorContainer',
@@ -91,6 +95,8 @@ type ElementMap = {
   userPromptInput: HTMLInputElement;
   clearButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
+  drawModeButton: HTMLButtonElement;
+  selectModeButton: HTMLButtonElement;
   editMotionButton: HTMLButtonElement;
   closeGraphEditorButton: HTMLButtonElement;
   graphEditorContainer: HTMLDivElement;
