@@ -7,7 +7,7 @@ import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
 import { drawBezierCurve } from './draw';
 import { deserializeCurves, serializePaths, deserializePaths, serializeAnchorsAndSegments } from './serialization';
-import { SketchSuggestionUI, GraphSuggestionUI } from './suggestionUI';
+import { SuggestionUI, positionSketchSuggestion } from './suggestionUI';
 
 
 // #region 提案マネージャー
@@ -25,8 +25,8 @@ export class SuggestionManager {
   private onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
   private pInstance: p5 | null = null;
   private strokeScale: number = 1;
-  private sketchUI: SketchSuggestionUI;
-  private graphUI: GraphSuggestionUI;
+  private sketchUI: SuggestionUI;
+  private graphUI: SuggestionUI;
 
   constructor(
     config: Config,
@@ -38,11 +38,21 @@ export class SuggestionManager {
     this.config = config;
     this.onSuggestionSelect = options.onSuggestionSelect;
     this.onGraphSuggestionSelect = options.onGraphSuggestionSelect;
-    this.sketchUI = new SketchSuggestionUI(
+    this.sketchUI = new SuggestionUI(
+      {
+        containerId: 'suggestionContainer',
+        listId: 'suggestionList',
+        itemClass: 'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
+        position: positionSketchSuggestion
+      },
       (id) => this.hoveredSuggestionId = id,
       (id) => this.selectSuggestionById(id)
     );
-    this.graphUI = new GraphSuggestionUI(
+    this.graphUI = new SuggestionUI(
+      {
+        listId: 'graphSuggestionList',
+        itemClass: 'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer'
+      },
       (id) => this.hoveredSuggestionId = id,
       (id) => this.selectSuggestionById(id)
     );
@@ -65,7 +75,7 @@ export class SuggestionManager {
 
     this.clear();
     this.setState('loading');
-    this.sketchUI.updateUI(this.status, this.suggestions, this.targetPath);
+    this.sketchUI.update(this.status, this.suggestions, this.targetPath);
 
     try {
       // パスをシリアライズ
@@ -92,11 +102,11 @@ export class SuggestionManager {
         }
       }));
       this.setState('idle');
-      this.sketchUI.updateUI(this.status, this.suggestions, this.targetPath);
+      this.sketchUI.update(this.status, this.suggestions, this.targetPath);
     } catch (error) {
       console.error(error);
       this.setState('error');
-      this.sketchUI.updateUI(this.status, this.suggestions, this.targetPath);
+      this.sketchUI.update(this.status, this.suggestions, this.targetPath);
     }
   }
 
@@ -111,7 +121,7 @@ export class SuggestionManager {
 
     this.setState('loading');
     this.suggestions = [];
-    this.graphUI.updateUI(this.status, this.suggestions);
+    this.graphUI.update(this.status, this.suggestions);
 
     try {
       // 現在のカーブをシリアライズ
@@ -141,11 +151,11 @@ export class SuggestionManager {
         }
       }));
       this.setState('idle');
-      this.graphUI.updateUI(this.status, this.suggestions);
+      this.graphUI.update(this.status, this.suggestions);
     } catch (error) {
       console.error(error);
       this.setState('error');
-      this.graphUI.updateUI(this.status, this.suggestions);
+      this.graphUI.update(this.status, this.suggestions);
     }
   }
 
@@ -156,11 +166,6 @@ export class SuggestionManager {
     this.setState('idle');
     this.sketchUI.hide();
     this.graphUI.hide();
-  }
-
-  // UI位置を設定する
-  setPosition(x: number, y: number): void {
-    this.sketchUI.setPosition(x, y);
   }
 
   // 提案を描画する（プレビューのみ）
@@ -247,7 +252,6 @@ export class SuggestionManager {
     this.clear();
     this.targetPath = undefined;
     this.setState('idle');
-    // リセット後はUIを更新しない（hide で対応済み）
   }
 }
 

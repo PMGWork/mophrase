@@ -1,28 +1,83 @@
 import type { Path, Suggestion } from './types';
 
 // 提案の状態
-type SuggestionState = 'idle' | 'loading' | 'error';
+export type SuggestionState = 'idle' | 'loading' | 'error';
 
-// 提案UI抽象クラス
-abstract class SuggestionUI {
-  protected onHoverChange: (id: string | null) => void;
-  protected onSuggestionClick: (id: string) => void;
+type SuggestionUIConfig = {
+  containerId?: string;
+  listId: string;
+  itemClass: string;
+  position?: (args: {
+    container: HTMLElement | null;
+    targetPath?: Path;
+  }) => void;
+};
 
+// スケッチ/グラフ共通の簡易UI
+export class SuggestionUI {
+  private config: SuggestionUIConfig;
+  private onHoverChange: (id: string | null) => void;
+  private onSuggestionClick: (id: string) => void;
+
+  // コンストラクタ
   constructor(
+    config: SuggestionUIConfig,
     onHoverChange: (id: string | null) => void,
     onSuggestionClick: (id: string) => void
   ) {
+    this.config = config;
     this.onHoverChange = onHoverChange;
     this.onSuggestionClick = onSuggestionClick;
   }
 
-  abstract updateUI(status: SuggestionState, suggestions: Suggestion[], targetPath?: Path): void;
-  abstract hide(): void;
+  // UIを非表示
+  hide(): void {
+    const { containerId, listId } = this.config;
+    if (containerId) {
+      const container = document.getElementById(containerId);
+      if (container) container.style.display = 'none';
+    }
+    this.clearItems(listId);
+  }
 
-  // 共通メソッド: 提案アイテムの作成
-  protected createSuggestionItem(suggestion: Suggestion, className: string): HTMLButtonElement {
+  // UIの更新
+  update(status: SuggestionState, suggestions: Suggestion[], targetPath?: Path): void {
+    const { containerId, listId } = this.config;
+    const listContainer = document.getElementById(listId);
+    if (!listContainer) return;
+
+    const container = containerId ? document.getElementById(containerId) : null;
+
+    const showLoading = status === 'loading';
+    const hasSuggestions = suggestions.length > 0;
+
+    if (container) {
+      container.style.display = showLoading || hasSuggestions ? 'flex' : 'none';
+      container.style.flexDirection = 'column';
+    }
+
+    this.clearItems(listId);
+
+    if (showLoading) {
+      const loading = document.createElement('div');
+      loading.className = 'suggestion-loading px-3 py-2 text-sm text-gray-400';
+      loading.textContent = 'Generating...';
+      listContainer.appendChild(loading);
+      this.applyPosition(targetPath);
+      return;
+    }
+
+    if (hasSuggestions) {
+      suggestions.forEach((suggestion) => listContainer.appendChild(this.createSuggestionItem(suggestion)));
+    }
+
+    this.applyPosition(targetPath);
+  }
+
+  // 提案項目の作成
+  private createSuggestionItem(suggestion: Suggestion): HTMLButtonElement {
     const item = document.createElement('button');
-    item.className = className;
+    item.className = `suggestion-item ${this.config.itemClass}`;
     item.textContent = suggestion.title;
     item.dataset.suggestionId = suggestion.id;
 
@@ -33,152 +88,44 @@ abstract class SuggestionUI {
     return item;
   }
 
-  // アイテムのクリア
-  protected clearItems(containerId: string): void {
-    const container = document.getElementById(containerId);
-    if (container) {
-      const items = container.querySelectorAll('.suggestion-item');
-      items.forEach(item => item.remove());
-    }
+  // 提案項目のクリア
+  private clearItems(listId: string): void {
+    const container = document.getElementById(listId);
+    if (container) container.innerHTML = '';
+  }
+
+  private applyPosition(targetPath?: Path): void {
+    this.config.position?.({
+      container: this.config.containerId ? document.getElementById(this.config.containerId) : null,
+      targetPath
+    });
   }
 }
 
-// スケッチ提案UI
-export class SketchSuggestionUI extends SuggestionUI {
-  private customPosition: { x: number; y: number } | null = null;
+// スケッチUIの配置計算
+export function positionSketchSuggestion({
+  container,
+  targetPath
+}: {
+  container: HTMLElement | null;
+  targetPath?: Path;
+}) {
+  if (!container) return;
 
-  // UI位置を設定する
-  setPosition(x: number, y: number): void {
-    this.customPosition = { x, y };
-    this.updateUIPosition(null);
-  }
+  if (!targetPath) return;
+  const anchor = getLatestEndPoint([targetPath]);
+  if (!anchor) return;
 
-  // UIを非表示にする
-  hide(): void {
-    const container = document.getElementById('suggestionContainer');
-    const loadingElement = document.getElementById('suggestionLoading');
+  const parent = container.parentElement;
+  const rect = parent?.getBoundingClientRect();
+  const offsetX = rect?.left ?? 0;
+  const offsetY = rect?.top ?? 0;
 
-    if (container) container.style.display = 'none';
-    if (loadingElement) loadingElement.style.display = 'none';
+  const left = offsetX + anchor.x + 20;
+  const top = offsetY + anchor.y - 20;
 
-    this.clearItems('suggestionList');
-  }
-
-  // UIを更新する
-  updateUI(status: SuggestionState, suggestions: Suggestion[], targetPath?: Path): void {
-    const container = document.getElementById('suggestionContainer');
-    const listContainer = document.getElementById('suggestionList');
-    const loadingElement = document.getElementById('suggestionLoading');
-
-    if (!container || !listContainer || !loadingElement) return;
-
-    if (status === 'loading') {
-      // ローディング表示
-      container.style.display = 'flex';
-      container.style.flexDirection = 'column';
-      loadingElement.style.display = 'flex';
-      loadingElement.style.alignItems = 'center';
-      loadingElement.style.gap = '0.5rem';
-      this.clearItems('suggestionList');
-      this.updateUIPosition(targetPath);
-    } else if (suggestions.length > 0) {
-      // 提案リスト表示
-      container.style.display = 'flex';
-      container.style.flexDirection = 'column';
-      loadingElement.style.display = 'none';
-      this.clearItems('suggestionList');
-      this.renderSuggestionItems(suggestions, listContainer);
-      this.updateUIPosition(targetPath);
-    } else {
-      // 非表示
-      container.style.display = 'none';
-      loadingElement.style.display = 'none';
-      this.clearItems('suggestionList');
-    }
-  }
-
-  // スケッチ提案アイテムをレンダリング
-  private renderSuggestionItems(suggestions: Suggestion[], listContainer: HTMLElement): void {
-    suggestions.forEach((suggestion) => {
-      const item = this.createSuggestionItem(
-        suggestion,
-        'suggestion-item px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer'
-      );
-      listContainer.appendChild(item);
-    });
-  }
-
-  // UIの位置を更新
-  private updateUIPosition(targetPath: Path | null | undefined): void {
-    const container = document.getElementById('suggestionContainer');
-    if (!container) return;
-
-    if (this.customPosition) {
-      container.style.left = `${this.customPosition.x}px`;
-      container.style.top = `${this.customPosition.y}px`;
-      return;
-    }
-
-    if (!targetPath) return;
-
-    const anchor = getLatestEndPoint([targetPath]);
-    if (!anchor) return;
-
-    const parent = container.parentElement;
-    const rect = parent?.getBoundingClientRect();
-    const offsetX = rect?.left ?? 0;
-    const offsetY = rect?.top ?? 0;
-
-    const left = offsetX + anchor.x + 20;
-    const top = offsetY + anchor.y - 20;
-
-    container.style.left = `${left}px`;
-    container.style.top = `${top}px`;
-  }
-}
-
-// グラフ提案UI
-export class GraphSuggestionUI extends SuggestionUI {
-  // UIを非表示にする
-  hide(): void {
-    const loadingElement = document.getElementById('graphSuggestionLoading');
-    if (loadingElement) loadingElement.style.display = 'none';
-    this.clearItems('graphSuggestionList');
-  }
-
-  // UIを更新する
-  updateUI(status: SuggestionState, suggestions: Suggestion[], _targetPath?: Path): void {
-    const listContainer = document.getElementById('graphSuggestionList');
-    const loadingElement = document.getElementById('graphSuggestionLoading');
-
-    if (!listContainer || !loadingElement) return;
-
-    if (status === 'loading') {
-      // ローディング表示
-      loadingElement.style.display = 'flex';
-      this.clearItems('graphSuggestionList');
-    } else if (suggestions.length > 0) {
-      // 提案リスト表示
-      loadingElement.style.display = 'none';
-      this.clearItems('graphSuggestionList');
-      this.renderGraphSuggestionItems(suggestions, listContainer);
-    } else {
-      // 非表示
-      loadingElement.style.display = 'none';
-      this.clearItems('graphSuggestionList');
-    }
-  }
-
-  // グラフ提案アイテムをレンダリング
-  private renderGraphSuggestionItems(suggestions: Suggestion[], listContainer: HTMLElement): void {
-    suggestions.forEach((suggestion) => {
-      const item = this.createSuggestionItem(
-        suggestion,
-        'suggestion-item w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer'
-      );
-      listContainer.appendChild(item);
-    });
-  }
+  container.style.left = `${left}px`;
+  container.style.top = `${top}px`;
 }
 
 // 最新のパスの終点を取得

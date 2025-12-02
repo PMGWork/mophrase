@@ -92,10 +92,6 @@ export class GraphEditor {
     // activePath.timeCurve は Vector[][]
     const currentCurves = this.activePath.timeCurve;
 
-    // UIの位置を設定 (入力欄の下)
-    const rect = this.domManager.graphUserPromptInput.getBoundingClientRect();
-    this.suggestionManager.setPosition(rect.left, rect.bottom + 10);
-
     await this.suggestionManager.generateGraphSuggestion(currentCurves, userPrompt);
   }
 
