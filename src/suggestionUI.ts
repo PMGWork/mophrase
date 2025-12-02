@@ -1,7 +1,4 @@
-import type { Path, Suggestion } from './types';
-
-// 提案の状態
-export type SuggestionState = 'idle' | 'loading' | 'error';
+import type { Path, Suggestion, SuggestionState } from './types';
 
 type SuggestionUIConfig = {
   containerId?: string;
@@ -49,10 +46,11 @@ export class SuggestionUI {
     const container = containerId ? document.getElementById(containerId) : null;
 
     const showLoading = status === 'loading';
+    const showInput = status === 'input';
     const hasSuggestions = suggestions.length > 0;
 
     if (container) {
-      container.style.display = showLoading || hasSuggestions ? 'flex' : 'none';
+      container.style.display = showLoading || showInput || hasSuggestions ? 'flex' : 'none';
       container.style.flexDirection = 'column';
     }
 

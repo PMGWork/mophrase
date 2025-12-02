@@ -1,7 +1,7 @@
 import p5 from 'p5';
 import { encode } from '@toon-format/toon'
 
-import type { Path, SerializedPath, Suggestion, SuggestionItem } from './types';
+import type { Path, SerializedPath, Suggestion, SuggestionItem, SuggestionState } from './types';
 import type { Colors, Config } from './config';
 import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
@@ -11,8 +11,6 @@ import { SuggestionUI, positionUI } from './suggestionUI';
 
 
 // #region 提案マネージャー
-// 提案の状態（内部でのみ使用）
-type SuggestionState = 'idle' | 'loading' | 'error';
 
 // 提案管理クラス
 export class SuggestionManager {
@@ -116,6 +114,13 @@ export class SuggestionManager {
       this.setState('error');
       this.sketchUI.update(this.status, this.suggestions, this.targetPath);
     }
+  }
+
+  // 入力ウィンドウを表示する
+  showInput(targetPath: Path): void {
+    this.targetPath = targetPath;
+    this.setState('input');
+    this.sketchUI.update(this.status, this.suggestions, this.targetPath);
   }
 
   // グラフカーブの提案を生成する

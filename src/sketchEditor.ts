@@ -173,7 +173,7 @@ export class SketchEditor {
           // 確定済みパスに追加
           this.paths.push(this.activePath);
           this.suggestionManager.reset();
-          void this.suggestionManager.generate(this.paths[this.paths.length - 1]);
+          this.suggestionManager.showInput(this.paths[this.paths.length - 1]);
 
           // グラフエディタにも反映
           this.onPathCreated(this.paths[this.paths.length - 1]);

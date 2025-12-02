@@ -88,6 +88,9 @@ export interface Suggestion {
   path: SerializedPath;
 }
 
+// 提案の状態
+export type SuggestionState = 'idle' | 'loading' | 'error' | 'input';
+
 
 // #region Zodスキーマ定義
 // 制御点スキーマ
