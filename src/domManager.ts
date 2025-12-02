@@ -1,3 +1,4 @@
+// DOMマネージャー
 export class DOMManager {
   public readonly sketchCheckbox!: HTMLInputElement;
   public readonly thresholdSlider!: HTMLInputElement;
@@ -20,6 +21,7 @@ export class DOMManager {
   public readonly graphUserPromptInput!: HTMLInputElement;
   public readonly graphSuggestionList!: HTMLDivElement;
 
+  // コンストラクタ
   constructor() {
     const elements = this.collectElements<ElementMap>({
       sketchCheckbox: 'toggleSketchCheckbox',
@@ -47,6 +49,7 @@ export class DOMManager {
     Object.assign(this, elements);
   }
 
+  // DOM要素を取得する
   private collectElements<T extends Record<string, HTMLElement>>(ids: Record<keyof T, string>): T {
     const entries = Object.entries(ids).map(([key, id]) => {
       const element = document.getElementById(id);
@@ -59,6 +62,7 @@ export class DOMManager {
     return Object.fromEntries(entries) as T;
   }
 
+  // キャンバスサイズを取得する
   public getCanvasSize(): { width: number; height: number } {
     return {
       width: this.canvasContainer.clientWidth,
@@ -66,6 +70,7 @@ export class DOMManager {
     };
   }
 
+  // グラフキャンバスサイズを取得する
   public getGraphCanvasSize(): { width: number; height: number } {
     return {
       width: this.graphEditorCanvas.clientWidth,
@@ -74,6 +79,7 @@ export class DOMManager {
   }
 }
 
+// DOM要素のマップ
 type ElementMap = {
   sketchCheckbox: HTMLInputElement;
   thresholdSlider: HTMLInputElement;
