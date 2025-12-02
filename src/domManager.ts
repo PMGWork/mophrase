@@ -6,7 +6,6 @@ export class DOMManager {
   public readonly graphThresholdSlider!: HTMLInputElement;
   public readonly graphThresholdLabel!: HTMLElement;
   public readonly durationInput!: HTMLInputElement;
-  public readonly llmProviderSelect!: HTMLSelectElement;
   public readonly llmModelSelect!: HTMLSelectElement;
   public readonly canvasContainer!: HTMLDivElement;
   public readonly userPromptForm!: HTMLFormElement;
@@ -30,7 +29,6 @@ export class DOMManager {
       graphThresholdSlider: 'graphThresholdSlider',
       graphThresholdLabel: 'graphThresholdLabel',
       durationInput: 'durationInput',
-      llmProviderSelect: 'llmProviderSelect',
       llmModelSelect: 'llmModelSelect',
       canvasContainer: 'canvasContainer',
       userPromptForm: 'userPromptForm',
@@ -87,7 +85,6 @@ type ElementMap = {
   graphThresholdSlider: HTMLInputElement;
   graphThresholdLabel: HTMLElement;
   durationInput: HTMLInputElement;
-  llmProviderSelect: HTMLSelectElement;
   llmModelSelect: HTMLSelectElement;
   canvasContainer: HTMLDivElement;
   userPromptForm: HTMLFormElement;

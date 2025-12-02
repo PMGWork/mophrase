@@ -103,7 +103,7 @@ export class SuggestionUI {
 }
 
 // スケッチUIの配置計算
-export function positionSketchSuggestion({
+export function positionUI({
   container,
   targetPath
 }: {

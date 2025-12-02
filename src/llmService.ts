@@ -33,6 +33,13 @@ type ProviderConfig = {
   generate: <T>(prompt: string, schema: z.ZodType<T>, model?: string) => Promise<T>;
 };
 
+// プロバイダモデルオプション
+type ProviderModelOption = {
+  provider: LLMProvider;
+  modelId: string;
+  name: string;
+};
+
 // プロバイダ一覧
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
@@ -121,4 +128,16 @@ export async function generateStructured<T>(
 // 指定されたプロバイダの利用可能モデル一覧を取得する
 export function getModelsForProvider(provider: LLMProvider): ModelInfo[] {
   return PROVIDERS[provider]?.models ?? [];
+}
+
+// 全プロバイダのモデル一覧を取得する
+export function getProviderModelOptions(): ProviderModelOption[] {
+  return (Object.entries(PROVIDERS) as [LLMProvider, ProviderConfig][])
+    .flatMap(([provider, config]) =>
+      config.models.map((model) => ({
+        provider,
+        modelId: model.id,
+        name: model.name ?? model.id,
+      }))
+    );
 }

@@ -18,19 +18,8 @@
       <h1 class="text-2xl font-medium">MoPhrase</h1>
       <div class="flex flex-wrap items-center gap-2">
         <!-- LLM Settings -->
-        <select id="llmProviderSelect" class="
-              px-4 py-2 h-9
-              bg-gray-800 text-gray-50
-              text-sm cursor-pointer rounded
-              hover:bg-gray-700 transition-colors
-              focus:outline-none focus:ring-1 focus:ring-gray-700
-            ">
-          <option value="OpenAI">OpenAI</option>
-          <option value="Gemini">Gemini</option>
-          <option value="Groq">Groq</option>
-        </select>
         <select id="llmModelSelect" class="
-              px-4 py-2 h-9
+              px-4 py-2 h-9 min-w-48
               bg-gray-800 text-gray-50
               text-sm cursor-pointer rounded
               hover:bg-gray-700 transition-colors
@@ -107,7 +96,7 @@
     <div class="flex-1 flex overflow-hidden mx-4 mb-4 gap-3">
       <main id="canvasContainer"
         class="flex-1 rounded-xl border border-gray-800 relative bg-gray-950 min-w-0 overflow-hidden">
-        <div id="suggestionContainer" class="absolute z-10 bg-gray-950 border border-gray-800 rounded min-w-60"
+        <div id="sketchSuggestionContainer" class="absolute z-10 bg-gray-950 border border-gray-800 rounded min-w-60"
           style="display: none;">
           <form id="userPromptForm" class="flex items-center">
             <input id="userPromptInput" type="text" placeholder="Enter instructions..."
@@ -118,7 +107,7 @@
             </button>
           </form>
 
-          <div id="suggestionList" class="flex flex-col *:border-t *:border-gray-800">
+          <div id="sketchSuggestonList" class="flex flex-col *:border-t *:border-gray-800">
           </div>
         </div>
       </main>

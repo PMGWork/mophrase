@@ -7,7 +7,7 @@ import { suggestionResponseSchema } from './types';
 import { generateStructured } from './llmService';
 import { drawBezierCurve } from './draw';
 import { deserializeCurves, serializePaths, deserializePaths, serializeAnchorsAndSegments } from './serialization';
-import { SuggestionUI, positionSketchSuggestion } from './suggestionUI';
+import { SuggestionUI, positionUI } from './suggestionUI';
 
 
 // #region 提案マネージャー
@@ -21,28 +21,29 @@ export class SuggestionManager {
   private config: Config;
   private targetPath: Path | undefined;
   private hoveredSuggestionId: string | null = null;
-  private onSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
+  private onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
   private onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
   private pInstance: p5 | null = null;
   private sketchUI: SuggestionUI;
   private graphUI: SuggestionUI;
 
+  // コンストラクタ
   constructor(
     config: Config,
     options: {
-      onSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
+      onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
       onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
     } = {}
   ) {
     this.config = config;
-    this.onSuggestionSelect = options.onSuggestionSelect;
+    this.onSketchSuggestionSelect = options.onSketchSuggestionSelect;
     this.onGraphSuggestionSelect = options.onGraphSuggestionSelect;
     this.sketchUI = new SuggestionUI(
       {
-        containerId: 'suggestionContainer',
-        listId: 'suggestionList',
+        containerId: 'sketchSuggestionContainer',
+        listId: 'sketchSuggestionList',
         itemClass: 'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
-        position: positionSketchSuggestion
+        position: positionUI
       },
       (id) => this.hoveredSuggestionId = id,
       (id) => this.selectSuggestionById(id)
@@ -123,14 +124,12 @@ export class SuggestionManager {
     this.graphUI.update(this.status, this.suggestions);
 
     try {
-      // 現在のカーブをシリアライズ
-      // GraphEditorのカーブは (0,0) -> (1,1) の空間にあると仮定
-      // バウンディングボックスは常に (0,0,1,1) とする
+      // カーブをシリアライズ
       const bbox = { x: 0, y: 0, width: 1, height: 1 };
       const { anchors, segments } = serializeAnchorsAndSegments(currentCurves, bbox);
       const serializedPath: SerializedPath = { anchors, segments, bbox };
 
-      // LLM から提案を取得
+      // 提案を取得
       const fetched = await fetchSuggestions(
         [serializedPath],
         this.config.graphPrompt || '',
@@ -167,19 +166,21 @@ export class SuggestionManager {
     this.graphUI.hide();
   }
 
-  // 提案を描画する（プレビューのみ）
+  // 提案を描画する
   draw(p: p5, colors: Colors, options: { transform?: (v: p5.Vector) => p5.Vector } = {}): void {
     this.pInstance = p;
     if (this.status === 'loading') {
       return;
     }
 
-    // ホバー中の提案のプレビューを描画
+    // ホバー中の提案を描画
     if (this.hoveredSuggestionId) {
       this.drawHoverPreview(p, colors, options.transform);
     }
   }
 
+
+  // #region プライベート関数
   // 状態を更新する
   private setState(state: SuggestionState): void {
     this.status = state;
@@ -244,8 +245,8 @@ export class SuggestionManager {
       }
 
       // コールバックを呼び出す
-      if (this.onSuggestionSelect) {
-        this.onSuggestionSelect(restored, this.targetPath);
+      if (this.onSketchSuggestionSelect) {
+        this.onSketchSuggestionSelect(restored, this.targetPath);
       }
     }
 
@@ -257,7 +258,7 @@ export class SuggestionManager {
 }
 
 
-// #region プライベート関数
+// #region 汎用関数
 // LLM から提案を取得する (共通)
 async function fetchSuggestions(
   serializedPaths: SerializedPath[],

@@ -1,6 +1,6 @@
 import '../style.css';
 import { DEFAULT_CONFIG, DEFAULT_COLORS } from './config';
-import { getModelsForProvider } from './llmService';
+import { getProviderModelOptions } from './llmService';
 import { DOMManager } from './domManager';
 import { GraphEditor } from './graphEditor';
 import { SketchEditor } from './sketchEditor';
@@ -59,12 +59,8 @@ const main = (): void => {
       (value) => `${value.toFixed(0)}%`
     );
 
-    // LLMプロバイダの選択肢を更新
-    domManager.llmProviderSelect.value = config.llmProvider;
-    domManager.llmProviderSelect.addEventListener('change', updateLLMProvider);
-
     // LLMモデルの選択肢を更新
-    populateModelOptions(config.llmProvider);
+    populateModelOptions();
     domManager.llmModelSelect.addEventListener('change', updateLLMModel);
 
     // プロンプト入力欄のセットアップ
@@ -102,34 +98,45 @@ const main = (): void => {
   }
 
   // LLMモデル選択肢の更新
-  function populateModelOptions(provider: import('./llmService').LLMProvider): void {
-    const models = getModelsForProvider(provider);
+  function populateModelOptions(): void {
+    const options = getProviderModelOptions();
     domManager.llmModelSelect.innerHTML = '';
-    for (const mi of models) {
+
+    for (const optionInfo of options) {
       const option = document.createElement('option');
-      option.value = mi.id;
-      option.textContent = mi.name ?? mi.id;
+      option.value = JSON.stringify({ provider: optionInfo.provider, modelId: optionInfo.modelId });
+      option.textContent = `${optionInfo.provider} - ${optionInfo.name}`;
       domManager.llmModelSelect.appendChild(option);
     }
 
-    const currentModelExists = models.some(mi => mi.id === config.llmModel);
-    const defaultModel = currentModelExists ? config.llmModel : (models[0]?.id ?? '');
-    config.llmModel = defaultModel;
-    domManager.llmModelSelect.value = defaultModel;
+    const current = options.find(
+      (entry) => entry.provider === config.llmProvider && entry.modelId === config.llmModel
+    ) ?? options[0];
+
+    if (current) {
+      const value = JSON.stringify({ provider: current.provider, modelId: current.modelId });
+      domManager.llmModelSelect.value = value;
+      applyModelSelection(value);
+    }
   }
 
   // LLMモデルの更新
   function updateLLMModel(): void {
-    config.llmModel = domManager.llmModelSelect.value;
+    applyModelSelection(domManager.llmModelSelect.value);
   }
 
-  // LLMプロバイダの更新
-  function updateLLMProvider(): void {
-    const selected = domManager.llmProviderSelect.value as import('./llmService').LLMProvider;
-    config.llmProvider = selected;
-
-    // LLMモデル選択肢の更新
-    populateModelOptions(selected);
+  // モデル選択の適用
+  function applyModelSelection(value: string): void {
+    try {
+      const parsed = JSON.parse(value) as {
+        provider: import('./llmService').LLMProvider;
+        modelId: string;
+      };
+      config.llmProvider = parsed.provider;
+      config.llmModel = parsed.modelId;
+    } catch (error) {
+      console.error('Failed to parse model selection', error);
+    }
   }
 
   // ユーザー指示入力欄のセットアップ
