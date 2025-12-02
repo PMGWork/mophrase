@@ -18,14 +18,18 @@
       <h1 class="text-2xl font-medium">MoPhrase</h1>
       <div class="flex flex-wrap items-center gap-2">
         <!-- LLM Settings -->
-        <select id="llmModelSelect" class="
-              px-4 py-2 h-9 min-w-48
-              bg-gray-800 text-gray-50
-              text-sm cursor-pointer rounded
-              hover:bg-gray-700 transition-colors
-              focus:outline-none focus:ring-1 focus:ring-gray-700
-            ">
-        </select>
+        <div class="relative">
+          <select id="llmModelSelect" class="
+                pl-4 pr-10 py-2 h-9 min-w-48
+                bg-gray-800 text-gray-50 text-left appearance-none
+                text-sm cursor-pointer rounded
+                hover:bg-gray-700 transition-colors
+                focus:outline-none focus:ring-1 focus:ring-gray-700
+              ">
+          </select>
+          <i data-lucide="chevron-down"
+            class="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+        </div>
 
         <div class="w-px h-6 bg-gray-800 mx-2"></div>
 

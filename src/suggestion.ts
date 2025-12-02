@@ -46,7 +46,7 @@ export class SuggestionManager {
         position: positionUI
       },
       (id) => this.hoveredSuggestionId = id,
-      (id) => this.selectSuggestionById(id)
+      (id) => this.selectById(id)
     );
     this.graphUI = new SuggestionUI(
       {
@@ -54,7 +54,7 @@ export class SuggestionManager {
         itemClass: 'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer'
       },
       (id) => this.hoveredSuggestionId = id,
-      (id) => this.selectSuggestionById(id)
+      (id) => this.selectById(id)
     );
   }
 
@@ -175,7 +175,7 @@ export class SuggestionManager {
 
     // ホバー中の提案を描画
     if (this.hoveredSuggestionId) {
-      this.drawHoverPreview(p, colors, options.transform);
+      this.drawPreview(p, colors, options.transform);
     }
   }
 
@@ -198,7 +198,7 @@ export class SuggestionManager {
   }
 
   // ホバー中の提案プレビューを描画する
-  private drawHoverPreview(p: p5, colors: Colors, transform?: (v: p5.Vector) => p5.Vector): void {
+  private drawPreview(p: p5, colors: Colors, transform?: (v: p5.Vector) => p5.Vector): void {
     if (!this.hoveredSuggestionId) return;
     const suggestion = this.suggestions.find(entry => entry.id === this.hoveredSuggestionId);
     if (!suggestion) return;
@@ -209,7 +209,7 @@ export class SuggestionManager {
 
     p.push();
 
-    // プレビュー描画（共通ロジック）
+    // プレビュー描画
     const curves = deserializeCurves(suggestion.path, p);
     const mapped = transform
       ? curves.map(curve => curve.map(pt => transform(pt.copy())))
@@ -225,17 +225,15 @@ export class SuggestionManager {
   }
 
   // IDで提案を選択
-  private selectSuggestionById(id: string): void {
+  private selectById(id: string): void {
     const suggestion = this.suggestions.find(s => s.id === id);
     if (!suggestion) return;
 
     if (suggestion.type === 'graph') {
       if (this.onGraphSuggestionSelect) {
-        // パスからカーブデータを復元
-        // pInstanceが必要だが、drawで設定されているはず
         if (!this.pInstance) return;
         const curves = deserializeCurves(suggestion.path, this.pInstance);
-        this.onGraphSuggestionSelect(curves); // Vector[][] を渡す
+        this.onGraphSuggestionSelect(curves);
       }
     } else if (suggestion.type === 'sketch' && this.targetPath && this.pInstance) {
       const restored = deserializePaths([suggestion.path], [this.targetPath], this.pInstance);
