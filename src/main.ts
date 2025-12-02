@@ -23,84 +23,82 @@ const main = (): void => {
   // #region セットアップ
   // UIのセットアップ
   const setupUI = (): void => {
-    // クリアボタンの設定
-    domManager.clearButton.addEventListener('click', () => {
-      sketchEditor.clearAll()
-    });
-
-    // モーション操作の設定
-    domManager.playButton.addEventListener('click', () => {
-      sketchEditor.playMotion();
-    });
-
-    // グラフエディタの設定
-    domManager.editMotionButton.addEventListener('click', () => {
+    // ボタンのイベントを登録
+    bindButton(domManager.clearButton, () => sketchEditor.clearAll());
+    bindButton(domManager.playButton, () => sketchEditor.playMotion());
+    bindButton(domManager.closeGraphEditorButton, () => graphEditor.toggle());
+    bindButton(domManager.editMotionButton, () => {
       graphEditor.toggle();
       const target = sketchEditor.getLatestPath();
       if (target) graphEditor.setPath(target);
     });
 
-    // グラフエディタの閉じるボタンの設定
-    domManager.closeGraphEditorButton.addEventListener('click', () => {
-      graphEditor.toggle();
+    // チェックボックスのイベントを登録
+    bindCheckbox(domManager.sketchCheckbox, config.showSketch, (value) => {
+      config.showSketch = value;
     });
 
-    // LLMプロバイダ選択の設定
+    // スライダーのイベントを登録
+    bindSlider(
+      domManager.thresholdSlider,
+      domManager.thresholdLabel,
+      config.sketchFitTolerance,
+      (value) => {
+        config.sketchFitTolerance = value;
+      },
+      (value) => `${value.toFixed(0)}px`
+    );
+
+    bindSlider(
+      domManager.graphThresholdSlider,
+      domManager.graphThresholdLabel,
+      config.graphFitTolerance,
+      (value) => {
+        config.graphFitTolerance = value;
+      },
+      (value) => `${value.toFixed(0)}%`
+    );
+
+    // LLMプロバイダの選択肢を更新
     domManager.llmProviderSelect.value = config.llmProvider;
     domManager.llmProviderSelect.addEventListener('change', updateLLMProvider);
 
-    // モデル選択を初期化
+    // LLMモデルの選択肢を更新
     populateModelOptions(config.llmProvider);
     domManager.llmModelSelect.addEventListener('change', updateLLMModel);
 
-    // スケッチ表示切替の設定
-    domManager.sketchCheckbox.checked = config.showSketch;
-    domManager.sketchCheckbox.addEventListener('change', () => {
-      config.showSketch = domManager.sketchCheckbox.checked;
-    });
-
-    // しきい値スライダーの設定
-    domManager.thresholdSlider.value = Math.round(config.sketchFitTolerance).toString();
-    domManager.thresholdSlider.addEventListener('input', updateThreshold);
-    updateThreshold();
-
-    // グラフ許容値スライダーの設定
-    domManager.graphThresholdSlider.value = config.graphFitTolerance.toString();
-    domManager.graphThresholdSlider.addEventListener('input', updateGraphThreshold);
-    updateGraphThreshold();
-
+    // プロンプト入力欄のセットアップ
     setupUserPromptInput();
   };
 
-  // 誤差許容値の更新
-  function updateThreshold(): void {
-    const parsed = Number(domManager.thresholdSlider.value);
-    if (!Number.isNaN(parsed)) {
-      config.sketchFitTolerance = parsed;
-    }
-
-    // 小数部分を表示しない (整数px)
-    domManager.thresholdLabel.textContent = `${parsed.toFixed(0)}px`;
+  // ボタンイベント
+  function bindButton(el: HTMLButtonElement, handler: () => void): void {
+    el.addEventListener('click', handler);
   }
 
-  // グラフ許容値の更新
-  function updateGraphThreshold(): void {
-    const parsed = Number(domManager.graphThresholdSlider.value);
-    if (!Number.isNaN(parsed)) {
-      config.graphFitTolerance = parsed;
-    }
-
-    // パーセント表示
-    domManager.graphThresholdLabel.textContent = `${config.graphFitTolerance.toFixed(0)}%`;
+  // チェックボックスイベント
+  function bindCheckbox(el: HTMLInputElement, initial: boolean, onChange: (value: boolean) => void): void {
+    el.checked = initial;
+    el.addEventListener('change', () => onChange(el.checked));
   }
 
-  // ユーザー指示入力欄のセットアップ
-  function setupUserPromptInput(): void {
-    domManager.userPromptForm.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const userPrompt = domManager.userPromptInput.value.trim();
-      sketchEditor.generateSuggestion(userPrompt);
-    });
+  // スライダーイベント
+  function bindSlider(
+    el: HTMLInputElement,
+    label: HTMLElement,
+    initial: number,
+    onChange: (value: number) => void,
+    format: (value: number) => string
+  ): void {
+    const sync = (): void => {
+      const parsed = Number(el.value);
+      if (!Number.isNaN(parsed)) onChange(parsed);
+      label.textContent = format(parsed);
+    };
+
+    el.value = Math.round(initial).toString();
+    sync();
+    el.addEventListener('input', sync);
   }
 
   // LLMモデル選択肢の更新
@@ -120,6 +118,7 @@ const main = (): void => {
     domManager.llmModelSelect.value = defaultModel;
   }
 
+  // LLMモデルの更新
   function updateLLMModel(): void {
     config.llmModel = domManager.llmModelSelect.value;
   }
@@ -131,6 +130,15 @@ const main = (): void => {
 
     // LLMモデル選択肢の更新
     populateModelOptions(selected);
+  }
+
+  // ユーザー指示入力欄のセットアップ
+  function setupUserPromptInput(): void {
+    domManager.userPromptForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const userPrompt = domManager.userPromptInput.value.trim();
+      sketchEditor.generateSuggestion(userPrompt);
+    });
   }
 
   setupUI();
