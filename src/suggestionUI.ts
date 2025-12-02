@@ -119,10 +119,9 @@ export function positionSketchSuggestion({
   const parent = container.parentElement;
   const rect = parent?.getBoundingClientRect();
   const offsetX = rect?.left ?? 0;
-  const offsetY = rect?.top ?? 0;
 
   const left = offsetX + anchor.x + 20;
-  const top = offsetY + anchor.y - 20;
+  const top = anchor.y - 20;
 
   container.style.left = `${left}px`;
   container.style.top = `${top}px`;

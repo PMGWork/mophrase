@@ -164,14 +164,9 @@ export class GraphEditor {
         drawControls(p, this.activePath.timeCurve, this.config.pointSize, this.colors.handle, transform);
 
         // 提案のプレビュー描画
-        p.push();
-        p.translate(0, graphH);
-        p.scale(graphW, -graphH);
-
-        // 線幅の補正 (逆スケール)
-        const scaleFactor = 1 / Math.min(graphW, graphH);
-        this.suggestionManager.draw(p, this.colors, { strokeScale: scaleFactor });
-        p.pop();
+        this.suggestionManager.draw(p, this.colors, {
+          transform: (v) => transform(v)
+        });
 
         p.pop();
       };

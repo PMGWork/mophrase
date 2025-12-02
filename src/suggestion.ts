@@ -24,7 +24,6 @@ export class SuggestionManager {
   private onSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
   private onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
   private pInstance: p5 | null = null;
-  private strokeScale: number = 1;
   private sketchUI: SuggestionUI;
   private graphUI: SuggestionUI;
 
@@ -169,16 +168,15 @@ export class SuggestionManager {
   }
 
   // 提案を描画する（プレビューのみ）
-  draw(p: p5, colors: Colors, options: { strokeScale?: number } = {}): void {
+  draw(p: p5, colors: Colors, options: { transform?: (v: p5.Vector) => p5.Vector } = {}): void {
     this.pInstance = p;
-    this.strokeScale = options.strokeScale ?? 1;
     if (this.status === 'loading') {
       return;
     }
 
     // ホバー中の提案のプレビューを描画
     if (this.hoveredSuggestionId) {
-      this.drawHoverPreview(p, colors, this.strokeScale);
+      this.drawHoverPreview(p, colors, options.transform);
     }
   }
 
@@ -199,7 +197,7 @@ export class SuggestionManager {
   }
 
   // ホバー中の提案プレビューを描画する
-  private drawHoverPreview(p: p5, colors: Colors, strokeScale: number): void {
+  private drawHoverPreview(p: p5, colors: Colors, transform?: (v: p5.Vector) => p5.Vector): void {
     if (!this.hoveredSuggestionId) return;
     const suggestion = this.suggestions.find(entry => entry.id === this.hoveredSuggestionId);
     if (!suggestion) return;
@@ -212,9 +210,12 @@ export class SuggestionManager {
 
     // プレビュー描画（共通ロジック）
     const curves = deserializeCurves(suggestion.path, p);
-    if (curves.length > 0) {
-      const weight = (Math.max(this.config.lineWeight, 1) + 0.5) * strokeScale;
-      drawBezierCurve(p, curves, weight, colors.handle);
+    const mapped = transform
+      ? curves.map(curve => curve.map(pt => transform(pt.copy())))
+      : curves;
+    if (mapped.length > 0) {
+      const weight = Math.max(this.config.lineWeight, 1) + 0.5;
+      drawBezierCurve(p, mapped, weight, colors.handle);
     }
 
     p.pop();
