@@ -105,7 +105,8 @@ const main = (): void => {
     for (const optionInfo of options) {
       const option = document.createElement('option');
       option.value = JSON.stringify({ provider: optionInfo.provider, modelId: optionInfo.modelId });
-      option.textContent = `${optionInfo.provider} - ${optionInfo.name}`;
+      const displayName = optionInfo.name || optionInfo.modelId;
+      option.textContent = `${displayName} (${optionInfo.provider})`;
       domManager.llmModelSelect.appendChild(option);
     }
 
