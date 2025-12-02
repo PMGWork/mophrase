@@ -16,16 +16,23 @@ type SuggestionState = 'idle' | 'loading' | 'error';
 
 // 提案管理クラス
 export class SuggestionManager {
-  private suggestions: Suggestion[] = [];
-  private status: SuggestionState = 'idle';
+  // 設定
   private config: Config;
+
+  // 状態管理
+  private status: SuggestionState = 'idle';
+  private suggestions: Suggestion[] = [];
   private targetPath: Path | undefined;
-  private hoveredSuggestionId: string | null = null;
-  private onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
-  private onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
+  private hoveredId: string | null = null;
   private pInstance: p5 | null = null;
+
+  // UI
   private sketchUI: SuggestionUI;
   private graphUI: SuggestionUI;
+
+  // コールバック
+  private onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
+  private onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
 
   // コンストラクタ
   constructor(
@@ -45,7 +52,7 @@ export class SuggestionManager {
         itemClass: 'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
         position: positionUI
       },
-      (id) => this.hoveredSuggestionId = id,
+      (id) => this.hoveredId = id,
       (id) => this.selectById(id)
     );
     this.graphUI = new SuggestionUI(
@@ -53,7 +60,7 @@ export class SuggestionManager {
         listId: 'graphSuggestionList',
         itemClass: 'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer'
       },
-      (id) => this.hoveredSuggestionId = id,
+      (id) => this.hoveredId = id,
       (id) => this.selectById(id)
     );
   }
@@ -78,10 +85,10 @@ export class SuggestionManager {
     this.sketchUI.update(this.status, this.suggestions, this.targetPath);
 
     try {
-      // パスをシリアライズ
+      // シリアライズ
       const serializedPaths = serializePaths([targetPath]);
 
-      // LLM から提案を取得
+      // 提案を取得
       const fetched = await fetchSuggestions(
         serializedPaths,
         this.config.sketchPrompt,
@@ -101,6 +108,7 @@ export class SuggestionManager {
           bbox: path.bbox,
         }
       }));
+
       this.setState('idle');
       this.sketchUI.update(this.status, this.suggestions, this.targetPath);
     } catch (error) {
@@ -112,9 +120,7 @@ export class SuggestionManager {
 
   // グラフカーブの提案を生成する
   async generateGraphSuggestion(currentCurves: p5.Vector[][], userPrompt?: string): Promise<void> {
-    console.log('SuggestionManager: generateGraphSuggestion called', { currentCurves, userPrompt });
     if (!currentCurves || currentCurves.length === 0) {
-      console.error('SuggestionManager: Invalid curve data');
       this.setState('error');
       return;
     }
@@ -148,6 +154,8 @@ export class SuggestionManager {
           bbox: bbox
         }
       }));
+
+      // UIを更新
       this.setState('idle');
       this.graphUI.update(this.status, this.suggestions);
     } catch (error) {
@@ -174,7 +182,7 @@ export class SuggestionManager {
     }
 
     // ホバー中の提案を描画
-    if (this.hoveredSuggestionId) {
+    if (this.hoveredId) {
       this.drawPreview(p, colors, options.transform);
     }
   }
@@ -189,7 +197,7 @@ export class SuggestionManager {
   // 提案をクリアする
   private clear(): void {
     this.suggestions = [];
-    this.hoveredSuggestionId = null;
+    this.hoveredId = null;
   }
 
   // 一意な提案IDを生成する
@@ -199,8 +207,8 @@ export class SuggestionManager {
 
   // ホバー中の提案プレビューを描画する
   private drawPreview(p: p5, colors: Colors, transform?: (v: p5.Vector) => p5.Vector): void {
-    if (!this.hoveredSuggestionId) return;
-    const suggestion = this.suggestions.find(entry => entry.id === this.hoveredSuggestionId);
+    if (!this.hoveredId) return;
+    const suggestion = this.suggestions.find(entry => entry.id === this.hoveredId);
     if (!suggestion) return;
 
     const ctx = p.drawingContext as CanvasRenderingContext2D;
