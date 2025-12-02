@@ -45,8 +45,8 @@ export class SuggestionUI {
 
     const container = containerId ? document.getElementById(containerId) : null;
 
-    const showLoading = status === 'loading';
-    const showInput = status === 'input';
+    const showLoading = status === 'generating';
+    const showInput = status === 'awaiting_input';
     const hasSuggestions = suggestions.length > 0;
 
     if (container) {

@@ -79,7 +79,7 @@ export class SuggestionManager {
     const trimmedUserPrompt = userPrompt?.trim() ?? '';
 
     this.clear();
-    this.setState('loading');
+    this.setState('generating');
     this.sketchUI.update(this.status, this.suggestions, this.targetPath);
 
     try {
@@ -119,7 +119,7 @@ export class SuggestionManager {
   // 入力ウィンドウを表示する
   showInput(targetPath: Path): void {
     this.targetPath = targetPath;
-    this.setState('input');
+    this.setState('awaiting_input');
     this.sketchUI.update(this.status, this.suggestions, this.targetPath);
   }
 
@@ -130,7 +130,7 @@ export class SuggestionManager {
       return;
     }
 
-    this.setState('loading');
+    this.setState('generating');
     this.suggestions = [];
     this.graphUI.update(this.status, this.suggestions);
 
@@ -182,7 +182,7 @@ export class SuggestionManager {
   // 提案を描画する
   draw(p: p5, colors: Colors, options: { transform?: (v: p5.Vector) => p5.Vector } = {}): void {
     this.pInstance = p;
-    if (this.status === 'loading') {
+    if (this.status === 'generating') {
       return;
     }
 

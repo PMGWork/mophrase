@@ -89,7 +89,7 @@ export interface Suggestion {
 }
 
 // 提案の状態
-export type SuggestionState = 'idle' | 'loading' | 'error' | 'input';
+export type SuggestionState = 'idle' | 'generating' | 'error' | 'awaiting_input';
 
 
 // #region Zodスキーマ定義
