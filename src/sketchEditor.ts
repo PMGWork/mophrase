@@ -6,6 +6,7 @@ import { fitCurve } from './fitting';
 import { HandleManager } from './handleManager';
 import { bezierCurve } from './mathUtils';
 import { MotionManager } from './motionManager';
+import { isLeftMouseButton } from './p5Utils';
 import { SuggestionManager } from './suggestion';
 import type { Path, SketchMode } from './types';
 
@@ -171,8 +172,7 @@ export class SketchEditor {
 
       p.mousePressed = () => {
         // 左クリックのみを処理
-        const isLeftClick =
-          (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
+        const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
         if (!isLeftClick) return;
 
         // ハンドルのドラッグ開始

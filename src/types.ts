@@ -121,3 +121,4 @@ export const suggestionResponseSchema = z.object({
 
 // Typescriptの型に変換
 export type SuggestionItem = z.infer<typeof suggestionItemSchema>;
+export type SuggestionResponse = z.infer<typeof suggestionResponseSchema>;

@@ -3,6 +3,7 @@ import type { Colors, Config } from './config';
 import type { DOMManager } from './domManager';
 import { drawBezierCurve, drawControls } from './draw';
 import { HandleManager } from './handleManager';
+import { isLeftMouseButton } from './p5Utils';
 import { SuggestionManager } from './suggestion';
 import type { Path, Vector } from './types';
 
@@ -122,7 +123,7 @@ export class GraphEditor {
     const sketch = (p: p5) => {
       this.handleManager = new HandleManager(
         () =>
-          this.activePath && this.activePath.timeCurve
+          this.activePath?.timeCurve
             ? [{ curves: this.activePath.timeCurve }]
             : [],
         (x, y) => this.getNormalizedMousePos(p, x, y),
@@ -202,8 +203,7 @@ export class GraphEditor {
 
       p.mousePressed = () => {
         // 左クリックのみを処理
-        const isLeftClick =
-          (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
+        const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
         if (!isLeftClick) return;
 
         if (this.isMouseInGraph(p)) {

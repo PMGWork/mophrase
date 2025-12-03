@@ -17,6 +17,7 @@ import type {
   Suggestion,
   SuggestionItem,
   SuggestionState,
+  SuggestionResponse,
 } from './types';
 import { suggestionResponseSchema } from './types';
 
@@ -323,14 +324,15 @@ async function fetchSuggestions(
   userPrompt?: string,
 ): Promise<SuggestionItem[]> {
   const prompt = buildPrompt(serializedPaths, basePrompt, userPrompt);
-  const result = (await generateStructured(
+  const result = await generateStructured<SuggestionResponse>(
     prompt,
     suggestionResponseSchema,
     config.llmProvider,
     config.llmModel,
-  )) as any;
+  );
+
   return result.suggestions.map(
-    (suggestion: any): SuggestionItem => ({
+    (suggestion): SuggestionItem => ({
       title: suggestion.title,
       anchors: suggestion.anchors,
     }),
