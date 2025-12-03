@@ -16,8 +16,8 @@ import type {
   SerializedPath,
   Suggestion,
   SuggestionItem,
-  SuggestionState,
   SuggestionResponse,
+  SuggestionState,
 } from './types';
 import { suggestionResponseSchema } from './types';
 

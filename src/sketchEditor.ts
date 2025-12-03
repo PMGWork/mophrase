@@ -51,7 +51,7 @@ export class SketchEditor {
         if (!updated) return;
 
         if (targetPath) {
-          const index = this.paths.findIndex((path) => path === targetPath);
+          const index = this.paths.indexOf(targetPath);
           if (index >= 0) {
             this.paths[index].points = updated.points;
             this.paths[index].curves = updated.curves;
