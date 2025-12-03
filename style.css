@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Geist', sans-serif;
+  --font-sans: "Geist", sans-serif;
 }
 
 :root {
-  --color-handle: #fbbf24;      /* Amber-400 */
-  --color-curve: #f9fafb;       /* Gray-50 */
-  --color-sketch: #374151;      /* Gray-700 */
-  --color-background: #030712;  /* Gray-950 */
+  --color-handle: #fbbf24; /* Amber-400 */
+  --color-curve: #f9fafb; /* Gray-50 */
+  --color-sketch: #374151; /* Gray-700 */
+  --color-background: #030712; /* Gray-950 */
 }
 
 body {
