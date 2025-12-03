@@ -7,7 +7,6 @@ export type Vector = p5.Vector;
 // エディタモード
 export type SketchMode = 'draw' | 'select';
 
-
 // #region スキーマ定義
 // カーブ情報
 export interface Curve {
@@ -94,7 +93,6 @@ export interface Suggestion {
 // 提案の状態
 export type SuggestionState = 'idle' | 'generating' | 'error' | 'input';
 
-
 // #region Zodスキーマ定義
 // 制御点スキーマ
 const handlePointSchema = z.object({
@@ -118,7 +116,7 @@ const suggestionItemSchema = z.object({
 
 // 提案レスポンス
 export const suggestionResponseSchema = z.object({
-  suggestions: z.array(suggestionItemSchema).max(3).min(3)
+  suggestions: z.array(suggestionItemSchema).max(3).min(3),
 });
 
 // Typescriptの型に変換

@@ -1,8 +1,9 @@
 import '../style.css';
-import { DEFAULT_CONFIG, DEFAULT_COLORS } from './config';
-import { getProviderModelOptions } from './llmService';
+import { createIcons, icons } from 'lucide';
+import { DEFAULT_COLORS, DEFAULT_CONFIG } from './config';
 import { DOMManager } from './domManager';
 import { GraphEditor } from './graphEditor';
+import { getProviderModelOptions } from './llmService';
 import { SketchEditor } from './sketchEditor';
 import type { SketchMode } from './types';
 
@@ -50,7 +51,7 @@ const main = (): void => {
       (value) => {
         config.sketchFitTolerance = value;
       },
-      (value) => `${value.toFixed(0)}px`
+      (value) => `${value.toFixed(0)}px`,
     );
 
     bindSlider(
@@ -60,7 +61,7 @@ const main = (): void => {
       (value) => {
         config.graphFitTolerance = value;
       },
-      (value) => `${value.toFixed(0)}%`
+      (value) => `${value.toFixed(0)}%`,
     );
 
     // LLMモデルの選択肢を更新
@@ -80,7 +81,7 @@ const main = (): void => {
   function setupModeToggle(): void {
     const modes: { mode: SketchMode; button: HTMLButtonElement }[] = [
       { mode: 'draw', button: domManager.drawModeButton },
-      { mode: 'select', button: domManager.selectModeButton }
+      { mode: 'select', button: domManager.selectModeButton },
     ];
 
     const updateMode = (targetMode: SketchMode) => {
@@ -98,7 +99,11 @@ const main = (): void => {
   }
 
   // チェックボックスイベント
-  function bindCheckbox(el: HTMLInputElement, initial: boolean, onChange: (value: boolean) => void): void {
+  function bindCheckbox(
+    el: HTMLInputElement,
+    initial: boolean,
+    onChange: (value: boolean) => void,
+  ): void {
     el.checked = initial;
     el.addEventListener('change', () => onChange(el.checked));
   }
@@ -109,7 +114,7 @@ const main = (): void => {
     label: HTMLElement,
     initial: number,
     onChange: (value: number) => void,
-    format: (value: number) => string
+    format: (value: number) => string,
   ): void {
     const sync = (): void => {
       const parsed = Number(el.value);
@@ -129,18 +134,27 @@ const main = (): void => {
 
     for (const optionInfo of options) {
       const option = document.createElement('option');
-      option.value = JSON.stringify({ provider: optionInfo.provider, modelId: optionInfo.modelId });
+      option.value = JSON.stringify({
+        provider: optionInfo.provider,
+        modelId: optionInfo.modelId,
+      });
       const displayName = optionInfo.name || optionInfo.modelId;
       option.textContent = `${displayName} (${optionInfo.provider})`;
       domManager.llmModelSelect.appendChild(option);
     }
 
-    const current = options.find(
-      (entry) => entry.provider === config.llmProvider && entry.modelId === config.llmModel
-    ) ?? options[0];
+    const current =
+      options.find(
+        (entry) =>
+          entry.provider === config.llmProvider &&
+          entry.modelId === config.llmModel,
+      ) ?? options[0];
 
     if (current) {
-      const value = JSON.stringify({ provider: current.provider, modelId: current.modelId });
+      const value = JSON.stringify({
+        provider: current.provider,
+        modelId: current.modelId,
+      });
       domManager.llmModelSelect.value = value;
       applyModelSelection(value);
     }
@@ -175,6 +189,8 @@ const main = (): void => {
   }
 
   setupUI();
+
+  createIcons({ icons });
 };
 
 main();

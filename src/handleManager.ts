@@ -1,5 +1,5 @@
 /// ベジェハンドル操作関連
-import type { HandleSelection, Curve, Vector } from './types';
+import type { Curve, HandleSelection, Vector } from './types';
 
 // ハンドルの制御クラス
 export class HandleManager {
@@ -7,13 +7,20 @@ export class HandleManager {
   private current: HandleSelection | null = null;
   private radius: number = 12;
 
-  private pixelToNormalized: (x: number, y: number) => { x: number, y: number };
-  private normalizedToPixel: ((x: number, y: number) => { x: number, y: number }) | null;
+  private pixelToNormalized: (x: number, y: number) => { x: number; y: number };
+  private normalizedToPixel:
+    | ((x: number, y: number) => { x: number; y: number })
+    | null;
 
   constructor(
     getContainers: () => Curve[],
-    pixelToNormalized: (x: number, y: number) => { x: number, y: number } = (x, y) => ({ x, y }),
-    normalizedToPixel: ((x: number, y: number) => { x: number, y: number }) | null = null
+    pixelToNormalized: (x: number, y: number) => { x: number; y: number } = (
+      x,
+      y,
+    ) => ({ x, y }),
+    normalizedToPixel:
+      | ((x: number, y: number) => { x: number; y: number })
+      | null = null,
   ) {
     this.getContainers = getContainers;
     this.pixelToNormalized = pixelToNormalized;
@@ -31,7 +38,8 @@ export class HandleManager {
     if (!this.current) return false;
     const localPos = this.pixelToNormalized(x, y);
 
-    if (this.setHandlePosition(this.current, localPos.x, localPos.y, mode)) return true;
+    if (this.setHandlePosition(this.current, localPos.x, localPos.y, mode))
+      return true;
     this.current = null;
     return false;
   }
@@ -49,7 +57,11 @@ export class HandleManager {
     const containers = this.getContainers();
     for (let pathIndex = containers.length - 1; pathIndex >= 0; pathIndex--) {
       const container = containers[pathIndex];
-      for (let curveIndex = container.curves.length - 1; curveIndex >= 0; curveIndex--) {
+      for (
+        let curveIndex = container.curves.length - 1;
+        curveIndex >= 0;
+        curveIndex--
+      ) {
         const curve = container.curves[curveIndex];
         for (let pointIndex = 0; pointIndex < curve.length; pointIndex++) {
           const point = curve[pointIndex];
@@ -81,7 +93,7 @@ export class HandleManager {
     selection: HandleSelection,
     x: number,
     y: number,
-    mode: number
+    mode: number,
   ): boolean {
     const container = this.getContainers()[selection.pathIndex];
     const curve = container?.curves[selection.curveIndex];
@@ -112,7 +124,8 @@ export class HandleManager {
       // 反対側のハンドル調整
       const isStartHandle = selection.pointIndex === 1;
       const anchor = curve?.[isStartHandle ? 0 : 3];
-      const adjacentCurve = container?.curves[selection.curveIndex + (isStartHandle ? -1 : 1)];
+      const adjacentCurve =
+        container?.curves[selection.curveIndex + (isStartHandle ? -1 : 1)];
       const oppositeHandle = adjacentCurve?.[isStartHandle ? 2 : 1];
       if (anchor && oppositeHandle) {
         const toCurrent = handle.copy().sub(anchor);

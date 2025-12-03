@@ -1,8 +1,8 @@
 /// ベジェ曲線の描画
 
 import type p5 from 'p5';
-import type { Vector } from './types';
 import { bezierCurve } from './mathUtils';
+import type { Vector } from './types';
 
 // 入力点の描画
 export function drawPoints(
@@ -11,7 +11,7 @@ export function drawPoints(
   weight: number,
   size: number,
   foreground: string,
-  background: string
+  background: string,
 ): void {
   if (points.length === 0) return;
 
@@ -45,7 +45,7 @@ export function drawBezierCurve(
   p: p5,
   curves: Vector[][],
   weight: number,
-  color: string
+  color: string,
 ): void {
   if (curves.length === 0) return;
 
@@ -70,7 +70,7 @@ export function drawControls(
   curves: Vector[][],
   size: number,
   color: string,
-  transform: (v: Vector) => Vector = (v) => v
+  transform: (v: Vector) => Vector = (v) => v,
 ): void {
   if (curves.length === 0) return;
 

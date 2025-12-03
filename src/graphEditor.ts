@@ -1,10 +1,10 @@
 import p5 from 'p5';
-import type { Path, Vector } from './types';
+import type { Colors, Config } from './config';
+import type { DOMManager } from './domManager';
 import { drawBezierCurve, drawControls } from './draw';
-import type { Config, Colors } from './config';
 import { HandleManager } from './handleManager';
-import { DOMManager } from './domManager';
 import { SuggestionManager } from './suggestion';
+import type { Path, Vector } from './types';
 
 export class GraphEditor {
   private domManager: DOMManager;
@@ -31,12 +31,14 @@ export class GraphEditor {
     this.suggestionManager = new SuggestionManager(config, {
       onGraphSuggestionSelect: (curves) => {
         this.applySuggestion(curves);
-      }
+      },
     });
 
     this.init();
 
-    this.domManager.durationInput.addEventListener('change', () => this.updateDuration());
+    this.domManager.durationInput.addEventListener('change', () =>
+      this.updateDuration(),
+    );
     this.domManager.graphUserPromptForm.addEventListener('submit', (e) => {
       e.preventDefault();
       console.log('GraphEditor: Submit button clicked');
@@ -47,8 +49,14 @@ export class GraphEditor {
   // グラフの表示/非表示
   public toggle(): void {
     this.isVisible = !this.isVisible;
-    this.domManager.graphEditorContainer.classList.toggle('hidden', !this.isVisible);
-    this.domManager.graphEditorContainer.classList.toggle('flex', this.isVisible);
+    this.domManager.graphEditorContainer.classList.toggle(
+      'hidden',
+      !this.isVisible,
+    );
+    this.domManager.graphEditorContainer.classList.toggle(
+      'flex',
+      this.isVisible,
+    );
 
     window.dispatchEvent(new Event('resize'));
   }
@@ -69,13 +77,17 @@ export class GraphEditor {
     const newDuration = Number(this.domManager.durationInput.value);
     if (Number.isNaN(newDuration) || newDuration <= 0) return;
 
-    const oldDuration = this.activePath.times[this.activePath.times.length - 1] - this.activePath.times[0];
+    const oldDuration =
+      this.activePath.times[this.activePath.times.length - 1] -
+      this.activePath.times[0];
     if (oldDuration === 0) return;
 
     const scale = newDuration / oldDuration;
     const startTime = this.activePath.times[0];
 
-    this.activePath.times = this.activePath.times.map(t => startTime + (t - startTime) * scale);
+    this.activePath.times = this.activePath.times.map(
+      (t) => startTime + (t - startTime) * scale,
+    );
   }
 
   // 提案の生成
@@ -92,7 +104,10 @@ export class GraphEditor {
     // activePath.timeCurve は Vector[][]
     const currentCurves = this.activePath.timeCurve;
 
-    await this.suggestionManager.generateGraphSuggestions(currentCurves, userPrompt);
+    await this.suggestionManager.generateGraphSuggestions(
+      currentCurves,
+      userPrompt,
+    );
   }
 
   // 提案の適用
@@ -106,16 +121,19 @@ export class GraphEditor {
   private init(): void {
     const sketch = (p: p5) => {
       this.handleManager = new HandleManager(
-        () => this.activePath && this.activePath.timeCurve ? [{ curves: this.activePath.timeCurve }] : [],
+        () =>
+          this.activePath && this.activePath.timeCurve
+            ? [{ curves: this.activePath.timeCurve }]
+            : [],
         (x, y) => this.getNormalizedMousePos(p, x, y),
         (x, y) => {
           const graphW = p.width - this.margin.left - this.margin.right;
           const graphH = p.height - this.margin.top - this.margin.bottom;
           return {
             x: x * graphW + this.margin.left,
-            y: (1 - y) * graphH + this.margin.top
+            y: (1 - y) * graphH + this.margin.top,
           };
-        }
+        },
       );
 
       p.setup = () => {
@@ -154,18 +172,29 @@ export class GraphEditor {
         p.scale(graphW, graphH);
         p.translate(0, 1);
         p.scale(1, -1);
-        drawBezierCurve(p, this.activePath.timeCurve, 2 / Math.min(graphW, graphH), this.colors.curve);
+        drawBezierCurve(
+          p,
+          this.activePath.timeCurve,
+          2 / Math.min(graphW, graphH),
+          this.colors.curve,
+        );
         p.pop();
 
         // コントロールの描画
         const transform = (v: Vector) => {
           return p.createVector(v.x * graphW, (1 - v.y) * graphH);
         };
-        drawControls(p, this.activePath.timeCurve, this.config.pointSize, this.colors.handle, transform);
+        drawControls(
+          p,
+          this.activePath.timeCurve,
+          this.config.pointSize,
+          this.colors.handle,
+          transform,
+        );
 
         // 提案のプレビュー描画
         this.suggestionManager.draw(p, this.colors, {
-          transform: (v) => transform(v)
+          transform: (v) => transform(v),
         });
 
         p.pop();
@@ -173,7 +202,8 @@ export class GraphEditor {
 
       p.mousePressed = () => {
         // 左クリックのみを処理
-        const isLeftClick = (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
+        const isLeftClick =
+          (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
         if (!isLeftClick) return;
 
         if (this.isMouseInGraph(p)) {
@@ -210,11 +240,20 @@ export class GraphEditor {
     const graphH = p.height - this.margin.top - this.margin.bottom;
 
     // 少し余裕を持たせる
-    return mouseX >= -10 && mouseX <= graphW + 10 && mouseY >= -10 && mouseY <= graphH + 10;
+    return (
+      mouseX >= -10 &&
+      mouseX <= graphW + 10 &&
+      mouseY >= -10 &&
+      mouseY <= graphH + 10
+    );
   }
 
   // 正規化座標からスクリーン座標への変換
-  private getNormalizedMousePos(p: p5, x: number, y: number): { x: number, y: number } {
+  private getNormalizedMousePos(
+    p: p5,
+    x: number,
+    y: number,
+  ): { x: number; y: number } {
     const mouseX = x - this.margin.left;
     const mouseY = y - this.margin.top;
 
@@ -222,7 +261,7 @@ export class GraphEditor {
     const graphH = p.height - this.margin.top - this.margin.bottom;
 
     const normX = mouseX / graphW;
-    const normY = 1 - (mouseY / graphH);
+    const normY = 1 - mouseY / graphH;
 
     return { x: normX, y: normY };
   }

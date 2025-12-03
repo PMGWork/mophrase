@@ -1,17 +1,20 @@
 import type p5 from 'p5';
+import { roundNormalizedValue } from './mathUtils';
 import type {
+  Path,
   SerializedAnchorPoint,
+  SerializedBoundingBox,
   SerializedHandlePoint,
   SerializedPath,
   SerializedSegment,
-  SerializedBoundingBox,
-  Path,
 } from './types';
-import { roundNormalizedValue } from './mathUtils';
 
 // #region シリアライズ
 // p5.Vector -> アンカーポイント（正規化）
-export function createSerializedAnchor(vec: p5.Vector, bbox: SerializedBoundingBox): SerializedAnchorPoint {
+export function createSerializedAnchor(
+  vec: p5.Vector,
+  bbox: SerializedBoundingBox,
+): SerializedAnchorPoint {
   const width = bbox.width;
   const height = bbox.height;
   return {
@@ -24,7 +27,7 @@ export function createSerializedAnchor(vec: p5.Vector, bbox: SerializedBoundingB
 export function toSerializedHandle(
   handle: p5.Vector | undefined,
   anchor: p5.Vector,
-  diag: number
+  diag: number,
 ): SerializedHandlePoint {
   const safeHandle = handle ?? anchor;
   const dx = safeHandle.x - anchor.x;
@@ -40,7 +43,7 @@ export function toSerializedHandle(
 // p5.Vector[][] -> アンカーポイントとセグメント
 export function serializeAnchorsAndSegments(
   curves: p5.Vector[][],
-  bbox: SerializedBoundingBox
+  bbox: SerializedBoundingBox,
 ): Omit<SerializedPath, 'bbox'> {
   const anchors: SerializedAnchorPoint[] = [];
   const anchorIndexMap = new Map<string, number>();
@@ -57,7 +60,9 @@ export function serializeAnchorsAndSegments(
   };
 
   // アンカーを取得または作成
-  const getOrCreateAnchor = (vec: p5.Vector): { index: number; anchor: SerializedAnchorPoint } => {
+  const getOrCreateAnchor = (
+    vec: p5.Vector,
+  ): { index: number; anchor: SerializedAnchorPoint } => {
     const key = getAnchorKey(vec);
     let index = anchorIndexMap.get(key);
     if (index === undefined) {
@@ -89,7 +94,10 @@ export function serializeAnchorsAndSegments(
 export function serializePaths(paths: Path[]): SerializedPath[] {
   return paths.map((path) => {
     const bbox = calculateBoundingBox(path.curves);
-    const { anchors, segments } = serializeAnchorsAndSegments(path.curves, bbox);
+    const { anchors, segments } = serializeAnchorsAndSegments(
+      path.curves,
+      bbox,
+    );
     return {
       anchors,
       segments,
@@ -100,13 +108,22 @@ export function serializePaths(paths: Path[]): SerializedPath[] {
 
 // #region デシリアライズ
 // シリアライズされたパス -> p5.js 描画パス
-export function deserializePaths(serializedPaths: SerializedPath[], paths: Path[], p: p5): Path[] {
+export function deserializePaths(
+  serializedPaths: SerializedPath[],
+  paths: Path[],
+  p: p5,
+): Path[] {
   return serializedPaths.map((serializedPath, index) => ({
     points: paths[index].points,
     times: paths[index].times,
     curves: deserializeCurves(
-      serializedPath.bbox ? serializedPath : { ...serializedPath, bbox: calculateBoundingBox(paths[index].curves) },
-      p
+      serializedPath.bbox
+        ? serializedPath
+        : {
+            ...serializedPath,
+            bbox: calculateBoundingBox(paths[index].curves),
+          },
+      p,
     ),
     timeCurve: paths[index].timeCurve,
     fitError: paths[index].fitError,
@@ -114,8 +131,16 @@ export function deserializePaths(serializedPaths: SerializedPath[], paths: Path[
 }
 
 // シリアライズされたパス -> p5.Vector[][]
-export function deserializeCurves(serializedPath: SerializedPath, p: p5): p5.Vector[][] {
-  if (!serializedPath.anchors || !serializedPath.segments || !serializedPath.bbox) return [];
+export function deserializeCurves(
+  serializedPath: SerializedPath,
+  p: p5,
+): p5.Vector[][] {
+  if (
+    !serializedPath.anchors ||
+    !serializedPath.segments ||
+    !serializedPath.bbox
+  )
+    return [];
   const bbox = serializedPath.bbox;
   const width = bbox.width;
   const height = bbox.height;
@@ -128,18 +153,20 @@ export function deserializeCurves(serializedPath: SerializedPath, p: p5): p5.Vec
 
       const start = p.createVector(
         bbox.x + startAnchor.x * width,
-        bbox.y + startAnchor.y * height
+        bbox.y + startAnchor.y * height,
       );
       const end = p.createVector(
         bbox.x + endAnchor.x * width,
-        bbox.y + endAnchor.y * height
+        bbox.y + endAnchor.y * height,
       );
       const handleOut = startAnchor.out;
       const handleIn = endAnchor.in;
 
       return [
         start,
-        handleOut ? polarHandleToVector(handleOut, start, diag, p) : start.copy(),
+        handleOut
+          ? polarHandleToVector(handleOut, start, diag, p)
+          : start.copy(),
         handleIn ? polarHandleToVector(handleIn, end, diag, p) : end.copy(),
         end,
       ];
@@ -152,7 +179,7 @@ function polarHandleToVector(
   handle: SerializedHandlePoint,
   anchor: p5.Vector,
   diag: number,
-  p: p5
+  p: p5,
 ): p5.Vector {
   const angle = handle.angle * (Math.PI / 180);
   const dist = handle.dist * diag;

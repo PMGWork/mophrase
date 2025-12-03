@@ -1,7 +1,7 @@
 import type p5 from 'p5';
-import type { Path, Vector } from './types';
 import { fitCurve } from './fitting';
 import { bezierCurve, curveLength } from './mathUtils';
+import type { Path, Vector } from './types';
 
 export class MotionManager {
   private p: p5;
@@ -20,7 +20,7 @@ export class MotionManager {
   // モーション再生を開始
   public play(path: Path): void {
     if (!path.timeCurve || path.timeCurve.length === 0) {
-      console.warn("No timing data available for this path.");
+      console.warn('No timing data available for this path.');
       return;
     }
 
@@ -30,7 +30,7 @@ export class MotionManager {
     this.lastTimingIndex = 0;
 
     // カーブの長さを事前計算してキャッシュ
-    this.curveLengths = path.curves.map(c => curveLength(c));
+    this.curveLengths = path.curves.map((c) => curveLength(c));
     this.totalLength = this.curveLengths.reduce((a, b) => a + b, 0);
 
     // 最後のタイミングポイントのX座標（時間）が1.0になるように正規化されている前提
@@ -142,7 +142,13 @@ export class MotionManager {
         // このカーブ内にある
         const localDist = targetDist - currentDist;
         const u = localDist / len; // 近似: 弧長パラメータ化されていないため、uは距離に比例しないが、一旦これで
-        return bezierCurve(curves[i][0], curves[i][1], curves[i][2], curves[i][3], u);
+        return bezierCurve(
+          curves[i][0],
+          curves[i][1],
+          curves[i][2],
+          curves[i][3],
+          u,
+        );
       }
       currentDist += len;
     }
@@ -154,7 +160,13 @@ export class MotionManager {
 
   // 描画されたパスからタイミング曲線を生成する
   public fitTiming(path: Path, p: p5, fitTolerance: number = 0.01): void {
-    if (!path.points || path.points.length < 2 || !path.times || path.times.length < 2) return;
+    if (
+      !path.points ||
+      path.points.length < 2 ||
+      !path.times ||
+      path.times.length < 2
+    )
+      return;
 
     const totalTime = path.times[path.times.length - 1] - path.times[0];
     if (totalTime <= 0) return;
@@ -182,7 +194,13 @@ export class MotionManager {
     const fitError = { current: { maxError: Number.MAX_VALUE, index: -1 } };
 
     // 許容誤差 (デフォルト 0.01 = 1%)
-    fitCurve(timingPoints, timingCurves, fitTolerance, fitTolerance * 5, fitError);
+    fitCurve(
+      timingPoints,
+      timingCurves,
+      fitTolerance,
+      fitTolerance * 5,
+      fitError,
+    );
 
     path.timeCurve = timingCurves;
   }

@@ -52,7 +52,9 @@ export class DOMManager {
   }
 
   // DOM要素を取得する
-  private collectElements<T extends Record<string, HTMLElement>>(ids: Record<keyof T, string>): T {
+  private collectElements<T extends Record<string, HTMLElement>>(
+    ids: Record<keyof T, string>,
+  ): T {
     const entries = Object.entries(ids).map(([key, id]) => {
       const element = document.getElementById(id);
       if (!element) {

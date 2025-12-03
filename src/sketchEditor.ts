@@ -1,14 +1,13 @@
 import p5 from 'p5';
-import type { Path, SketchMode } from './types';
-import type { Config, Colors } from './config';
+import type { Colors, Config } from './config';
+import type { DOMManager } from './domManager';
+import { drawBezierCurve, drawControls, drawPoints } from './draw';
 import { fitCurve } from './fitting';
-import { drawPoints, drawBezierCurve, drawControls } from './draw';
-import { SuggestionManager } from './suggestion';
 import { HandleManager } from './handleManager';
 import { bezierCurve } from './mathUtils';
-
-import { DOMManager } from './domManager';
 import { MotionManager } from './motionManager';
+import { SuggestionManager } from './suggestion';
+import type { Path, SketchMode } from './types';
 
 export class SketchEditor {
   private domManager: DOMManager;
@@ -30,7 +29,12 @@ export class SketchEditor {
   private colors: Colors;
 
   // コンストラクタ
-  constructor(domManager: DOMManager, config: Config, colors: Colors, onPathCreated: (path: Path) => void) {
+  constructor(
+    domManager: DOMManager,
+    config: Config,
+    colors: Colors,
+    onPathCreated: (path: Path) => void,
+  ) {
     this.domManager = domManager;
     this.config = config;
     this.colors = colors;
@@ -46,7 +50,7 @@ export class SketchEditor {
         if (!updated) return;
 
         if (targetPath) {
-          const index = this.paths.findIndex(path => path === targetPath);
+          const index = this.paths.findIndex((path) => path === targetPath);
           if (index >= 0) {
             this.paths[index].points = updated.points;
             this.paths[index].curves = updated.curves;
@@ -56,7 +60,7 @@ export class SketchEditor {
         }
 
         this.paths.push(updated);
-      }
+      },
     });
 
     this.init();
@@ -101,19 +105,35 @@ export class SketchEditor {
         // 確定済みパスの描画
         for (const path of this.paths) {
           const isSelected = this.selectedPath === path;
-          if (this.config.showSketch) drawPoints(
-            p,
-            path.points,
-            this.config.lineWeight,
-            this.config.pointSize - this.config.lineWeight,
-            this.colors.curve,
-            this.colors.background
-          );
+          if (this.config.showSketch)
+            drawPoints(
+              p,
+              path.points,
+              this.config.lineWeight,
+              this.config.pointSize - this.config.lineWeight,
+              this.colors.curve,
+              this.colors.background,
+            );
           if (isSelected) {
-            drawBezierCurve(p, path.curves, this.config.lineWeight + 1, this.colors.handle);
+            drawBezierCurve(
+              p,
+              path.curves,
+              this.config.lineWeight + 1,
+              this.colors.handle,
+            );
           }
-          drawBezierCurve(p, path.curves, this.config.lineWeight, this.colors.curve);
-          drawControls(p, path.curves, this.config.pointSize, this.colors.handle);
+          drawBezierCurve(
+            p,
+            path.curves,
+            this.config.lineWeight,
+            this.colors.curve,
+          );
+          drawControls(
+            p,
+            path.curves,
+            this.config.pointSize,
+            this.colors.handle,
+          );
         }
 
         // 現在描画中のパスの描画
@@ -124,7 +144,7 @@ export class SketchEditor {
             this.config.lineWeight,
             this.config.pointSize - this.config.lineWeight,
             this.colors.curve,
-            this.colors.background
+            this.colors.background,
           );
         }
 
@@ -151,7 +171,8 @@ export class SketchEditor {
 
       p.mousePressed = () => {
         // 左クリックのみを処理
-        const isLeftClick = (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
+        const isLeftClick =
+          (p.mouseButton as any) === p.LEFT || (p.mouseButton as any)?.left;
         if (!isLeftClick) return;
 
         // ハンドルのドラッグ開始
@@ -172,7 +193,7 @@ export class SketchEditor {
           fitError: {
             current: {
               maxError: Number.MAX_VALUE,
-              index: -1
+              index: -1,
             },
           },
         };
@@ -192,7 +213,7 @@ export class SketchEditor {
             this.draftPath.curves,
             this.config.sketchFitTolerance,
             this.config.sketchFitTolerance * this.config.coarseErrorWeight,
-            this.draftPath.fitError
+            this.draftPath.fitError,
           );
 
           // モーションのタイミングをフィッティング
@@ -247,7 +268,12 @@ export class SketchEditor {
   }
 
   // パスと座標の当たり判定
-  private isNearPath(path: Path, x: number, y: number, toleranceSq: number): boolean {
+  private isNearPath(
+    path: Path,
+    x: number,
+    y: number,
+    toleranceSq: number,
+  ): boolean {
     if (path.curves.length === 0) return false;
 
     for (const curve of path.curves) {

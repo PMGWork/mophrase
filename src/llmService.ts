@@ -1,9 +1,9 @@
-import { GoogleGenAI } from "@google/genai";
-import { OpenAI } from "openai";
-import { Groq } from "groq-sdk";
-import { zodTextFormat } from "openai/helpers/zod";
-import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { GoogleGenAI } from '@google/genai';
+import { Groq } from 'groq-sdk';
+import { OpenAI } from 'openai';
+import { zodTextFormat } from 'openai/helpers/zod';
+import type { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 // インスタンス
 const genai = new GoogleGenAI({
@@ -21,7 +21,7 @@ const groq = new Groq({
 });
 
 // プロバイダの種類
-export type LLMProvider = "Gemini" | "OpenAI" | "Groq";
+export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
 
 // モデル設定
 type ModelInfo = { id: string; name?: string };
@@ -30,7 +30,11 @@ type ModelInfo = { id: string; name?: string };
 type ProviderConfig = {
   defaultModel: string;
   models: ModelInfo[];
-  generate: <T>(prompt: string, schema: z.ZodType<T>, model?: string) => Promise<T>;
+  generate: <T>(
+    prompt: string,
+    schema: z.ZodType<T>,
+    model?: string,
+  ) => Promise<T>;
 };
 
 // プロバイダモデルオプション
@@ -59,7 +63,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
         reasoning: { effort: reasoningEffort },
         text: {
           format: zodTextFormat(schema, 'schema'),
-          verbosity: 'low'
+          verbosity: 'low',
         },
       });
 
@@ -69,9 +73,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   },
   Gemini: {
     defaultModel: 'gemini-flash-latest',
-    models: [
-      { id: 'gemini-flash-latest', name: 'Gemini Flash' },
-    ],
+    models: [{ id: 'gemini-flash-latest', name: 'Gemini Flash' }],
     generate: async (prompt, schema, model) => {
       const response = await genai.models.generateContent({
         model: model ?? 'gemini-flash-latest',
@@ -116,7 +118,7 @@ export async function generateStructured<T>(
   prompt: string,
   schema: z.ZodType<T>,
   provider: LLMProvider,
-  model?: string
+  model?: string,
 ): Promise<T> {
   const providerConfig = PROVIDERS[provider];
   if (!providerConfig) throw new Error(`Unsupported LLM provider: ${provider}`);
@@ -130,12 +132,12 @@ export function getModelsForProvider(provider: LLMProvider): ModelInfo[] {
 
 // 全プロバイダのモデル一覧を取得する
 export function getProviderModelOptions(): ProviderModelOption[] {
-  return (Object.entries(PROVIDERS) as [LLMProvider, ProviderConfig][])
-    .flatMap(([provider, config]) =>
+  return (Object.entries(PROVIDERS) as [LLMProvider, ProviderConfig][]).flatMap(
+    ([provider, config]) =>
       config.models.map((model) => ({
         provider,
         modelId: model.id,
         name: model.name ?? model.id,
-      }))
-    );
+      })),
+  );
 }

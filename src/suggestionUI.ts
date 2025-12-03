@@ -20,7 +20,7 @@ export class SuggestionUI {
   constructor(
     config: SuggestionUIConfig,
     onHoverChange: (id: string | null) => void,
-    onSuggestionClick: (id: string) => void
+    onSuggestionClick: (id: string) => void,
   ) {
     this.config = config;
     this.onHoverChange = onHoverChange;
@@ -38,7 +38,11 @@ export class SuggestionUI {
   }
 
   // UIの更新
-  update(status: SuggestionState, suggestions: Suggestion[], targetPath?: Path): void {
+  update(
+    status: SuggestionState,
+    suggestions: Suggestion[],
+    targetPath?: Path,
+  ): void {
     const { containerId, listId } = this.config;
     const listContainer = document.getElementById(listId);
     if (!listContainer) return;
@@ -50,7 +54,8 @@ export class SuggestionUI {
     const hasSuggestions = suggestions.length > 0;
 
     if (container) {
-      container.style.display = showLoading || showInput || hasSuggestions ? 'flex' : 'none';
+      container.style.display =
+        showLoading || showInput || hasSuggestions ? 'flex' : 'none';
       container.style.flexDirection = 'column';
     }
 
@@ -66,7 +71,9 @@ export class SuggestionUI {
     }
 
     if (hasSuggestions) {
-      suggestions.forEach((suggestion) => listContainer.appendChild(this.createSuggestionItem(suggestion)));
+      suggestions.forEach((suggestion) => {
+        listContainer.appendChild(this.createSuggestionItem(suggestion));
+      });
     }
 
     this.applyPosition(targetPath);
@@ -79,7 +86,9 @@ export class SuggestionUI {
     item.textContent = suggestion.title;
     item.dataset.suggestionId = suggestion.id;
 
-    item.addEventListener('mouseenter', () => this.onHoverChange(suggestion.id));
+    item.addEventListener('mouseenter', () =>
+      this.onHoverChange(suggestion.id),
+    );
     item.addEventListener('mouseleave', () => this.onHoverChange(null));
     item.addEventListener('click', () => this.onSuggestionClick(suggestion.id));
 
@@ -94,8 +103,10 @@ export class SuggestionUI {
 
   private applyPosition(targetPath?: Path): void {
     this.config.position?.({
-      container: this.config.containerId ? document.getElementById(this.config.containerId) : null,
-      targetPath
+      container: this.config.containerId
+        ? document.getElementById(this.config.containerId)
+        : null,
+      targetPath,
     });
   }
 }
@@ -103,7 +114,7 @@ export class SuggestionUI {
 // スケッチUIの配置計算
 export function positionUI({
   container,
-  targetPath
+  targetPath,
 }: {
   container: HTMLElement | null;
   targetPath?: Path;

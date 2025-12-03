@@ -1,14 +1,24 @@
-import p5 from 'p5';
-import { encode } from '@toon-format/toon'
+import { encode } from '@toon-format/toon';
+import type p5 from 'p5';
 
-import type { Path, SerializedPath, Suggestion, SuggestionItem, SuggestionState } from './types';
 import type { Colors, Config } from './config';
-import { suggestionResponseSchema } from './types';
-import { generateStructured } from './llmService';
 import { drawBezierCurve } from './draw';
-import { deserializeCurves, serializePaths, deserializePaths, serializeAnchorsAndSegments } from './serialization';
-import { SuggestionUI, positionUI } from './suggestionUI';
-
+import { generateStructured } from './llmService';
+import {
+  deserializeCurves,
+  deserializePaths,
+  serializeAnchorsAndSegments,
+  serializePaths,
+} from './serialization';
+import { positionUI, SuggestionUI } from './suggestionUI';
+import type {
+  Path,
+  SerializedPath,
+  Suggestion,
+  SuggestionItem,
+  SuggestionState,
+} from './types';
+import { suggestionResponseSchema } from './types';
 
 // #region 提案マネージャー
 
@@ -38,7 +48,7 @@ export class SuggestionManager {
     options: {
       onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
       onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
-    } = {}
+    } = {},
   ) {
     this.config = config;
     this.onSketchSuggestionSelect = options.onSketchSuggestionSelect;
@@ -47,19 +57,25 @@ export class SuggestionManager {
       {
         containerId: 'sketchSuggestionContainer',
         listId: 'sketchSuggestionList',
-        itemClass: 'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
-        position: positionUI
+        itemClass:
+          'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
+        position: positionUI,
       },
-      (id) => this.hoveredId = id,
-      (id) => this.selectById(id)
+      (id) => {
+        this.hoveredId = id;
+      },
+      (id) => this.selectById(id),
     );
     this.graphUI = new SuggestionUI(
       {
         listId: 'graphSuggestionList',
-        itemClass: 'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer'
+        itemClass:
+          'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
       },
-      (id) => this.hoveredId = id,
-      (id) => this.selectById(id)
+      (id) => {
+        this.hoveredId = id;
+      },
+      (id) => this.selectById(id),
     );
   }
 
@@ -91,21 +107,23 @@ export class SuggestionManager {
         serializedPaths,
         this.config.sketchPrompt,
         this.config,
-        trimmedUserPrompt
+        trimmedUserPrompt,
       );
 
       // 提案を保存
       const path = serializedPaths[0];
-      this.suggestions = fetched.map((item): Suggestion => ({
-        id: this.generateId(),
-        title: item.title,
-        type: 'sketch',
-        path: {
-          anchors: item.anchors,
-          segments: path.segments,
-          bbox: path.bbox,
-        }
-      }));
+      this.suggestions = fetched.map(
+        (item): Suggestion => ({
+          id: this.generateId(),
+          title: item.title,
+          type: 'sketch',
+          path: {
+            anchors: item.anchors,
+            segments: path.segments,
+            bbox: path.bbox,
+          },
+        }),
+      );
 
       this.setState('idle');
       this.sketchUI.update(this.status, this.suggestions, this.targetPath);
@@ -124,7 +142,10 @@ export class SuggestionManager {
   }
 
   // グラフカーブの提案を生成する
-  async generateGraphSuggestions(currentCurves: p5.Vector[][], userPrompt?: string): Promise<void> {
+  async generateGraphSuggestions(
+    currentCurves: p5.Vector[][],
+    userPrompt?: string,
+  ): Promise<void> {
     if (!currentCurves || currentCurves.length === 0) {
       this.setState('error');
       return;
@@ -137,7 +158,10 @@ export class SuggestionManager {
     try {
       // カーブをシリアライズ
       const bbox = { x: 0, y: 0, width: 1, height: 1 };
-      const { anchors, segments } = serializeAnchorsAndSegments(currentCurves, bbox);
+      const { anchors, segments } = serializeAnchorsAndSegments(
+        currentCurves,
+        bbox,
+      );
       const serializedPath: SerializedPath = { anchors, segments, bbox };
 
       // 提案を取得
@@ -145,20 +169,24 @@ export class SuggestionManager {
         [serializedPath],
         this.config.graphPrompt || '',
         this.config,
-        userPrompt
+        userPrompt,
       );
 
       // 提案を保存
-      this.suggestions = fetched.map((item): Suggestion => ({
-        id: this.generateId(),
-        title: item.title,
-        type: 'graph',
-        path: {
-          anchors: item.anchors,
-          segments: item.anchors.slice(0, -1).map((_, i) => ({ startIndex: i, endIndex: i + 1 })),
-          bbox: bbox
-        }
-      }));
+      this.suggestions = fetched.map(
+        (item): Suggestion => ({
+          id: this.generateId(),
+          title: item.title,
+          type: 'graph',
+          path: {
+            anchors: item.anchors,
+            segments: item.anchors
+              .slice(0, -1)
+              .map((_, i) => ({ startIndex: i, endIndex: i + 1 })),
+            bbox: bbox,
+          },
+        }),
+      );
 
       // UIを更新
       this.setState('idle');
@@ -180,7 +208,11 @@ export class SuggestionManager {
   }
 
   // 提案を描画する
-  draw(p: p5, colors: Colors, options: { transform?: (v: p5.Vector) => p5.Vector } = {}): void {
+  draw(
+    p: p5,
+    colors: Colors,
+    options: { transform?: (v: p5.Vector) => p5.Vector } = {},
+  ): void {
     this.pInstance = p;
     if (this.status === 'generating') {
       return;
@@ -191,7 +223,6 @@ export class SuggestionManager {
       this.drawPreview(p, colors, options.transform);
     }
   }
-
 
   // #region プライベート関数
   // 状態を更新する
@@ -211,13 +242,20 @@ export class SuggestionManager {
   }
 
   // ホバー中のプレビューを描画する
-  private drawPreview(p: p5, colors: Colors, transform?: (v: p5.Vector) => p5.Vector): void {
+  private drawPreview(
+    p: p5,
+    colors: Colors,
+    transform?: (v: p5.Vector) => p5.Vector,
+  ): void {
     if (!this.hoveredId) return;
-    const suggestion = this.suggestions.find(entry => entry.id === this.hoveredId);
+    const suggestion = this.suggestions.find(
+      (entry) => entry.id === this.hoveredId,
+    );
     if (!suggestion) return;
 
     const ctx = p.drawingContext as CanvasRenderingContext2D;
-    const previousDash = typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
+    const previousDash =
+      typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
     if (typeof ctx.setLineDash === 'function') ctx.setLineDash([6, 4]);
 
     p.push();
@@ -225,7 +263,7 @@ export class SuggestionManager {
     // プレビュー描画
     const curves = deserializeCurves(suggestion.path, p);
     const mapped = transform
-      ? curves.map(curve => curve.map(pt => transform(pt.copy())))
+      ? curves.map((curve) => curve.map((pt) => transform(pt.copy())))
       : curves;
     if (mapped.length > 0) {
       const weight = Math.max(this.config.lineWeight, 1) + 0.5;
@@ -239,7 +277,7 @@ export class SuggestionManager {
 
   // IDで提案を選択
   private selectById(id: string): void {
-    const suggestion = this.suggestions.find(s => s.id === id);
+    const suggestion = this.suggestions.find((s) => s.id === id);
     if (!suggestion) return;
 
     if (suggestion.type === 'graph') {
@@ -248,8 +286,16 @@ export class SuggestionManager {
         const curves = deserializeCurves(suggestion.path, this.pInstance);
         this.onGraphSuggestionSelect(curves);
       }
-    } else if (suggestion.type === 'sketch' && this.targetPath && this.pInstance) {
-      const restored = deserializePaths([suggestion.path], [this.targetPath], this.pInstance);
+    } else if (
+      suggestion.type === 'sketch' &&
+      this.targetPath &&
+      this.pInstance
+    ) {
+      const restored = deserializePaths(
+        [suggestion.path],
+        [this.targetPath],
+        this.pInstance,
+      );
       if (restored.length === 0) {
         this.setState('error');
         return;
@@ -268,25 +314,35 @@ export class SuggestionManager {
   }
 }
 
-
 // #region 汎用関数
 // LLM から提案を取得する
 async function fetchSuggestions(
   serializedPaths: SerializedPath[],
   basePrompt: string,
   config: Config,
-  userPrompt?: string
+  userPrompt?: string,
 ): Promise<SuggestionItem[]> {
   const prompt = buildPrompt(serializedPaths, basePrompt, userPrompt);
-  const result = await generateStructured(prompt, suggestionResponseSchema, config.llmProvider, config.llmModel) as any;
-  return result.suggestions.map((suggestion: any): SuggestionItem => ({
-    title: suggestion.title,
-    anchors: suggestion.anchors,
-  }));
+  const result = (await generateStructured(
+    prompt,
+    suggestionResponseSchema,
+    config.llmProvider,
+    config.llmModel,
+  )) as any;
+  return result.suggestions.map(
+    (suggestion: any): SuggestionItem => ({
+      title: suggestion.title,
+      anchors: suggestion.anchors,
+    }),
+  );
 }
 
 // プロンプトを構築する
-function buildPrompt(serializedPaths: SerializedPath[], basePrompt: string, userPrompt?: string): string {
+function buildPrompt(
+  serializedPaths: SerializedPath[],
+  basePrompt: string,
+  userPrompt?: string,
+): string {
   const promptParts = [basePrompt];
   const trimmedUserPrompt = userPrompt?.trim();
   if (trimmedUserPrompt) {

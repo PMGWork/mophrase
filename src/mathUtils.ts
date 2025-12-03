@@ -5,7 +5,7 @@ import type { Vector } from './types';
 // バーンスタイン多項式
 export function bernstein(i: number, n: number, t: number): number {
   const coeff = binomial(n, i);
-  return coeff * Math.pow(t, i) * Math.pow(1 - t, n - i);
+  return coeff * t ** i * (1 - t) ** (n - i);
 }
 
 // 二項係数
@@ -14,7 +14,7 @@ export function binomial(n: number, k: number): number {
 
   let res = 1;
   for (let i = 1; i <= k; i++) {
-    res *= (n - i + 1);
+    res *= n - i + 1;
     res /= i;
   }
   return res;
@@ -33,7 +33,7 @@ export function bezierCurve(
   v1: Vector,
   v2: Vector,
   v3: Vector,
-  t: number
+  t: number,
 ): Vector {
   const point = v0.copy().mult(0);
   point.add(v0.copy().mult(bernstein(0, 3, t)));
@@ -49,12 +49,27 @@ export function bezierDerivative(
   v1: Vector,
   v2: Vector,
   v3: Vector,
-  t: number
+  t: number,
 ): Vector {
   const d = v0.copy().mult(0);
-  d.add(v1.copy().sub(v0).mult(3 * (1 - t) * (1 - t)));
-  d.add(v2.copy().sub(v1).mult(6 * (1 - t) * t));
-  d.add(v3.copy().sub(v2).mult(3 * t * t));
+  d.add(
+    v1
+      .copy()
+      .sub(v0)
+      .mult(3 * (1 - t) * (1 - t)),
+  );
+  d.add(
+    v2
+      .copy()
+      .sub(v1)
+      .mult(6 * (1 - t) * t),
+  );
+  d.add(
+    v3
+      .copy()
+      .sub(v2)
+      .mult(3 * t * t),
+  );
   return d;
 }
 
@@ -64,7 +79,7 @@ export function bezierSecondDerivative(
   v1: Vector,
   v2: Vector,
   v3: Vector,
-  t: number
+  t: number,
 ): Vector {
   const d2 = v0.copy().mult(0);
   const term1 = v2.copy().sub(v1.copy().mult(2)).add(v0);
@@ -78,16 +93,22 @@ export function bezierSecondDerivative(
 export function refineParameter(
   control: Vector[],
   point: Vector,
-  u: number
+  u: number,
 ): number {
   const q = bezierCurve(control[0], control[1], control[2], control[3], u);
-  const qPrime = bezierDerivative(control[0], control[1], control[2], control[3], u);
+  const qPrime = bezierDerivative(
+    control[0],
+    control[1],
+    control[2],
+    control[3],
+    u,
+  );
   const qDoublePrime = bezierSecondDerivative(
     control[0],
     control[1],
     control[2],
     control[3],
-    u
+    u,
   );
 
   const diff = q.copy().sub(point);
@@ -109,7 +130,7 @@ export function refineParameter(
 // 分割点における接ベクトルの計算
 export function splitTangent(
   points: Vector[],
-  splitIndex: number
+  splitIndex: number,
 ): Vector | null {
   const n = points.length;
   if (n < 3) return null;

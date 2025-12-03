@@ -1,7 +1,13 @@
 /// ベジェ曲線フィッティング関連
 
-import type { Vector, FitErrorResult, Range, Tangents } from './types';
-import { bernstein, unitTangent, bezierCurve, refineParameter, splitTangent } from './mathUtils';
+import {
+  bernstein,
+  bezierCurve,
+  refineParameter,
+  splitTangent,
+  unitTangent,
+} from './mathUtils';
+import type { FitErrorResult, Range, Tangents, Vector } from './types';
 
 // #region プライベート関数
 // ベジェ曲線の始点と終点の接ベクトルを計算する
@@ -22,10 +28,7 @@ function computeEndTangents(points: Vector[]): [Vector, Vector] {
 }
 
 // 点列に対応する曲線のパラメータの位置を計算する
-function parametrizeRange(
-  points: Vector[],
-  range: Range
-): number[] {
+function parametrizeRange(points: Vector[], range: Range): number[] {
   const _params: number[] = [0];
 
   // 分割点が1つの場合はパラメータを計算しない
@@ -49,10 +52,7 @@ function parametrizeRange(
 }
 
 // 3次ベジェ曲線の始点と終点を定める
-function extractEndPoints(
-  points: Vector[],
-  range: Range
-): [Vector, Vector] {
+function extractEndPoints(points: Vector[], range: Range): [Vector, Vector] {
   return [points[range.start].copy(), points[range.end].copy()];
 }
 
@@ -62,7 +62,7 @@ function fitControlPoints(
   params: number[],
   tangents: Tangents,
   points: Vector[],
-  range: Range
+  range: Range,
 ): void {
   const n = range.end - range.start + 1;
   if (n < 2) return;
@@ -79,11 +79,11 @@ function fitControlPoints(
   const defaultAlpha = chordLength / 3.0;
 
   // 正規方程式の係数行列と右辺ベクトルを初期化
-  let c11 = 0;  // C_11 = Σ A1·A1
-  let c12 = 0;  // C_12 = Σ A1·A2
-  let c22 = 0;  // C_22 = Σ A2·A2
-  let x1 = 0;   // X_1 = Σ A1·C_i
-  let x2 = 0;   // X_2 = Σ A2·C_i
+  let c11 = 0; // C_11 = Σ A1·A1
+  let c12 = 0; // C_12 = Σ A1·A2
+  let c22 = 0; // C_22 = Σ A2·A2
+  let x1 = 0; // X_1 = Σ A1·C_i
+  let x2 = 0; // X_2 = Σ A2·C_i
 
   for (let i = 0; i < params.length; i++) {
     const u = params[i];
@@ -106,13 +106,13 @@ function fitControlPoints(
       .sub(v3.copy().mult(b2 + b3));
 
     // 係数行列の要素を累積
-    c11 += a1.dot(a1);  // C_11 = Σ a1·a1
-    c12 += a1.dot(a2);  // C_12 = Σ a1·a2
-    c22 += a2.dot(a2);  // C_22 = Σ a2·a2
+    c11 += a1.dot(a1); // C_11 = Σ a1·a1
+    c12 += a1.dot(a2); // C_12 = Σ a1·a2
+    c22 += a2.dot(a2); // C_22 = Σ a2·a2
 
     // 右辺ベクトルの要素を累積
-    x1 += a1.dot(tVec);  // X_1 = Σ a1·T_i
-    x2 += a2.dot(tVec);  // X_2 = Σ a2·T_i
+    x1 += a1.dot(tVec); // X_1 = Σ a1·T_i
+    x2 += a2.dot(tVec); // X_2 = Σ a2·T_i
   }
 
   // 連立方程式を解く
@@ -120,8 +120,8 @@ function fitControlPoints(
   // C_12·α_1 + C_22·α_2 = X_2
   const det = c11 * c22 - c12 * c12;
 
-    // 特異行列の場合はデフォルト値を使用
-    if (Math.abs(det) < 1e-6 || chordLength === 0) {
+  // 特異行列の場合はデフォルト値を使用
+  if (Math.abs(det) < 1e-6 || chordLength === 0) {
     controls[1] = v0.copy().add(t1.copy().mult(defaultAlpha));
     controls[2] = v3.copy().add(t2.copy().mult(defaultAlpha));
     return;
@@ -132,8 +132,8 @@ function fitControlPoints(
   const alpha_2 = (c11 * x2 - c12 * x1) / det;
 
   // 制御点を設定
-  controls[1] = v0.copy().add(t1.copy().mult(alpha_1));  // V_1 = V_0 + α_1·t_1
-  controls[2] = v3.copy().add(t2.copy().mult(alpha_2));  // V_2 = V_3 + α_2·t_2
+  controls[1] = v0.copy().add(t1.copy().mult(alpha_1)); // V_1 = V_0 + α_1·t_1
+  controls[2] = v3.copy().add(t2.copy().mult(alpha_2)); // V_2 = V_3 + α_2·t_2
 }
 
 // ベジェ曲線と点列との最大距離を求める
@@ -141,7 +141,7 @@ function computeMaxError(
   controls: Vector[],
   params: number[],
   points: Vector[],
-  range: Range
+  range: Range,
 ): FitErrorResult {
   const n = range.end - range.start + 1;
 
@@ -149,7 +149,8 @@ function computeMaxError(
   if (n < 3) return { maxError: 0, index: -1 };
 
   // 制御点が不正な場合は誤差を計算しない
-  if (!controls.every(c => c)) return { maxError: Number.MAX_VALUE, index: -1 };
+  if (!controls.every((c) => c))
+    return { maxError: Number.MAX_VALUE, index: -1 };
 
   // 最大誤差を計算
   let maxError = -1;
@@ -162,7 +163,7 @@ function computeMaxError(
       controls[1],
       controls[2],
       controls[3],
-      u
+      u,
     );
     const error = points[range.start + i].dist(curve);
     if (error > maxError) {
@@ -179,7 +180,7 @@ function refineParams(
   controls: Vector[],
   params: number[],
   points: Vector[],
-  startIndex: number
+  startIndex: number,
 ): void {
   const cubicControls = controls as [Vector, Vector, Vector, Vector];
 
@@ -203,7 +204,7 @@ function fitCurveRange(
   tangents: Tangents,
   errorTol: number,
   coarseErrTol: number,
-  fitError: { current: FitErrorResult }
+  fitError: { current: FitErrorResult },
 ): void {
   // パラメータを計算
   const params = parametrizeRange(points, range);
@@ -213,16 +214,10 @@ function fitCurveRange(
   const [p0, p3] = extractEndPoints(points, range);
   controls[0] = p0;
   controls[3] = p3;
-  fitControlPoints(
-    controls,
-    params,
-    tangents,
-    points,
-    range
-  );
+  fitControlPoints(controls, params, tangents, points, range);
 
   // 最大誤差を計算
-  let errorResult = computeMaxError(controls, params, points, range);
+  const errorResult = computeMaxError(controls, params, points, range);
   let maxError = errorResult.maxError;
 
   // fitErrorを更新
@@ -278,7 +273,7 @@ function fitCurveRange(
     { start: tangents.start, end: tangent },
     errorTol,
     coarseErrTol,
-    fitError
+    fitError,
   );
   fitCurveRange(
     points,
@@ -287,7 +282,7 @@ function fitCurveRange(
     { start: tangent.copy().mult(-1), end: tangents.end },
     errorTol,
     coarseErrTol,
-    fitError
+    fitError,
   );
 }
 
@@ -298,7 +293,7 @@ export function fitCurve(
   curves: Vector[][],
   errorTol: number,
   coarseErrTol: number,
-  fitError: { current: FitErrorResult }
+  fitError: { current: FitErrorResult },
 ): void {
   // 全体の接ベクトルを計算
   const [tangent0, tangent1] = computeEndTangents(points);
@@ -311,11 +306,11 @@ export function fitCurve(
     { start: tangent0, end: tangent1 },
     errorTol,
     coarseErrTol,
-    fitError
+    fitError,
   );
 
   // 最終的な誤差と分割数を出力
   console.log(
-    `Final error: ${fitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`
+    `Final error: ${fitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`,
   );
 }
