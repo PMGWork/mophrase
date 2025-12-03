@@ -68,7 +68,10 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       });
 
       const content = response.output_text;
-      return schema.parse(JSON.parse(content!));
+      if (!content) {
+        throw new Error('OpenAI response content is empty');
+      }
+      return schema.parse(JSON.parse(content));
     },
   },
   Gemini: {
@@ -85,7 +88,11 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
         },
       });
 
-      return schema.parse(JSON.parse(response.text!));
+      const text = response.text;
+      if (!text) {
+        throw new Error('Gemini response text is empty');
+      }
+      return schema.parse(JSON.parse(text));
     },
   },
   Groq: {
@@ -108,7 +115,10 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       });
 
       const content = response.choices[0].message.content;
-      return schema.parse(JSON.parse(content!));
+      if (!content) {
+        throw new Error('Groq response content is empty');
+      }
+      return schema.parse(JSON.parse(content));
     },
   },
 };
