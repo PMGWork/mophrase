@@ -115,19 +115,15 @@ export class SketchEditor {
               this.colors.curve,
               this.colors.background,
             );
-          if (isSelected) {
-            drawBezierCurve(
-              p,
-              path.curves,
-              this.config.lineWeight + 1,
-              this.colors.handle,
-            );
-          }
+          // 選択されたパスはハイライト色で描画
+          const curveColor = isSelected
+            ? this.colors.handle
+            : this.colors.curve;
           drawBezierCurve(
             p,
             path.curves,
             this.config.lineWeight,
-            this.colors.curve,
+            curveColor
           );
           drawControls(
             p,
@@ -171,6 +167,23 @@ export class SketchEditor {
       };
 
       p.mousePressed = () => {
+        // 入力欄やフォーム要素がクリックされた場合は処理をスキップ
+        // p.mouseX/Yはキャンバス相対座標なので、ウィンドウ座標に変換
+        const canvas = this.domManager.canvasContainer.querySelector('canvas');
+        const rect = canvas?.getBoundingClientRect();
+        const windowX = (rect?.left ?? 0) + p.mouseX;
+        const windowY = (rect?.top ?? 0) + p.mouseY;
+        const target = document.elementFromPoint(windowX, windowY);
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLButtonElement ||
+          target instanceof HTMLSelectElement ||
+          target?.closest('form') ||
+          target?.closest('#sketchSuggestionContainer')
+        ) {
+          return;
+        }
+
         // 左クリックのみを処理
         const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
         if (!isLeftClick) return;

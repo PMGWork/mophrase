@@ -172,6 +172,16 @@ export class SuggestionManager {
       this.targetPath,
       this.promptHistory.length,
     );
+
+    // 入力欄にフォーカスを当てる
+    const inputElement = document.getElementById(
+      'userPromptInput',
+    ) as HTMLInputElement | null;
+    if (inputElement) {
+      requestAnimationFrame(() => {
+        inputElement.focus();
+      });
+    }
   }
 
   // グラフカーブの提案を生成する
