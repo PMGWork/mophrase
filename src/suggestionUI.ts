@@ -3,6 +3,7 @@ import type { Path, Suggestion, SuggestionState } from './types';
 type SuggestionUIConfig = {
   containerId?: string;
   listId: string;
+  inputId?: string;
   itemClass: string;
   position?: (args: {
     container: HTMLElement | null;
@@ -42,8 +43,9 @@ export class SuggestionUI {
     status: SuggestionState,
     suggestions: Suggestion[],
     targetPath?: Path,
+    promptCount: number = 0,
   ): void {
-    const { containerId, listId } = this.config;
+    const { containerId, listId, inputId } = this.config;
     const listContainer = document.getElementById(listId);
     if (!listContainer) return;
 
@@ -57,6 +59,17 @@ export class SuggestionUI {
       container.style.display =
         showLoading || showInput || hasSuggestions ? 'flex' : 'none';
       container.style.flexDirection = 'column';
+    }
+
+    // placeholderを履歴に応じて変更
+    if (inputId) {
+      const inputElement = document.getElementById(
+        inputId,
+      ) as HTMLInputElement | null;
+      if (inputElement) {
+        inputElement.placeholder =
+          promptCount > 0 ? 'Refine instruction...' : 'Enter instructions...';
+      }
     }
 
     this.clearItems(listId);

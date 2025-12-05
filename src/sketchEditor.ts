@@ -314,7 +314,6 @@ export class SketchEditor {
   public generateSuggestion(userPrompt: string): void {
     const targetPath = this.selectedPath ?? this.paths[this.paths.length - 1];
     if (!targetPath) return;
-    this.suggestionManager.reset();
     this.suggestionManager.showInput(targetPath);
     void this.suggestionManager.generate(targetPath, userPrompt);
   }

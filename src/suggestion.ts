@@ -35,6 +35,9 @@ export class SuggestionManager {
   private hoveredId: string | null = null;
   private pInstance: p5 | null = null;
 
+  // 履歴管理
+  private promptHistory: string[] = [];
+
   // UI
   private sketchUI: SuggestionUI;
   private graphUI: SuggestionUI;
@@ -58,6 +61,7 @@ export class SuggestionManager {
       {
         containerId: 'sketchSuggestionContainer',
         listId: 'sketchSuggestionList',
+        inputId: 'userPromptInput',
         itemClass:
           'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
         position: positionUI,
@@ -95,9 +99,19 @@ export class SuggestionManager {
     this.targetPath = targetPath;
     const trimmedUserPrompt = userPrompt?.trim() ?? '';
 
-    this.clear();
+    // 履歴に追加
+    if (trimmedUserPrompt) {
+      this.promptHistory.push(trimmedUserPrompt);
+    }
+
+    this.clearSuggestions();
     this.setState('generating');
-    this.sketchUI.update(this.status, this.suggestions, this.targetPath);
+    this.sketchUI.update(
+      this.status,
+      this.suggestions,
+      this.targetPath,
+      this.promptHistory.length,
+    );
 
     try {
       // シリアライズ
@@ -108,7 +122,7 @@ export class SuggestionManager {
         serializedPaths,
         this.config.sketchPrompt,
         this.config,
-        trimmedUserPrompt,
+        this.promptHistory,
       );
 
       // 提案を保存
@@ -127,19 +141,37 @@ export class SuggestionManager {
       );
 
       this.setState('idle');
-      this.sketchUI.update(this.status, this.suggestions, this.targetPath);
+      this.sketchUI.update(
+        this.status,
+        this.suggestions,
+        this.targetPath,
+        this.promptHistory.length,
+      );
     } catch (error) {
       console.error(error);
       this.setState('error');
-      this.sketchUI.update(this.status, this.suggestions, this.targetPath);
+      this.sketchUI.update(
+        this.status,
+        this.suggestions,
+        this.targetPath,
+        this.promptHistory.length,
+      );
     }
   }
 
   // 入力ウィンドウを表示する
   showInput(targetPath: Path): void {
+    if (this.targetPath !== targetPath) {
+      this.promptHistory = [];
+    }
     this.targetPath = targetPath;
     this.setState('input');
-    this.sketchUI.update(this.status, this.suggestions, this.targetPath);
+    this.sketchUI.update(
+      this.status,
+      this.suggestions,
+      this.targetPath,
+      this.promptHistory.length,
+    );
   }
 
   // グラフカーブの提案を生成する
@@ -166,11 +198,12 @@ export class SuggestionManager {
       const serializedPath: SerializedPath = { anchors, segments, bbox };
 
       // 提案を取得
+      const promptHistory = userPrompt?.trim() ? [userPrompt.trim()] : [];
       const fetched = await fetchSuggestions(
         [serializedPath],
         this.config.graphPrompt || '',
         this.config,
-        userPrompt,
+        promptHistory,
       );
 
       // 提案を保存
@@ -201,7 +234,8 @@ export class SuggestionManager {
 
   // 提案をリセットする
   reset(): void {
-    this.clear();
+    this.clearSuggestions();
+    this.promptHistory = [];
     this.targetPath = undefined;
     this.setState('idle');
     this.sketchUI.hide();
@@ -232,7 +266,7 @@ export class SuggestionManager {
   }
 
   // 提案をクリアする
-  private clear(): void {
+  private clearSuggestions(): void {
     this.suggestions = [];
     this.hoveredId = null;
   }
@@ -287,6 +321,12 @@ export class SuggestionManager {
         const curves = deserializeCurves(suggestion.path, this.pInstance);
         this.onGraphSuggestionSelect(curves);
       }
+
+      // グラフ提案の場合はリセット
+      this.clearSuggestions();
+      this.promptHistory = [];
+      this.targetPath = undefined;
+      this.setState('idle');
     } else if (
       suggestion.type === 'sketch' &&
       this.targetPath &&
@@ -306,12 +346,17 @@ export class SuggestionManager {
       if (this.onSketchSuggestionSelect) {
         this.onSketchSuggestionSelect(restored, this.targetPath);
       }
-    }
 
-    // リセット
-    this.clear();
-    this.targetPath = undefined;
-    this.setState('idle');
+      // スケッチ提案の場合は入力待ち状態に戻す
+      this.clearSuggestions();
+      this.setState('input');
+      this.sketchUI.update(
+        this.status,
+        this.suggestions,
+        this.targetPath,
+        this.promptHistory.length,
+      );
+    }
   }
 }
 
@@ -321,9 +366,9 @@ async function fetchSuggestions(
   serializedPaths: SerializedPath[],
   basePrompt: string,
   config: Config,
-  userPrompt?: string,
+  promptHistory: string[],
 ): Promise<SuggestionItem[]> {
-  const prompt = buildPrompt(serializedPaths, basePrompt, userPrompt);
+  const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
   const result = await generateStructured<SuggestionResponse>(
     prompt,
     suggestionResponseSchema,
@@ -343,13 +388,24 @@ async function fetchSuggestions(
 function buildPrompt(
   serializedPaths: SerializedPath[],
   basePrompt: string,
-  userPrompt?: string,
+  promptHistory: string[],
 ): string {
   const promptParts = [basePrompt];
-  const trimmedUserPrompt = userPrompt?.trim();
-  if (trimmedUserPrompt) {
-    promptParts.push('', '## 追加のユーザー指示', trimmedUserPrompt);
+
+  // 履歴がある場合は会話形式で追加
+  if (promptHistory.length > 0) {
+    promptParts.push('', '## ユーザー指示の履歴');
+    promptHistory.forEach((prompt, index) => {
+      const label =
+        index === promptHistory.length - 1 ? '現在の指示' : `指示${index + 1}`;
+      promptParts.push(`- **${label}**: ${prompt}`);
+    });
+    promptParts.push('');
+    promptParts.push(
+      '上記の履歴を踏まえ、特に最新の「現在の指示」に従ってパスを修正してください。',
+    );
   }
+
   promptParts.push('', '```toon', encode(serializedPaths), '```');
 
   return promptParts.join('\n');

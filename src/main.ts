@@ -184,7 +184,9 @@ const main = (): void => {
     domManager.userPromptForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const userPrompt = domManager.userPromptInput.value.trim();
+      if (!userPrompt) return;
       sketchEditor.generateSuggestion(userPrompt);
+      domManager.userPromptInput.value = '';
     });
   }
 
