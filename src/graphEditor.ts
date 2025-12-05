@@ -31,7 +31,7 @@ export class GraphEditor {
     this.colors = colors;
 
     // p5.jsの初期化
-    this.init();
+    this.initP5();
 
     // 提案マネージャーの初期化
     this.suggestionManager = new SuggestionManager(config, {
@@ -53,7 +53,9 @@ export class GraphEditor {
     });
   }
 
-  // グラフの表示/非表示
+  // #region メイン関数
+
+  // 表示/非表示の切り替え
   public toggle(): void {
     this.isVisible = !this.isVisible;
     this.domManager.graphEditorContainer.classList.toggle(
@@ -78,6 +80,8 @@ export class GraphEditor {
       this.suggestionManager.showGraphInput();
     }
   }
+
+  // #region プライベート関数
 
   // Durationの更新
   private updateDuration(): void {
@@ -113,8 +117,10 @@ export class GraphEditor {
     this.activePath.timeCurve = curves;
   }
 
+  // #region p5.js
+
   // p5.jsの初期化
-  private init(): void {
+  private initP5(): void {
     const sketch = (p: p5) => {
       // 正規化座標からピクセル座標への変換
       const normalizedToPixel = (normX: number, normY: number) => {
@@ -221,6 +227,8 @@ export class GraphEditor {
 
     new p5(sketch);
   }
+
+  // #region ヘルパー関数
 
   // グリッドの描画
   private drawGrid(p: p5, w: number, h: number): void {

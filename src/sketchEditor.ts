@@ -119,12 +119,7 @@ export class SketchEditor {
           const curveColor = isSelected
             ? this.colors.handle
             : this.colors.curve;
-          drawBezierCurve(
-            p,
-            path.curves,
-            this.config.lineWeight,
-            curveColor
-          );
+          drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
           drawControls(
             p,
             path.curves,
