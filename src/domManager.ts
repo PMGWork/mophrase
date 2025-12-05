@@ -1,3 +1,30 @@
+/// DOMマネージャー
+
+// DOM要素のマップ
+type ElementMap = {
+  sketchCheckbox: HTMLInputElement;
+  thresholdSlider: HTMLInputElement;
+  thresholdLabel: HTMLElement;
+  graphThresholdSlider: HTMLInputElement;
+  graphThresholdLabel: HTMLElement;
+  durationInput: HTMLInputElement;
+  llmModelSelect: HTMLSelectElement;
+  canvasContainer: HTMLDivElement;
+  userPromptForm: HTMLFormElement;
+  userPromptInput: HTMLInputElement;
+  clearButton: HTMLButtonElement;
+  playButton: HTMLButtonElement;
+  drawModeButton: HTMLButtonElement;
+  selectModeButton: HTMLButtonElement;
+  editMotionButton: HTMLButtonElement;
+  closeGraphEditorButton: HTMLButtonElement;
+  graphEditorContainer: HTMLDivElement;
+  graphEditorCanvas: HTMLDivElement;
+  graphUserPromptForm: HTMLFormElement;
+  graphUserPromptInput: HTMLInputElement;
+  graphSuggestionList: HTMLDivElement;
+};
+
 // DOMマネージャー
 export class DOMManager {
   public readonly sketchCheckbox!: HTMLInputElement;
@@ -56,10 +83,12 @@ export class DOMManager {
     ids: Record<keyof T, string>,
   ): T {
     const entries = Object.entries(ids).map(([key, id]) => {
+      // 指定されたIDでDOM要素を検索
       const element = document.getElementById(id);
-      if (!element) {
-        throw new Error(`Required DOM element with id '${id}' not found.`);
-      }
+      if (!element)
+        throw new Error(`ID '${id}' のDOM要素が見つかりませんでした。`);
+
+      // キーと要素のペアを返す
       return [key, element];
     });
 
@@ -82,28 +111,3 @@ export class DOMManager {
     };
   }
 }
-
-// DOM要素のマップ
-type ElementMap = {
-  sketchCheckbox: HTMLInputElement;
-  thresholdSlider: HTMLInputElement;
-  thresholdLabel: HTMLElement;
-  graphThresholdSlider: HTMLInputElement;
-  graphThresholdLabel: HTMLElement;
-  durationInput: HTMLInputElement;
-  llmModelSelect: HTMLSelectElement;
-  canvasContainer: HTMLDivElement;
-  userPromptForm: HTMLFormElement;
-  userPromptInput: HTMLInputElement;
-  clearButton: HTMLButtonElement;
-  playButton: HTMLButtonElement;
-  drawModeButton: HTMLButtonElement;
-  selectModeButton: HTMLButtonElement;
-  editMotionButton: HTMLButtonElement;
-  closeGraphEditorButton: HTMLButtonElement;
-  graphEditorContainer: HTMLDivElement;
-  graphEditorCanvas: HTMLDivElement;
-  graphUserPromptForm: HTMLFormElement;
-  graphUserPromptInput: HTMLInputElement;
-  graphSuggestionList: HTMLDivElement;
-};

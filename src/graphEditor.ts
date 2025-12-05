@@ -30,20 +30,24 @@ export class GraphEditor {
     this.config = config;
     this.colors = colors;
 
+    // p5.jsの初期化
+    this.init();
+
+    // 提案マネージャーの初期化
     this.suggestionManager = new SuggestionManager(config, {
       onGraphSuggestionSelect: (curves) => {
         this.applySuggestion(curves);
       },
     });
 
-    this.init();
-
+    // Durationの更新
     this.domManager.durationInput.addEventListener('change', () =>
       this.updateDuration(),
     );
+
+    // 提案生成
     this.domManager.graphUserPromptForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      console.log('GraphEditor: Submit button clicked');
       this.generateSuggestion();
       this.domManager.graphUserPromptInput.value = '';
     });
@@ -67,6 +71,7 @@ export class GraphEditor {
   // パスの設定
   public setPath(path: Path | null): void {
     this.activePath = path;
+
     if (path && path.times.length > 0) {
       const duration = path.times[path.times.length - 1] - path.times[0];
       this.domManager.durationInput.value = Math.round(duration).toString();
@@ -76,38 +81,26 @@ export class GraphEditor {
 
   // Durationの更新
   private updateDuration(): void {
-    if (!this.activePath || this.activePath.times.length === 0) return;
+    const activePath = this.activePath;
+    const times = activePath?.times;
+    if (!activePath || !times?.length) return;
 
     const newDuration = Number(this.domManager.durationInput.value);
-    if (Number.isNaN(newDuration) || newDuration <= 0) return;
+    const start = times[0];
+    const oldDuration = times[times.length - 1] - start;
 
-    const oldDuration =
-      this.activePath.times[this.activePath.times.length - 1] -
-      this.activePath.times[0];
-    if (oldDuration === 0) return;
-
-    const scale = newDuration / oldDuration;
-    const startTime = this.activePath.times[0];
-
-    this.activePath.times = this.activePath.times.map(
-      (t) => startTime + (t - startTime) * scale,
-    );
+    if (newDuration > 0 && oldDuration > 0) {
+      const scale = newDuration / oldDuration;
+      activePath.times = times.map((t) => start + (t - start) * scale);
+    }
   }
 
   // 提案の生成
   private async generateSuggestion(): Promise<void> {
-    console.log('GraphEditor: generateSuggestion called');
-    if (!this.activePath || !this.activePath.timeCurve) {
-      console.log('GraphEditor: No active path or time curve', this.activePath);
-      return;
-    }
+    const currentCurves = this.activePath?.timeCurve;
+    if (!currentCurves) return;
 
     const userPrompt = this.domManager.graphUserPromptInput.value;
-    console.log('GraphEditor: User prompt:', userPrompt);
-    // 現在のカーブを取得 (p0, p1, p2, p3)
-    // activePath.timeCurve は Vector[][]
-    const currentCurves = this.activePath.timeCurve;
-
     await this.suggestionManager.generateGraphSuggestions(
       currentCurves,
       userPrompt,
@@ -117,7 +110,6 @@ export class GraphEditor {
   // 提案の適用
   private applySuggestion(curves: Vector[][]): void {
     if (!this.activePath) return;
-    // カーブを更新
     this.activePath.timeCurve = curves;
   }
 
