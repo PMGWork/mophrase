@@ -31,6 +31,7 @@ export class SketchEditor {
 
   // コールバック
   private onPathCreated: (path: Path) => void;
+  private onPathSelected: (path: Path | null) => void;
 
   // コンストラクタ
   constructor(
@@ -38,11 +39,13 @@ export class SketchEditor {
     config: Config,
     colors: Colors,
     onPathCreated: (path: Path) => void,
+    onPathSelected: (path: Path | null) => void,
   ) {
     this.dom = domManager;
     this.config = config;
     this.colors = colors;
     this.onPathCreated = onPathCreated;
+    this.onPathSelected = onPathSelected;
 
     // ハンドルマネージャー
     this.handleManager = new HandleManager(() => this.paths);
@@ -58,14 +61,21 @@ export class SketchEditor {
             this.paths[index].points = updated.points;
             this.paths[index].curves = updated.curves;
             this.paths[index].fitError = updated.fitError;
+
+            // パスが更新されたので選択状態として通知
+            this.onPathSelected(this.paths[index]);
             return;
           }
         }
 
         this.paths.push(updated);
+        // 新しいパスが追加されたので通知
+        this.onPathSelected(updated);
+        this.onPathCreated(updated);
       },
     });
 
+    // p5.jsの初期化
     this.init();
   }
 
@@ -80,6 +90,7 @@ export class SketchEditor {
       // 描画モードでは選択状態をクリア
       this.selectedPath = null;
       this.suggestionManager.stop();
+      this.onPathSelected(null);
     } else {
       // 選択モードでは描画中のパスを破棄
       this.draftPath = null;
@@ -160,21 +171,6 @@ export class SketchEditor {
     this.motionManager?.draw();
   }
 
-  // p5.js マウスドラッグ
-  private mouseDragged(p: p5): void {
-    // ハンドルのドラッグ
-    const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
-    if (this.handleManager.drag(p.mouseX, p.mouseY, dragMode)) return;
-
-    if (this.mode !== 'draw') return;
-
-    // 現在描画中のパスの点を追加
-    if (this.draftPath && this.inCanvas(p, p.mouseX, p.mouseY)) {
-      this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
-      this.draftPath.times.push(p.millis());
-    }
-  }
-
   // p5.js マウス押下
   private mousePressed(p: p5): void {
     const canvas = this.dom.canvasContainer.querySelector('canvas');
@@ -183,18 +179,17 @@ export class SketchEditor {
     const windowY = (rect?.top ?? 0) + p.mouseY;
     const target = document.elementFromPoint(windowX, windowY);
 
-    if (this.shouldIgnoreClick(target)) {
-      return;
-    }
+    if (this.shouldIgnoreClick(target)) return;
 
     // 左クリックのみを処理
     const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
     if (!isLeftClick) return;
 
-    // ハンドルのドラッグ開始
+    // ハンドルのドラッグ
     if (this.handleManager.start(p.mouseX, p.mouseY)) return;
     if (!this.inCanvas(p, p.mouseX, p.mouseY)) return;
 
+    // 選択モード
     if (this.mode === 'select') {
       this.selectPathAt(p.mouseX, p.mouseY);
       return;
@@ -216,6 +211,20 @@ export class SketchEditor {
 
     // ユーザー指示入力欄をクリア
     this.dom.userPromptInput.value = '';
+  }
+
+  // p5.js マウスドラッグ
+  private mouseDragged(p: p5): void {
+    // ハンドルのドラッグ
+    const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
+    if (this.handleManager.drag(p.mouseX, p.mouseY, dragMode)) return;
+    if (this.mode !== 'draw') return;
+
+    // 現在描画中のパスの点を追加
+    if (this.draftPath && this.inCanvas(p, p.mouseX, p.mouseY)) {
+      this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
+      this.draftPath.times.push(p.millis());
+    }
   }
 
   // p5.js マウスリリース
@@ -244,7 +253,9 @@ export class SketchEditor {
       this.suggestionManager.start('sketch', this.paths[this.paths.length - 1]);
 
       // グラフエディタにも反映
-      this.onPathCreated(this.paths[this.paths.length - 1]);
+      const newPath = this.paths[this.paths.length - 1];
+      this.onPathCreated(newPath);
+      this.onPathSelected(newPath);
     }
 
     // 描画中のパスをリセット
@@ -276,6 +287,7 @@ export class SketchEditor {
     if (this.selectedPath) {
       this.suggestionManager.start('sketch', this.selectedPath);
     }
+    this.onPathSelected(this.selectedPath);
   }
 
   // 指定座標に近いパスを検索
@@ -329,6 +341,7 @@ export class SketchEditor {
     this.selectedPath = null;
     this.suggestionManager.stop();
     this.motionManager?.stop();
+    this.onPathSelected(null);
   }
 
   // モーションを再生

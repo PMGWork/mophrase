@@ -14,7 +14,7 @@ export class GraphEditor {
 
   // マネージャー
   private dom: DOMManager;
-  private handleManager!: HandleManager;
+  private handleManager: HandleManager;
   private suggestionManager: SuggestionManager;
 
   // 設定
@@ -36,8 +36,26 @@ export class GraphEditor {
     this.config = config;
     this.colors = colors;
 
-    // p5.jsの初期化
-    this.init();
+    // ハンドルマネージャー
+    this.handleManager = new HandleManager(
+      // アクティブパスのカーブを取得
+      () => (this.activePath ? [{ curves: this.activePath.timeCurve }] : []),
+
+      // ピクセル座標から正規化座標への変換
+      (x, y) => this.getNormalizedMousePos(x, y),
+
+      // 正規化座標からピクセル座標への変換
+      (normX, normY) => {
+        const { width, height } = this.dom.getGraphCanvasSize();
+        const size = Math.min(width, height);
+        const graphW = size - this.margin.left - this.margin.right;
+        const graphH = size - this.margin.top - this.margin.bottom;
+        return {
+          x: normX * graphW + this.margin.left,
+          y: (1 - normY) * graphH + this.margin.top,
+        };
+      },
+    );
 
     // 提案マネージャー
     this.suggestionManager = new SuggestionManager(config, {
@@ -46,17 +64,15 @@ export class GraphEditor {
       },
     });
 
-    // Duration更新
-    this.dom.durationInput.addEventListener('change', () =>
-      this.updateDuration(),
-    );
-
     // 提案生成
     this.dom.graphUserPromptForm.addEventListener('submit', (e) => {
       e.preventDefault();
       this.generateSuggestion();
       this.dom.graphUserPromptInput.value = '';
     });
+
+    // p5.jsの初期化
+    this.init();
   }
 
   // #region メイン関数
@@ -71,48 +87,7 @@ export class GraphEditor {
   public setPath(path: Path | null): void {
     this.activePath = path;
     if (!path || !path.times.length) return;
-
-    const duration = path.times[path.times.length - 1] - path.times[0];
-    this.dom.durationInput.value = Math.round(duration).toString();
     this.suggestionManager.start('graph');
-  }
-
-  // #region プライベート関数
-
-  // Durationの更新
-  private updateDuration(): void {
-    const activePath = this.activePath;
-    if (!activePath) return;
-    const { times } = activePath;
-    if (!times.length) return;
-
-    const newDuration = Number(this.dom.durationInput.value);
-    const start = times[0];
-    const oldDuration = times[times.length - 1] - start;
-
-    if (newDuration > 0 && oldDuration > 0) {
-      const scale = newDuration / oldDuration;
-      activePath.times = times.map((t) => start + (t - start) * scale);
-    }
-  }
-
-  // 提案の生成
-  private async generateSuggestion(): Promise<void> {
-    const activePath = this.activePath;
-    if (!activePath || activePath.timeCurve.length === 0) return;
-
-    const userPrompt = this.dom.graphUserPromptInput.value;
-    await this.suggestionManager.generate(
-      'graph',
-      { timeCurve: activePath.timeCurve },
-      userPrompt,
-    );
-  }
-
-  // 提案の適用
-  private applySuggestion(path: Pick<Path, 'timeCurve'>): void {
-    if (!this.activePath) return;
-    this.activePath.timeCurve = path.timeCurve;
   }
 
   // #region p5.js
@@ -137,38 +112,12 @@ export class GraphEditor {
     const size = Math.min(width, height);
     p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
     p.textFont('Geist');
-
-    // アクティブパスのカーブを取得
-    const getActiveCurves = (): { curves: Vector[][] }[] =>
-      this.activePath ? [{ curves: this.activePath.timeCurve }] : [];
-
-    // ピクセル座標から正規化座標への変換
-    const pixelToNormalized = (x: number, y: number) =>
-      this.getNormalizedMousePos(p, x, y);
-
-    // 正規化座標からピクセル座標への変換
-    const normalizedToPixel = (normX: number, normY: number) => {
-      const graphW = p.width - this.margin.left - this.margin.right;
-      const graphH = p.height - this.margin.top - this.margin.bottom;
-      return {
-        x: normX * graphW + this.margin.left,
-        y: (1 - normY) * graphH + this.margin.top,
-      };
-    };
-
-    // HandleManagerの初期化
-    this.handleManager = new HandleManager(
-      getActiveCurves,
-      pixelToNormalized,
-      normalizedToPixel,
-    );
   }
 
-  // p5.js サイズ変更
+  // p5.js リサイズ
   private windowResized(p: p5): void {
     const { width, height } = this.dom.getGraphCanvasSize();
-    const size = Math.min(width, height);
-    p.resizeCanvas(size, size);
+    p.resizeCanvas(width, height);
   }
 
   // p5.js 描画
@@ -228,12 +177,14 @@ export class GraphEditor {
     const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
     if (!isLeftClick) return;
 
-    if (this.inGraph(p))
-      if (this.handleManager.start(p.mouseX, p.mouseY)) return;
+    // ハンドルのドラッグ
+    if (this.handleManager.start(p.mouseX, p.mouseY)) return;
+    if (this.inCanvas(p, p.mouseX, p.mouseY)) return;
   }
 
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
+    // ハンドルのドラッグ
     const mode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
     this.handleManager.drag(p.mouseX, p.mouseY, mode);
   }
@@ -243,7 +194,7 @@ export class GraphEditor {
     if (this.handleManager.stop()) return;
   }
 
-  // #region ヘルパー関数
+  // #region プライベート関数
 
   // グリッドの描画
   private drawGrid(p: p5, w: number, h: number): void {
@@ -253,30 +204,53 @@ export class GraphEditor {
     p.rect(0, 0, w, h);
   }
 
-  // マウスがグラフ領域内にあるか
-  private inGraph(p: p5): boolean {
-    const mouseX = p.mouseX - this.margin.left;
-    const mouseY = p.mouseY - this.margin.top;
-    const graphW = p.width - this.margin.left - this.margin.right;
-    const graphH = p.height - this.margin.top - this.margin.bottom;
+  // マウス位置がキャンバス内か
+  private inCanvas(p: p5, x: number, y: number): boolean {
+    const size = p.width;
+
+    const mouseX = x - this.margin.left;
+    const mouseY = y - this.margin.top;
+    const graphW = size - this.margin.left - this.margin.right;
+    const graphH = size - this.margin.top - this.margin.bottom;
 
     return mouseX >= 0 && mouseX <= graphW && mouseY >= 0 && mouseY <= graphH;
   }
 
   // 正規化座標からスクリーン座標への変換
   private getNormalizedMousePos(
-    p: p5,
     x: number,
     y: number,
   ): { x: number; y: number } {
+    const { width, height } = this.dom.getGraphCanvasSize();
+    const size = Math.min(width, height);
+
     const mouseX = x - this.margin.left;
     const mouseY = y - this.margin.top;
-    const graphW = p.width - this.margin.left - this.margin.right;
-    const graphH = p.height - this.margin.top - this.margin.bottom;
+    const graphW = size - this.margin.left - this.margin.right;
+    const graphH = size - this.margin.top - this.margin.bottom;
 
     const normX = mouseX / graphW;
     const normY = 1 - mouseY / graphH;
 
     return { x: normX, y: normY };
+  }
+
+  // 提案の生成
+  private async generateSuggestion(): Promise<void> {
+    const activePath = this.activePath;
+    if (!activePath || activePath.timeCurve.length === 0) return;
+
+    const userPrompt = this.dom.graphUserPromptInput.value;
+    await this.suggestionManager.generate(
+      'graph',
+      { timeCurve: activePath.timeCurve },
+      userPrompt,
+    );
+  }
+
+  // 提案の適用
+  private applySuggestion(path: Pick<Path, 'timeCurve'>): void {
+    if (!this.activePath) return;
+    this.activePath.timeCurve = path.timeCurve;
   }
 }

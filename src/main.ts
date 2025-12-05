@@ -4,6 +4,7 @@ import { DEFAULT_COLORS, DEFAULT_CONFIG } from './config';
 import { DOMManager } from './domManager';
 import { GraphEditor } from './graphEditor';
 import { getProviderModelOptions } from './llmService';
+import { PropertyEditor } from './propertyEditor';
 import { SketchEditor } from './sketchEditor';
 import type { LLMProvider, SketchMode } from './types';
 
@@ -18,9 +19,22 @@ const main = (): void => {
 
   // エディタ
   const graphEditor = new GraphEditor(domManager, config, colors);
-  const sketchEditor = new SketchEditor(domManager, config, colors, (path) => {
-    graphEditor.setPath(path);
-  });
+  const propertyEditor = new PropertyEditor(domManager);
+
+  const sketchEditor = new SketchEditor(
+    domManager,
+    config,
+    colors,
+    (path) => {
+      // パス作成時
+      graphEditor.setPath(path);
+    },
+    (path) => {
+      // パス選択時（作成時も呼ばれる）
+      graphEditor.setPath(path);
+      propertyEditor.setPath(path);
+    },
+  );
 
   // #region セットアップ
   // UIのセットアップ
@@ -32,7 +46,10 @@ const main = (): void => {
     bindButton(domManager.editMotionButton, () => {
       graphEditor.toggle();
       const target = sketchEditor.getLatestPath();
-      if (target) graphEditor.setPath(target);
+      if (target) {
+        graphEditor.setPath(target);
+        propertyEditor.setPath(target);
+      }
     });
 
     // トグルのイベントを登録
