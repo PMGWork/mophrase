@@ -99,44 +99,26 @@ export class SuggestionManager {
     }
 
     this.targetPath = targetPath;
-    const trimmedUserPrompt = userPrompt?.trim() ?? '';
+    const serializedPaths = serializePaths([targetPath]);
+    const path = serializedPaths[0];
 
-    // 履歴に追加
-    if (trimmedUserPrompt) {
-      this.sketchPromptHistory.push(trimmedUserPrompt);
-    }
-
-    // UIを更新
-    await this.executeWithUI(
-      () => this.updateSketchUI(),
-      async () => {
-        // パスをシリアライズ
-        const serializedPaths = serializePaths([targetPath]);
-
-        // 提案を取得
-        const fetched = await fetchSuggestions(
-          serializedPaths,
-          this.config.sketchPrompt,
-          this.config,
-          this.sketchPromptHistory,
-        );
-        const path = serializedPaths[0];
-
-        // 提案を保存
-        this.suggestions = fetched.map(
-          (item): Suggestion => ({
-            id: this.generateId(),
-            title: item.title,
-            type: 'sketch',
-            path: {
-              anchors: item.anchors,
-              segments: path.segments,
-              bbox: path.bbox,
-            },
-          }),
-        );
-      },
-    );
+    await this.executeGeneration({
+      userPrompt,
+      promptHistory: this.sketchPromptHistory,
+      updateUI: () => this.updateSketchUI(),
+      basePrompt: this.config.sketchPrompt,
+      serializedPaths,
+      createSuggestion: (item) => ({
+        id: this.generateId(),
+        title: item.title,
+        type: 'sketch',
+        path: {
+          anchors: item.anchors,
+          segments: path.segments,
+          bbox: path.bbox,
+        },
+      }),
+    });
   }
 
   // 入力ウィンドウを表示する
@@ -167,52 +149,61 @@ export class SuggestionManager {
       return;
     }
 
-    const trimmedUserPrompt = userPrompt?.trim() ?? '';
+    const bbox = { x: 0, y: 0, width: 1, height: 1 };
+    const { anchors, segments } = serializeAnchorsAndSegments(
+      currentCurves,
+      bbox,
+    );
+    const serializedPath: SerializedPath = { anchors, segments, bbox };
+
+    await this.executeGeneration({
+      userPrompt,
+      promptHistory: this.graphPromptHistory,
+      updateUI: () => this.updateGraphUI(),
+      basePrompt: this.config.graphPrompt || '',
+      serializedPaths: [serializedPath],
+      createSuggestion: (item) => ({
+        id: this.generateId(),
+        title: item.title,
+        type: 'graph',
+        path: {
+          anchors: item.anchors,
+          segments: item.anchors
+            .slice(0, -1)
+            .map((_, i) => ({ startIndex: i, endIndex: i + 1 })),
+          bbox: bbox,
+        },
+      }),
+    });
+  }
+
+  // 提案を生成する
+  private async executeGeneration(options: {
+    userPrompt?: string;
+    promptHistory: string[];
+    updateUI: () => void;
+    basePrompt: string;
+    serializedPaths: SerializedPath[];
+    createSuggestion: (item: SuggestionItem) => Suggestion;
+  }): Promise<void> {
+    const trimmedUserPrompt = options.userPrompt?.trim() ?? '';
 
     // 履歴に追加
     if (trimmedUserPrompt) {
-      this.graphPromptHistory.push(trimmedUserPrompt);
+      options.promptHistory.push(trimmedUserPrompt);
     }
 
-    // UIを更新
-    await this.executeWithUI(
-      () => this.updateGraphUI(),
-      async () => {
-        // バウンディングボックスを設定
-        const bbox = { x: 0, y: 0, width: 1, height: 1 };
-        const { anchors, segments } = serializeAnchorsAndSegments(
-          currentCurves,
-          bbox,
-        );
+    // UIを更新しながら提案を取得
+    await this.executeWithUI(options.updateUI, async () => {
+      const fetched = await fetchSuggestions(
+        options.serializedPaths,
+        options.basePrompt,
+        this.config,
+        options.promptHistory,
+      );
 
-        // パスをシリアライズ
-        const serializedPath: SerializedPath = { anchors, segments, bbox };
-
-        // 提案を取得
-        const fetched = await fetchSuggestions(
-          [serializedPath],
-          this.config.graphPrompt || '',
-          this.config,
-          this.graphPromptHistory,
-        );
-
-        // 提案を保存
-        this.suggestions = fetched.map(
-          (item): Suggestion => ({
-            id: this.generateId(),
-            title: item.title,
-            type: 'graph',
-            path: {
-              anchors: item.anchors,
-              segments: item.anchors
-                .slice(0, -1)
-                .map((_, i) => ({ startIndex: i, endIndex: i + 1 })),
-              bbox: bbox,
-            },
-          }),
-        );
-      },
-    );
+      this.suggestions = fetched.map(options.createSuggestion);
+    });
   }
 
   // 提案をリセットする
