@@ -103,8 +103,9 @@ export class GraphEditor {
     if (!currentCurves) return;
 
     const userPrompt = this.dom.graphUserPromptInput.value;
-    await this.suggestionManager.generateGraphSuggestions(
-      currentCurves,
+    await this.suggestionManager.generate(
+      'graph',
+      { timeCurve: currentCurves },
       userPrompt,
     );
   }

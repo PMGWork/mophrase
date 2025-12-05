@@ -235,7 +235,9 @@ export class SketchEditor {
           this.paths.push(this.draftPath);
           this.selectedPath = this.draftPath;
           this.suggestionManager.reset();
-          this.suggestionManager.showInput(this.paths[this.paths.length - 1]);
+          this.suggestionManager.showSketchInput(
+            this.paths[this.paths.length - 1],
+          );
 
           // グラフエディタにも反映
           this.onPathCreated(this.paths[this.paths.length - 1]);
@@ -259,7 +261,7 @@ export class SketchEditor {
     this.selectedPath = this.findPathAtPoint(x, y);
     this.suggestionManager.reset();
     if (this.selectedPath) {
-      this.suggestionManager.showInput(this.selectedPath);
+      this.suggestionManager.showSketchInput(this.selectedPath);
     }
   }
 
@@ -331,7 +333,7 @@ export class SketchEditor {
   public generateSuggestion(userPrompt: string): void {
     const targetPath = this.selectedPath ?? this.paths[this.paths.length - 1];
     if (!targetPath) return;
-    this.suggestionManager.showInput(targetPath);
-    void this.suggestionManager.generate(targetPath, userPrompt);
+    this.suggestionManager.showSketchInput(targetPath);
+    void this.suggestionManager.generate('sketch', targetPath, userPrompt);
   }
 }

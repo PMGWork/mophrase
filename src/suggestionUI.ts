@@ -52,12 +52,12 @@ export class SuggestionUI {
     const container = containerId ? document.getElementById(containerId) : null;
 
     const showLoading = status === 'generating';
-    const showInput = status === 'input';
+    const showSketchInput = status === 'input';
     const hasSuggestions = suggestions.length > 0;
 
     if (container) {
       container.style.display =
-        showLoading || showInput || hasSuggestions ? 'flex' : 'none';
+        showLoading || showSketchInput || hasSuggestions ? 'flex' : 'none';
       container.style.flexDirection = 'column';
     }
 
