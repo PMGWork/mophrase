@@ -2,12 +2,16 @@
 import type p5 from 'p5';
 import { z } from 'zod';
 
+// #region 基本スキーマ定義
+// p5.jsベクトル
 export type Vector = p5.Vector;
 
 // エディタモード
 export type SketchMode = 'draw' | 'select';
 
-// #region スキーマ定義
+// LLMプロバイダの種類
+export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
+
 // カーブ情報
 export interface Curve {
   curves: Vector[][];

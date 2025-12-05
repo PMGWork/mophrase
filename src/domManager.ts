@@ -1,5 +1,3 @@
-/// DOMマネージャー
-
 // DOM要素のマップ
 type ElementMap = {
   sketchCheckbox: HTMLInputElement;

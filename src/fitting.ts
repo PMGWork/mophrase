@@ -1,5 +1,3 @@
-/// ベジェ曲線フィッティング関連
-
 import {
   bernstein,
   bezierCurve,

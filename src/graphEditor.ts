@@ -13,7 +13,7 @@ export class GraphEditor {
   private activePath: Path | null = null;
 
   // マネージャー
-  private domManager: DOMManager;
+  private dom: DOMManager;
   private suggestionManager: SuggestionManager;
   private handleManager: HandleManager | null = null;
 
@@ -22,11 +22,17 @@ export class GraphEditor {
   private colors: Colors;
 
   // 描画領域の設定
-  private readonly margin = { top: 40, right: 40, bottom: 40, left: 40 };
+  private static readonly GRAPH_MARGIN = 40;
+  private readonly margin = {
+    top: GraphEditor.GRAPH_MARGIN,
+    right: GraphEditor.GRAPH_MARGIN,
+    bottom: GraphEditor.GRAPH_MARGIN,
+    left: GraphEditor.GRAPH_MARGIN,
+  };
 
   // コンストラクタ
   constructor(domManager: DOMManager, config: Config, colors: Colors) {
-    this.domManager = domManager;
+    this.dom = domManager;
     this.config = config;
     this.colors = colors;
 
@@ -41,15 +47,15 @@ export class GraphEditor {
     });
 
     // Durationの更新
-    this.domManager.durationInput.addEventListener('change', () =>
+    this.dom.durationInput.addEventListener('change', () =>
       this.updateDuration(),
     );
 
     // 提案生成
-    this.domManager.graphUserPromptForm.addEventListener('submit', (e) => {
+    this.dom.graphUserPromptForm.addEventListener('submit', (e) => {
       e.preventDefault();
       this.generateSuggestion();
-      this.domManager.graphUserPromptInput.value = '';
+      this.dom.graphUserPromptInput.value = '';
     });
   }
 
@@ -58,27 +64,18 @@ export class GraphEditor {
   // 表示/非表示の切り替え
   public toggle(): void {
     this.isVisible = !this.isVisible;
-    this.domManager.graphEditorContainer.classList.toggle(
-      'hidden',
-      !this.isVisible,
-    );
-    this.domManager.graphEditorContainer.classList.toggle(
-      'flex',
-      this.isVisible,
-    );
-
+    this.dom.graphEditorContainer.classList.toggle('hidden');
     window.dispatchEvent(new Event('resize'));
   }
 
   // パスの設定
   public setPath(path: Path | null): void {
     this.activePath = path;
+    if (!path || !path.times.length) return;
 
-    if (path && path.times.length > 0) {
-      const duration = path.times[path.times.length - 1] - path.times[0];
-      this.domManager.durationInput.value = Math.round(duration).toString();
-      this.suggestionManager.showGraphInput();
-    }
+    const duration = path.times[path.times.length - 1] - path.times[0];
+    this.dom.durationInput.value = Math.round(duration).toString();
+    this.suggestionManager.showGraphInput();
   }
 
   // #region プライベート関数
@@ -89,7 +86,7 @@ export class GraphEditor {
     const times = activePath?.times;
     if (!activePath || !times?.length) return;
 
-    const newDuration = Number(this.domManager.durationInput.value);
+    const newDuration = Number(this.dom.durationInput.value);
     const start = times[0];
     const oldDuration = times[times.length - 1] - start;
 
@@ -104,7 +101,7 @@ export class GraphEditor {
     const currentCurves = this.activePath?.timeCurve;
     if (!currentCurves) return;
 
-    const userPrompt = this.domManager.graphUserPromptInput.value;
+    const userPrompt = this.dom.graphUserPromptInput.value;
     await this.suggestionManager.generateGraphSuggestions(
       currentCurves,
       userPrompt,
@@ -122,6 +119,16 @@ export class GraphEditor {
   // p5.jsの初期化
   private initP5(): void {
     const sketch = (p: p5) => {
+      // アクティブパスのカーブを取得
+      const getActiveCurves = (): { curves: Vector[][] }[] =>
+        this.activePath?.timeCurve
+          ? [{ curves: this.activePath.timeCurve }]
+          : [];
+
+      // マウス座標を正規化座標に変換
+      const mouseToNormalized = (x: number, y: number) =>
+        this.getNormalizedMousePos(p, x, y);
+
       // 正規化座標からピクセル座標への変換
       const normalizedToPixel = (normX: number, normY: number) => {
         const graphW = p.width - this.margin.left - this.margin.right;
@@ -132,28 +139,29 @@ export class GraphEditor {
         };
       };
 
+      // HandleManagerの初期化
       this.handleManager = new HandleManager(
-        () =>
-          this.activePath?.timeCurve
-            ? [{ curves: this.activePath.timeCurve }]
-            : [],
-        (x, y) => this.getNormalizedMousePos(p, x, y),
+        getActiveCurves,
+        mouseToNormalized,
         normalizedToPixel,
       );
 
+      // 初期設定
       p.setup = () => {
-        const { width, height } = this.domManager.getGraphCanvasSize();
+        const { width, height } = this.dom.getGraphCanvasSize();
         const size = Math.min(width, height);
-        p.createCanvas(size, size).parent(this.domManager.graphEditorCanvas);
+        p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
         p.textFont('Geist');
       };
 
+      // サイズ変更
       p.windowResized = () => {
-        const { width, height } = this.domManager.getGraphCanvasSize();
+        const { width, height } = this.dom.getGraphCanvasSize();
         const size = Math.min(width, height);
         p.resizeCanvas(size, size);
       };
 
+      // 描画
       p.draw = () => {
         p.background(this.colors.background);
 
@@ -169,10 +177,10 @@ export class GraphEditor {
         p.push();
         p.translate(this.margin.left, this.margin.top);
 
-        // グリッドと軸
+        // グリッド
         this.drawGrid(p, graphW, graphH);
 
-        // ベジェ曲線の描画
+        // ベジェ曲線
         p.push();
         p.scale(graphW, graphH);
         p.translate(0, 1);
@@ -185,7 +193,7 @@ export class GraphEditor {
         );
         p.pop();
 
-        // コントロールの描画
+        // 制御点と制御ポリゴン
         const transform = (v: Vector) => {
           return p.createVector(v.x * graphW, (1 - v.y) * graphH);
         };
@@ -197,7 +205,7 @@ export class GraphEditor {
           transform,
         );
 
-        // 提案のプレビュー描画
+        // 提案プレビュー
         this.suggestionManager.draw(p, this.colors, {
           transform: (v) => transform(v),
         });
@@ -205,14 +213,13 @@ export class GraphEditor {
         p.pop();
       };
 
+      // マウス関連
       p.mousePressed = () => {
-        // 左クリックのみを処理
         const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
         if (!isLeftClick) return;
 
-        if (this.isMouseInGraph(p)) {
+        if (this.isMouseInGraph(p))
           if (this.handleManager?.begin(p.mouseX, p.mouseY)) return;
-        }
       };
 
       p.mouseDragged = () => {
@@ -245,13 +252,7 @@ export class GraphEditor {
     const graphW = p.width - this.margin.left - this.margin.right;
     const graphH = p.height - this.margin.top - this.margin.bottom;
 
-    // 少し余裕を持たせる
-    return (
-      mouseX >= -10 &&
-      mouseX <= graphW + 10 &&
-      mouseY >= -10 &&
-      mouseY <= graphH + 10
-    );
+    return mouseX >= 0 && mouseX <= graphW && mouseY >= 0 && mouseY <= graphH;
   }
 
   // 正規化座標からスクリーン座標への変換
@@ -262,7 +263,6 @@ export class GraphEditor {
   ): { x: number; y: number } {
     const mouseX = x - this.margin.left;
     const mouseY = y - this.margin.top;
-
     const graphW = p.width - this.margin.left - this.margin.right;
     const graphH = p.height - this.margin.top - this.margin.bottom;
 

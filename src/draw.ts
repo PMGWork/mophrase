@@ -1,5 +1,3 @@
-/// ベジェ曲線の描画
-
 import type p5 from 'p5';
 import { bezierCurve } from './mathUtils';
 import type { Vector } from './types';

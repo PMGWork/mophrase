@@ -1,5 +1,3 @@
-/// 数式ユーティリティ
-
 import type { Vector } from './types';
 
 // バーンスタイン多項式

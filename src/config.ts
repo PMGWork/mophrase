@@ -1,8 +1,6 @@
-/// アプリケーション設定
-
-import type { LLMProvider } from './llmService';
 import graphPrompt from './prompts/graphPrompt.md?raw';
 import sketchPrompt from './prompts/sketchPrompt.md?raw';
+import type { LLMProvider } from './types';
 
 // スキーマ定義
 export interface Config {

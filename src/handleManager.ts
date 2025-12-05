@@ -1,4 +1,3 @@
-/// ベジェハンドル操作関連
 import type { Curve, HandleSelection, Vector } from './types';
 
 // ハンドルの制御クラス

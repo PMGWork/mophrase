@@ -5,7 +5,7 @@ import { DOMManager } from './domManager';
 import { GraphEditor } from './graphEditor';
 import { getProviderModelOptions } from './llmService';
 import { SketchEditor } from './sketchEditor';
-import type { SketchMode } from './types';
+import type { LLMProvider, SketchMode } from './types';
 
 // メイン処理
 const main = (): void => {
@@ -169,7 +169,7 @@ const main = (): void => {
   function applyModelSelection(value: string): void {
     try {
       const parsed = JSON.parse(value) as {
-        provider: import('./llmService').LLMProvider;
+        provider: LLMProvider;
         modelId: string;
       };
       config.llmProvider = parsed.provider;
