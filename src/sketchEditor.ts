@@ -1,6 +1,6 @@
 import p5 from 'p5';
 import type { Colors, Config } from './config';
-import { CURVE_POINT } from './constants';
+import { BEZIER_T_STEP, CURVE_POINT } from './constants';
 import type { DOMManager } from './domManager';
 import { drawBezierCurve, drawControls, drawPoints } from './draw';
 import { fitCurve } from './fitting';
@@ -69,6 +69,8 @@ export class SketchEditor {
     this.init();
   }
 
+  // #region メイン関数
+
   // モードを設定
   public setMode(mode: SketchMode): void {
     if (this.mode === mode) return;
@@ -77,177 +79,189 @@ export class SketchEditor {
     if (mode === 'draw') {
       // 描画モードでは選択状態をクリア
       this.selectedPath = null;
-      this.suggestionManager.reset();
+      this.suggestionManager.stop();
     } else {
       // 選択モードでは描画中のパスを破棄
       this.draftPath = null;
     }
   }
 
-  // p5.jsの初期化
+  // #region p5.js
+
+  // p5.js 初期化
   private init(): void {
     const sketch = (p: p5) => {
-      p.setup = () => {
-        const { width, height } = this.dom.getCanvasSize();
-        const canvas = p.createCanvas(width, height);
-        canvas.parent(this.dom.canvasContainer);
-        p.background(this.colors.background);
-        p.textFont('Geist');
-
-        this.motionManager = new MotionManager(p, this.colors.marker);
-      };
-
-      p.windowResized = () => {
-        const { width, height } = this.dom.getCanvasSize();
-        p.resizeCanvas(width, height);
-      };
-
-      p.draw = () => {
-        p.background(this.colors.background);
-
-        // 確定済みパスの描画
-        for (const path of this.paths) {
-          const isSelected = this.selectedPath === path;
-          if (this.config.showSketch)
-            drawPoints(
-              p,
-              path.points,
-              this.config.lineWeight,
-              this.config.pointSize - this.config.lineWeight,
-              this.colors.curve,
-              this.colors.background,
-            );
-          // 選択されたパスはハイライト色で描画
-          const curveColor = isSelected
-            ? this.colors.handle
-            : this.colors.curve;
-          drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
-          drawControls(
-            p,
-            path.curves,
-            this.config.pointSize,
-            this.colors.handle,
-          );
-        }
-
-        // 現在描画中のパスの描画
-        if (this.draftPath) {
-          drawPoints(
-            p,
-            this.draftPath.points,
-            this.config.lineWeight,
-            this.config.pointSize - this.config.lineWeight,
-            this.colors.curve,
-            this.colors.background,
-          );
-        }
-
-        // 提案プレビューの描画
-        this.suggestionManager.draw(p, this.colors);
-
-        // モーションの更新
-        this.motionManager?.update();
-      };
-
-      p.mouseDragged = () => {
-        // ハンドルのドラッグ
-        const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
-        if (this.handleManager.drag(p.mouseX, p.mouseY, dragMode)) return;
-
-        if (this.mode !== 'draw') return;
-
-        // 現在描画中のパスの点を追加
-        if (this.draftPath && this.inCanvas(p, p.mouseX, p.mouseY)) {
-          this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
-          this.draftPath.times.push(p.millis());
-        }
-      };
-
-      p.mousePressed = () => {
-        // 入力欄やフォーム要素がクリックされた場合は処理をスキップ
-        // p.mouseX/Yはキャンバス相対座標なので、ウィンドウ座標に変換
-        const canvas = this.dom.canvasContainer.querySelector('canvas');
-        const rect = canvas?.getBoundingClientRect();
-        const windowX = (rect?.left ?? 0) + p.mouseX;
-        const windowY = (rect?.top ?? 0) + p.mouseY;
-        const target = document.elementFromPoint(windowX, windowY);
-        if (
-          target instanceof HTMLInputElement ||
-          target instanceof HTMLButtonElement ||
-          target instanceof HTMLSelectElement ||
-          target?.closest('form') ||
-          target?.closest('#sketchSuggestionContainer')
-        ) {
-          return;
-        }
-
-        // 左クリックのみを処理
-        const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
-        if (!isLeftClick) return;
-
-        // ハンドルのドラッグ開始
-        if (this.handleManager.begin(p.mouseX, p.mouseY)) return;
-        if (!this.inCanvas(p, p.mouseX, p.mouseY)) return;
-
-        if (this.mode === 'select') {
-          this.selectPathAt(p.mouseX, p.mouseY);
-          return;
-        }
-
-        // 新しいパスを開始
-        this.draftPath = {
-          points: [p.createVector(p.mouseX, p.mouseY)],
-          times: [p.millis()],
-          curves: [],
-          timeCurve: [],
-          fitError: {
-            current: {
-              maxError: Number.MAX_VALUE,
-              index: -1,
-            },
-          },
-        };
-
-        // ユーザー指示入力欄をクリア
-        this.dom.userPromptInput.value = '';
-      };
-
-      p.mouseReleased = () => {
-        if (this.handleManager.end()) return;
-        if (this.mode !== 'draw' || !this.draftPath) return;
-
-        if (this.draftPath.points.length >= 2) {
-          // フィッティングを実行
-          fitCurve(
-            this.draftPath.points,
-            this.draftPath.curves,
-            this.config.sketchFitTolerance,
-            this.config.sketchFitTolerance * this.config.coarseErrorWeight,
-            this.draftPath.fitError,
-          );
-
-          // モーションのタイミングをフィッティング
-          const normalizedTol = this.config.graphFitTolerance / 100;
-          this.motionManager?.fitTiming(this.draftPath, p, normalizedTol);
-
-          // 確定済みパスに追加
-          this.paths.push(this.draftPath);
-          this.selectedPath = this.draftPath;
-          this.suggestionManager.reset();
-          this.suggestionManager.showSketchInput(
-            this.paths[this.paths.length - 1],
-          );
-
-          // グラフエディタにも反映
-          this.onPathCreated(this.paths[this.paths.length - 1]);
-        }
-
-        // 描画中のパスをリセット
-        this.draftPath = null;
-      };
+      p.setup = () => this.setup(p);
+      p.windowResized = () => this.windowResized(p);
+      p.draw = () => this.draw(p);
+      p.mouseDragged = () => this.mouseDragged(p);
+      p.mousePressed = () => this.mousePressed(p);
+      p.mouseReleased = () => this.mouseReleased(p);
     };
 
     new p5(sketch);
+  }
+
+  // p5.js セットアップ
+  private setup(p: p5): void {
+    const { width, height } = this.dom.getCanvasSize();
+    const canvas = p.createCanvas(width, height);
+    canvas.parent(this.dom.canvasContainer);
+    p.background(this.colors.background);
+    p.textFont('Geist');
+
+    this.motionManager = new MotionManager(p, this.colors.marker);
+  }
+
+  // p5.js リサイズ
+  private windowResized(p: p5): void {
+    const { width, height } = this.dom.getCanvasSize();
+    p.resizeCanvas(width, height);
+  }
+
+  // p5.js 描画
+  private draw(p: p5): void {
+    p.background(this.colors.background);
+
+    // 確定済みパスの描画
+    for (const path of this.paths) {
+      const isSelected = this.selectedPath === path;
+      if (this.config.showSketch)
+        drawPoints(
+          p,
+          path.points,
+          this.config.lineWeight,
+          this.config.pointSize - this.config.lineWeight,
+          this.colors.curve,
+          this.colors.background,
+        );
+
+      const curveColor = isSelected ? this.colors.handle : this.colors.curve;
+      drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
+      drawControls(p, path.curves, this.config.pointSize, this.colors.handle);
+    }
+
+    // 現在描画中のパスの描画
+    if (this.draftPath) {
+      drawPoints(
+        p,
+        this.draftPath.points,
+        this.config.lineWeight,
+        this.config.pointSize - this.config.lineWeight,
+        this.colors.curve,
+        this.colors.background,
+      );
+    }
+
+    // 提案プレビューの描画
+    this.suggestionManager.draw(p, this.colors);
+
+    // モーションの更新
+    this.motionManager?.draw();
+  }
+
+  // p5.js マウスドラッグ
+  private mouseDragged(p: p5): void {
+    // ハンドルのドラッグ
+    const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
+    if (this.handleManager.drag(p.mouseX, p.mouseY, dragMode)) return;
+
+    if (this.mode !== 'draw') return;
+
+    // 現在描画中のパスの点を追加
+    if (this.draftPath && this.inCanvas(p, p.mouseX, p.mouseY)) {
+      this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
+      this.draftPath.times.push(p.millis());
+    }
+  }
+
+  // p5.js マウス押下
+  private mousePressed(p: p5): void {
+    const canvas = this.dom.canvasContainer.querySelector('canvas');
+    const rect = canvas?.getBoundingClientRect();
+    const windowX = (rect?.left ?? 0) + p.mouseX;
+    const windowY = (rect?.top ?? 0) + p.mouseY;
+    const target = document.elementFromPoint(windowX, windowY);
+
+    if (this.shouldIgnoreClick(target)) {
+      return;
+    }
+
+    // 左クリックのみを処理
+    const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
+    if (!isLeftClick) return;
+
+    // ハンドルのドラッグ開始
+    if (this.handleManager.start(p.mouseX, p.mouseY)) return;
+    if (!this.inCanvas(p, p.mouseX, p.mouseY)) return;
+
+    if (this.mode === 'select') {
+      this.selectPathAt(p.mouseX, p.mouseY);
+      return;
+    }
+
+    // 新しいパスを開始
+    this.draftPath = {
+      points: [p.createVector(p.mouseX, p.mouseY)],
+      times: [p.millis()],
+      curves: [],
+      timeCurve: [],
+      fitError: {
+        current: {
+          maxError: Number.MAX_VALUE,
+          index: -1,
+        },
+      },
+    };
+
+    // ユーザー指示入力欄をクリア
+    this.dom.userPromptInput.value = '';
+  }
+
+  // p5.js マウスリリース
+  private mouseReleased(p: p5): void {
+    if (this.handleManager.stop()) return;
+    if (this.mode !== 'draw' || !this.draftPath) return;
+
+    if (this.draftPath.points.length >= 2) {
+      // フィッティングを実行
+      fitCurve(
+        this.draftPath.points,
+        this.draftPath.curves,
+        this.config.sketchFitTolerance,
+        this.config.sketchFitTolerance * this.config.coarseErrorWeight,
+        this.draftPath.fitError,
+      );
+
+      // モーションのタイミングをフィッティング
+      const normalizedTol = this.config.graphFitTolerance / 100;
+      this.motionManager?.fitTiming(this.draftPath, p, normalizedTol);
+
+      // 確定済みパスに追加
+      this.paths.push(this.draftPath);
+      this.selectedPath = this.draftPath;
+      this.suggestionManager.stop();
+      this.suggestionManager.start('sketch', this.paths[this.paths.length - 1]);
+
+      // グラフエディタにも反映
+      this.onPathCreated(this.paths[this.paths.length - 1]);
+    }
+
+    // 描画中のパスをリセット
+    this.draftPath = null;
+  }
+
+  // #region プライベート関数
+
+  // UI要素クリック判定
+  private shouldIgnoreClick(target: Element | null): boolean {
+    return (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLButtonElement ||
+      target instanceof HTMLSelectElement ||
+      !!target?.closest('form') ||
+      !!target?.closest('#sketchSuggestionContainer')
+    );
   }
 
   // マウス位置がキャンバス内か
@@ -258,9 +272,9 @@ export class SketchEditor {
   // クリック位置のパスを選択し、提案UIを表示
   private selectPathAt(x: number, y: number): void {
     this.selectedPath = this.findPathAtPoint(x, y);
-    this.suggestionManager.reset();
+    this.suggestionManager.stop();
     if (this.selectedPath) {
-      this.suggestionManager.showSketchInput(this.selectedPath);
+      this.suggestionManager.start('sketch', this.selectedPath);
     }
   }
 
@@ -289,7 +303,7 @@ export class SketchEditor {
     if (path.curves.length === 0) return false;
 
     for (const curve of path.curves) {
-      for (let t = 0; t <= 1; t += 0.02) {
+      for (let t = 0; t <= 1; t += BEZIER_T_STEP) {
         const pt = bezierCurve(
           curve[CURVE_POINT.START_ANCHOR],
           curve[CURVE_POINT.START_CONTROL],
@@ -313,14 +327,15 @@ export class SketchEditor {
     this.paths = [];
     this.draftPath = null;
     this.selectedPath = null;
-    this.suggestionManager.reset();
+    this.suggestionManager.stop();
+    this.motionManager?.stop();
   }
 
   // モーションを再生
   public playMotion(): void {
     if (this.draftPath) return;
     const target = this.paths[this.paths.length - 1];
-    if (target && this.motionManager) this.motionManager.play(target);
+    if (target && this.motionManager) this.motionManager.start(target);
   }
 
   // 最後のパスを取得
@@ -332,7 +347,7 @@ export class SketchEditor {
   public generateSuggestion(userPrompt: string): void {
     const targetPath = this.selectedPath ?? this.paths[this.paths.length - 1];
     if (!targetPath) return;
-    this.suggestionManager.showSketchInput(targetPath);
+    this.suggestionManager.start('sketch', targetPath);
     void this.suggestionManager.generate('sketch', targetPath, userPrompt);
   }
 }

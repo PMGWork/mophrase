@@ -25,8 +25,10 @@ export class MotionManager {
     this.markerColor = markerColor;
   }
 
+  // #region メイン関数
+
   // モーション再生を開始
-  public play(path: Path): void {
+  public start(path: Path): void {
     if (path.timeCurve.length === 0) return;
 
     // パスを設定
@@ -45,8 +47,15 @@ export class MotionManager {
         : DEFAULT_DURATION;
   }
 
+  // モーション再生を停止
+  public stop(): void {
+    this.isPlaying = false;
+    this.time = 0;
+    this.currentPath = null;
+  }
+
   // モーションを更新
-  public update(): void {
+  public draw(): void {
     if (!this.isPlaying || !this.currentPath) return;
 
     this.time += this.p.deltaTime / this.duration;
@@ -61,6 +70,8 @@ export class MotionManager {
 
     this.drawMarker(position);
   }
+
+  // #region プライベート関数
 
   // マーカーを描画
   private drawMarker(position: Vector): void {

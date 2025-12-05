@@ -37,9 +37,16 @@ export class HandleManager {
   // #region メイン関数
 
   // ドラッグを開始
-  begin(x: number, y: number): boolean {
+  start(x: number, y: number): boolean {
     this.draggedHandle = this.findHandle(x, y);
     return this.draggedHandle !== null;
+  }
+
+  // ドラッグを終了
+  stop(): boolean {
+    if (!this.draggedHandle) return false;
+    this.draggedHandle = null;
+    return true;
   }
 
   // ドラッグ中の位置更新
@@ -54,13 +61,6 @@ export class HandleManager {
     // ハンドルの位置を更新できなかった場合
     this.draggedHandle = null;
     return false;
-  }
-
-  // ドラッグを終了
-  end(): boolean {
-    if (!this.draggedHandle) return false;
-    this.draggedHandle = null;
-    return true;
   }
 
   // #region プライベート関数

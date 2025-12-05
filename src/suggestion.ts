@@ -220,26 +220,27 @@ export class SuggestionManager {
     );
   }
 
-  // スケッチの入力ウィンドウを表示する
-  showSketchInput(targetPath: Path): void {
-    if (this.targetPath !== targetPath) {
-      this.sketchPromptHistory = [];
+  // 提案UIを開始する
+  start(mode: 'sketch', targetPath: Path): void;
+  start(mode: 'graph'): void;
+  start(mode: SuggestionMode, targetPath?: Path): void {
+    if (mode === 'sketch' && targetPath) {
+      if (this.targetPath !== targetPath) {
+        this.sketchPromptHistory = [];
+      }
+      this.targetPath = targetPath;
+      this.setState('input');
+      this.updateSketchUI();
+      this.sketchUI.focusInput();
+    } else if (mode === 'graph') {
+      this.setState('input');
+      this.updateGraphUI();
+      this.graphUI.focusInput();
     }
-    this.targetPath = targetPath;
-    this.setState('input');
-    this.updateSketchUI();
-    this.sketchUI.focusInput();
   }
 
-  // グラフの入力ウィンドウを表示する
-  showGraphInput(): void {
-    this.setState('input');
-    this.updateGraphUI();
-    this.graphUI.focusInput();
-  }
-
-  // 提案をリセットする
-  reset(): void {
+  // 提案UIを停止する
+  stop(): void {
     this.clearSuggestions();
     this.sketchPromptHistory = [];
     this.targetPath = undefined;
