@@ -7,6 +7,7 @@ import { isLeftMouseButton } from './p5Utils';
 import { SuggestionManager } from './suggestion';
 import type { Path, Vector } from './types';
 
+// グラフエディタ
 export class GraphEditor {
   // 状態
   private isVisible: boolean = true;
@@ -125,8 +126,8 @@ export class GraphEditor {
           ? [{ curves: this.activePath.timeCurve }]
           : [];
 
-      // マウス座標を正規化座標に変換
-      const mouseToNormalized = (x: number, y: number) =>
+      // ピクセル座標から正規化座標への変換
+      const pixelToNormalized = (x: number, y: number) =>
         this.getNormalizedMousePos(p, x, y);
 
       // 正規化座標からピクセル座標への変換
@@ -142,7 +143,7 @@ export class GraphEditor {
       // HandleManagerの初期化
       this.handleManager = new HandleManager(
         getActiveCurves,
-        mouseToNormalized,
+        pixelToNormalized,
         normalizedToPixel,
       );
 

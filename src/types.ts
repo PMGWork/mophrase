@@ -12,11 +12,6 @@ export type SketchMode = 'draw' | 'select';
 // LLMプロバイダの種類
 export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
 
-// カーブ情報
-export interface Curve {
-  curves: Vector[][];
-}
-
 // 描画パス情報
 export interface Path {
   points: Vector[];

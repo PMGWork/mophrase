@@ -1,5 +1,6 @@
 import p5 from 'p5';
 import type { Colors, Config } from './config';
+import { CURVE_POINT } from './constants';
 import type { DOMManager } from './domManager';
 import { drawBezierCurve, drawControls, drawPoints } from './draw';
 import { fitCurve } from './fitting';
@@ -10,10 +11,8 @@ import { isLeftMouseButton } from './p5Utils';
 import { SuggestionManager } from './suggestion';
 import type { Path, SketchMode } from './types';
 
+// スケッチエディタ
 export class SketchEditor {
-  private domManager: DOMManager;
-  private onPathCreated: (path: Path) => void;
-
   // データ構造
   public paths: Path[] = [];
   private draftPath: Path | null = null;
@@ -21,6 +20,7 @@ export class SketchEditor {
   private mode: SketchMode = 'draw';
 
   // マネージャー
+  private dom: DOMManager;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
   private suggestionManager: SuggestionManager;
@@ -29,6 +29,9 @@ export class SketchEditor {
   private config: Config;
   private colors: Colors;
 
+  // コールバック
+  private onPathCreated: (path: Path) => void;
+
   // コンストラクタ
   constructor(
     domManager: DOMManager,
@@ -36,7 +39,7 @@ export class SketchEditor {
     colors: Colors,
     onPathCreated: (path: Path) => void,
   ) {
-    this.domManager = domManager;
+    this.dom = domManager;
     this.config = config;
     this.colors = colors;
     this.onPathCreated = onPathCreated;
@@ -86,9 +89,9 @@ export class SketchEditor {
   private init(): void {
     const sketch = (p: p5) => {
       p.setup = () => {
-        const { width, height } = this.domManager.getCanvasSize();
+        const { width, height } = this.dom.getCanvasSize();
         const canvas = p.createCanvas(width, height);
-        canvas.parent(this.domManager.canvasContainer);
+        canvas.parent(this.dom.canvasContainer);
         p.background(this.colors.background);
         p.textFont('Geist');
 
@@ -96,7 +99,7 @@ export class SketchEditor {
       };
 
       p.windowResized = () => {
-        const { width, height } = this.domManager.getCanvasSize();
+        const { width, height } = this.dom.getCanvasSize();
         p.resizeCanvas(width, height);
       };
 
@@ -164,7 +167,7 @@ export class SketchEditor {
       p.mousePressed = () => {
         // 入力欄やフォーム要素がクリックされた場合は処理をスキップ
         // p.mouseX/Yはキャンバス相対座標なので、ウィンドウ座標に変換
-        const canvas = this.domManager.canvasContainer.querySelector('canvas');
+        const canvas = this.dom.canvasContainer.querySelector('canvas');
         const rect = canvas?.getBoundingClientRect();
         const windowX = (rect?.left ?? 0) + p.mouseX;
         const windowY = (rect?.top ?? 0) + p.mouseY;
@@ -207,7 +210,7 @@ export class SketchEditor {
         };
 
         // ユーザー指示入力欄をクリア
-        this.domManager.userPromptInput.value = '';
+        this.dom.userPromptInput.value = '';
       };
 
       p.mouseReleased = () => {
@@ -286,7 +289,13 @@ export class SketchEditor {
 
     for (const curve of path.curves) {
       for (let t = 0; t <= 1; t += 0.02) {
-        const pt = bezierCurve(curve[0], curve[1], curve[2], curve[3], t);
+        const pt = bezierCurve(
+          curve[CURVE_POINT.START_ANCHOR],
+          curve[CURVE_POINT.START_CONTROL],
+          curve[CURVE_POINT.END_CONTROL],
+          curve[CURVE_POINT.END_ANCHOR],
+          t,
+        );
         const dx = pt.x - x;
         const dy = pt.y - y;
         if (dx * dx + dy * dy <= toleranceSq) {

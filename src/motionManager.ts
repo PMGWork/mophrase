@@ -1,8 +1,10 @@
 import type p5 from 'p5';
+import { CURVE_POINT } from './constants';
 import { fitCurve } from './fitting';
 import { bezierCurve, curveLength } from './mathUtils';
 import type { Path, Vector } from './types';
 
+// モーション管理クラス
 export class MotionManager {
   private p: p5;
   private isPlaying: boolean = false;
@@ -90,8 +92,8 @@ export class MotionManager {
     // 時間は単調増加するので、戻る必要はない
     for (let i = this.lastTimingIndex; i < curves.length; i++) {
       const curve = curves[i];
-      const startX = curve[0].x;
-      const endX = curve[3].x;
+      const startX = curve[CURVE_POINT.START_ANCHOR].x;
+      const endX = curve[CURVE_POINT.END_ANCHOR].x;
 
       if (t >= startX && t <= endX) {
         this.lastTimingIndex = i; // インデックスを更新
@@ -104,8 +106,8 @@ export class MotionManager {
 
     // 見つからなかった場合（浮動小数点の誤差などで範囲外になった場合など）、
     // 念のため最初から探索するか、端点を返す
-    if (t < curves[0][0].x) return 0;
-    if (t > curves[curves.length - 1][3].x) return 1;
+    if (t < curves[0][CURVE_POINT.START_ANCHOR].x) return 0;
+    if (t > curves[curves.length - 1][CURVE_POINT.END_ANCHOR].x) return 1;
 
     return t;
   }
@@ -131,7 +133,7 @@ export class MotionManager {
 
   // 空間曲線から、進行度 p (0-1) に対応する座標を取得
   private evaluatePosition(curves: Vector[][], p: number): Vector {
-    if (this.totalLength === 0) return curves[0][0];
+    if (this.totalLength === 0) return curves[0][CURVE_POINT.START_ANCHOR];
 
     const targetDist = p * this.totalLength;
     let currentDist = 0;
@@ -155,7 +157,7 @@ export class MotionManager {
 
     // 最後の点
     const lastCurve = curves[curves.length - 1];
-    return lastCurve[3];
+    return lastCurve[CURVE_POINT.END_ANCHOR];
   }
 
   // 描画されたパスからタイミング曲線を生成する

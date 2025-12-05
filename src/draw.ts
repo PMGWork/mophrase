@@ -1,4 +1,5 @@
 import type p5 from 'p5';
+import { CURVE_POINT } from './constants';
 import { bezierCurve } from './mathUtils';
 import type { Vector } from './types';
 
@@ -55,7 +56,13 @@ export function drawBezierCurve(
   for (const curve of curves) {
     p.beginShape();
     for (let t = 0; t <= 1; t += 0.01) {
-      const pt = bezierCurve(curve[0], curve[1], curve[2], curve[3], t);
+      const pt = bezierCurve(
+        curve[CURVE_POINT.START_ANCHOR],
+        curve[CURVE_POINT.START_CONTROL],
+        curve[CURVE_POINT.END_CONTROL],
+        curve[CURVE_POINT.END_ANCHOR],
+        t,
+      );
       p.vertex(pt.x, pt.y);
     }
     p.endShape();
@@ -78,10 +85,10 @@ export function drawControls(
   p.rectMode(p.CENTER);
 
   for (const curve of curves) {
-    const p0 = transform(curve[0].copy());
-    const p1 = transform(curve[1].copy());
-    const p2 = transform(curve[2].copy());
-    const p3 = transform(curve[3].copy());
+    const p0 = transform(curve[CURVE_POINT.START_ANCHOR].copy());
+    const p1 = transform(curve[CURVE_POINT.START_CONTROL].copy());
+    const p2 = transform(curve[CURVE_POINT.END_CONTROL].copy());
+    const p3 = transform(curve[CURVE_POINT.END_ANCHOR].copy());
 
     p.rect(p0.x, p0.y, size, size);
     p.rect(p3.x, p3.y, size, size);
@@ -95,10 +102,10 @@ export function drawControls(
   p.noFill();
 
   for (const curve of curves) {
-    const p0 = transform(curve[0].copy());
-    const p1 = transform(curve[1].copy());
-    const p2 = transform(curve[2].copy());
-    const p3 = transform(curve[3].copy());
+    const p0 = transform(curve[CURVE_POINT.START_ANCHOR].copy());
+    const p1 = transform(curve[CURVE_POINT.START_CONTROL].copy());
+    const p2 = transform(curve[CURVE_POINT.END_CONTROL].copy());
+    const p3 = transform(curve[CURVE_POINT.END_ANCHOR].copy());
 
     p.beginShape();
     p.vertex(p0.x, p0.y);
