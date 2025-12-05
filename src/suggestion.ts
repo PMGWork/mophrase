@@ -310,10 +310,7 @@ export class SuggestionManager {
     colors: Colors,
     transform?: (v: p5.Vector) => p5.Vector,
   ): void {
-    if (!this.hoveredId) return;
-    const suggestion = this.suggestions.find(
-      (entry) => entry.id === this.hoveredId,
-    );
+    const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
     if (!suggestion) return;
 
     const ctx = p.drawingContext as CanvasRenderingContext2D;
@@ -416,14 +413,14 @@ function buildPrompt(
 
   // 履歴がある場合は会話形式で追加
   if (promptHistory.length > 0) {
-    promptParts.push('', '## ユーザー指示の履歴');
-    promptHistory.forEach((prompt, index) => {
-      const label =
-        index === promptHistory.length - 1 ? '現在の指示' : `指示${index + 1}`;
-      promptParts.push(`- **${label}**: ${prompt}`);
-    });
-    promptParts.push('');
     promptParts.push(
+      '',
+      '## ユーザー指示の履歴',
+      ...promptHistory.map(
+        (p, i) =>
+          `- **${i === promptHistory.length - 1 ? '現在の指示' : `指示${i + 1}`}**: ${p}`,
+      ),
+      '',
       '上記の履歴を踏まえ、特に最新の「現在の指示」に従ってパスを修正してください。',
     );
   }
