@@ -124,20 +124,23 @@ export class GraphEditor {
   // p5.jsの初期化
   private init(): void {
     const sketch = (p: p5) => {
+      // 正規化座標からピクセル座標への変換
+      const normalizedToPixel = (normX: number, normY: number) => {
+        const graphW = p.width - this.margin.left - this.margin.right;
+        const graphH = p.height - this.margin.top - this.margin.bottom;
+        return {
+          x: normX * graphW + this.margin.left,
+          y: (1 - normY) * graphH + this.margin.top,
+        };
+      };
+
       this.handleManager = new HandleManager(
         () =>
           this.activePath?.timeCurve
             ? [{ curves: this.activePath.timeCurve }]
             : [],
         (x, y) => this.getNormalizedMousePos(p, x, y),
-        (x, y) => {
-          const graphW = p.width - this.margin.left - this.margin.right;
-          const graphH = p.height - this.margin.top - this.margin.bottom;
-          return {
-            x: x * graphW + this.margin.left,
-            y: (1 - y) * graphH + this.margin.top,
-          };
-        },
+        normalizedToPixel,
       );
 
       p.setup = () => {

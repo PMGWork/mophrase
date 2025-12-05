@@ -124,6 +124,9 @@ export class SuggestionUI {
   }
 }
 
+// ポップアップのオフセット値
+const POPUP_OFFSET = 20;
+
 // スケッチUIの配置計算
 export function positionUI({
   container,
@@ -142,8 +145,8 @@ export function positionUI({
   const rect = parent?.getBoundingClientRect();
   const offsetX = rect?.left ?? 0;
 
-  const left = offsetX + anchor.x + 20;
-  const top = anchor.y - 20;
+  const left = offsetX + anchor.x + POPUP_OFFSET;
+  const top = anchor.y - POPUP_OFFSET;
 
   container.style.left = `${left}px`;
   container.style.top = `${top}px`;
