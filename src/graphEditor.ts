@@ -8,19 +8,20 @@ import { SuggestionManager } from './suggestion';
 import type { Path, Vector } from './types';
 
 export class GraphEditor {
-  private domManager: DOMManager;
-  private suggestionManager: SuggestionManager;
+  // 状態
   private isVisible: boolean = true;
   private activePath: Path | null = null;
 
   // マネージャー
+  private domManager: DOMManager;
+  private suggestionManager: SuggestionManager;
   private handleManager: HandleManager | null = null;
 
   // 設定
   private config: Config;
   private colors: Colors;
 
-  // グラフ描画領域の設定
+  // 描画領域の設定
   private readonly margin = { top: 40, right: 40, bottom: 40, left: 40 };
 
   // コンストラクタ
@@ -44,6 +45,7 @@ export class GraphEditor {
       e.preventDefault();
       console.log('GraphEditor: Submit button clicked');
       this.generateSuggestion();
+      this.domManager.graphUserPromptInput.value = '';
     });
   }
 
@@ -68,6 +70,7 @@ export class GraphEditor {
     if (path && path.times.length > 0) {
       const duration = path.times[path.times.length - 1] - path.times[0];
       this.domManager.durationInput.value = Math.round(duration).toString();
+      this.suggestionManager.showGraphInput();
     }
   }
 

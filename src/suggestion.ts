@@ -36,7 +36,8 @@ export class SuggestionManager {
   private pInstance: p5 | null = null;
 
   // 履歴管理
-  private promptHistory: string[] = [];
+  private sketchPromptHistory: string[] = [];
+  private graphPromptHistory: string[] = [];
 
   // UI
   private sketchUI: SuggestionUI;
@@ -74,6 +75,7 @@ export class SuggestionManager {
     this.graphUI = new SuggestionUI(
       {
         listId: 'graphSuggestionList',
+        inputId: 'graphUserPromptInput',
         itemClass:
           'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
       },
@@ -101,7 +103,7 @@ export class SuggestionManager {
 
     // 履歴に追加
     if (trimmedUserPrompt) {
-      this.promptHistory.push(trimmedUserPrompt);
+      this.sketchPromptHistory.push(trimmedUserPrompt);
     }
 
     this.clearSuggestions();
@@ -110,7 +112,7 @@ export class SuggestionManager {
       this.status,
       this.suggestions,
       this.targetPath,
-      this.promptHistory.length,
+      this.sketchPromptHistory.length,
     );
 
     try {
@@ -122,7 +124,7 @@ export class SuggestionManager {
         serializedPaths,
         this.config.sketchPrompt,
         this.config,
-        this.promptHistory,
+        this.sketchPromptHistory,
       );
 
       // 提案を保存
@@ -145,7 +147,7 @@ export class SuggestionManager {
         this.status,
         this.suggestions,
         this.targetPath,
-        this.promptHistory.length,
+        this.sketchPromptHistory.length,
       );
     } catch (error) {
       console.error(error);
@@ -154,7 +156,7 @@ export class SuggestionManager {
         this.status,
         this.suggestions,
         this.targetPath,
-        this.promptHistory.length,
+        this.sketchPromptHistory.length,
       );
     }
   }
@@ -162,7 +164,7 @@ export class SuggestionManager {
   // 入力ウィンドウを表示する
   showInput(targetPath: Path): void {
     if (this.targetPath !== targetPath) {
-      this.promptHistory = [];
+      this.sketchPromptHistory = [];
     }
     this.targetPath = targetPath;
     this.setState('input');
@@ -170,12 +172,33 @@ export class SuggestionManager {
       this.status,
       this.suggestions,
       this.targetPath,
-      this.promptHistory.length,
+      this.sketchPromptHistory.length,
     );
 
     // 入力欄にフォーカスを当てる
     const inputElement = document.getElementById(
       'userPromptInput',
+    ) as HTMLInputElement | null;
+    if (inputElement) {
+      requestAnimationFrame(() => {
+        inputElement.focus();
+      });
+    }
+  }
+
+  // グラフの入力ウィンドウを表示する
+  showGraphInput(): void {
+    this.setState('input');
+    this.graphUI.update(
+      this.status,
+      this.suggestions,
+      undefined,
+      this.graphPromptHistory.length,
+    );
+
+    // 入力欄にフォーカスを当てる
+    const inputElement = document.getElementById(
+      'graphUserPromptInput',
     ) as HTMLInputElement | null;
     if (inputElement) {
       requestAnimationFrame(() => {
@@ -194,9 +217,21 @@ export class SuggestionManager {
       return;
     }
 
+    const trimmedUserPrompt = userPrompt?.trim() ?? '';
+
+    // 履歴に追加
+    if (trimmedUserPrompt) {
+      this.graphPromptHistory.push(trimmedUserPrompt);
+    }
+
     this.setState('generating');
     this.suggestions = [];
-    this.graphUI.update(this.status, this.suggestions);
+    this.graphUI.update(
+      this.status,
+      this.suggestions,
+      undefined,
+      this.graphPromptHistory.length,
+    );
 
     try {
       // カーブをシリアライズ
@@ -208,12 +243,11 @@ export class SuggestionManager {
       const serializedPath: SerializedPath = { anchors, segments, bbox };
 
       // 提案を取得
-      const promptHistory = userPrompt?.trim() ? [userPrompt.trim()] : [];
       const fetched = await fetchSuggestions(
         [serializedPath],
         this.config.graphPrompt || '',
         this.config,
-        promptHistory,
+        this.graphPromptHistory,
       );
 
       // 提案を保存
@@ -234,18 +268,28 @@ export class SuggestionManager {
 
       // UIを更新
       this.setState('idle');
-      this.graphUI.update(this.status, this.suggestions);
+      this.graphUI.update(
+        this.status,
+        this.suggestions,
+        undefined,
+        this.graphPromptHistory.length,
+      );
     } catch (error) {
       console.error(error);
       this.setState('error');
-      this.graphUI.update(this.status, this.suggestions);
+      this.graphUI.update(
+        this.status,
+        this.suggestions,
+        undefined,
+        this.graphPromptHistory.length,
+      );
     }
   }
 
   // 提案をリセットする
   reset(): void {
     this.clearSuggestions();
-    this.promptHistory = [];
+    this.sketchPromptHistory = [];
     this.targetPath = undefined;
     this.setState('idle');
     this.sketchUI.hide();
@@ -332,11 +376,15 @@ export class SuggestionManager {
         this.onGraphSuggestionSelect(curves);
       }
 
-      // グラフ提案の場合はリセット
+      // グラフ提案の場合は入力待ち状態に戻す
       this.clearSuggestions();
-      this.promptHistory = [];
-      this.targetPath = undefined;
-      this.setState('idle');
+      this.setState('input');
+      this.graphUI.update(
+        this.status,
+        this.suggestions,
+        undefined,
+        this.graphPromptHistory.length,
+      );
     } else if (
       suggestion.type === 'sketch' &&
       this.targetPath &&
@@ -364,7 +412,7 @@ export class SuggestionManager {
         this.status,
         this.suggestions,
         this.targetPath,
-        this.promptHistory.length,
+        this.sketchPromptHistory.length,
       );
     }
   }
