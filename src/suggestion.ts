@@ -98,67 +98,42 @@ export class SuggestionManager {
       return;
     }
 
+    // ターゲットパスを保存
     this.targetPath = targetPath;
-    const trimmedUserPrompt = userPrompt?.trim() ?? '';
 
-    // 履歴に追加
-    if (trimmedUserPrompt) {
-      this.sketchPromptHistory.push(trimmedUserPrompt);
-    }
+    // 提案を生成
+    await this.executeGeneration(
+      userPrompt,
+      this.sketchPromptHistory,
+      () => this.updateSketchUI(),
+      async () => {
+        // シリアライズ
+        const serializedPaths = serializePaths([targetPath]);
 
-    this.clearSuggestions();
-    this.setState('generating');
-    this.sketchUI.update(
-      this.status,
-      this.suggestions,
-      this.targetPath,
-      this.sketchPromptHistory.length,
+        // 提案を取得
+        const fetched = await fetchSuggestions(
+          serializedPaths,
+          this.config.sketchPrompt,
+          this.config,
+          this.sketchPromptHistory,
+        );
+
+        // 提案を保存
+        const path = serializedPaths[0];
+        this.suggestions = fetched.map(
+          (item): Suggestion => ({
+            id: this.generateId(),
+            title: item.title,
+            type: 'sketch',
+            path: {
+              anchors: item.anchors,
+              segments: path.segments,
+              bbox: path.bbox,
+            },
+          }),
+        );
+      },
     );
-
-    try {
-      // シリアライズ
-      const serializedPaths = serializePaths([targetPath]);
-
-      // 提案を取得
-      const fetched = await fetchSuggestions(
-        serializedPaths,
-        this.config.sketchPrompt,
-        this.config,
-        this.sketchPromptHistory,
-      );
-
-      // 提案を保存
-      const path = serializedPaths[0];
-      this.suggestions = fetched.map(
-        (item): Suggestion => ({
-          id: this.generateId(),
-          title: item.title,
-          type: 'sketch',
-          path: {
-            anchors: item.anchors,
-            segments: path.segments,
-            bbox: path.bbox,
-          },
-        }),
-      );
-
-      this.setState('idle');
-      this.sketchUI.update(
-        this.status,
-        this.suggestions,
-        this.targetPath,
-        this.sketchPromptHistory.length,
-      );
-    } catch (error) {
-      console.error(error);
-      this.setState('error');
-      this.sketchUI.update(
-        this.status,
-        this.suggestions,
-        this.targetPath,
-        this.sketchPromptHistory.length,
-      );
-    }
   }
 
   // 入力ウィンドウを表示する
@@ -168,43 +143,15 @@ export class SuggestionManager {
     }
     this.targetPath = targetPath;
     this.setState('input');
-    this.sketchUI.update(
-      this.status,
-      this.suggestions,
-      this.targetPath,
-      this.sketchPromptHistory.length,
-    );
-
-    // 入力欄にフォーカスを当てる
-    const inputElement = document.getElementById(
-      'userPromptInput',
-    ) as HTMLInputElement | null;
-    if (inputElement) {
-      requestAnimationFrame(() => {
-        inputElement.focus();
-      });
-    }
+    this.updateSketchUI();
+    this.focusInput('userPromptInput');
   }
 
   // グラフの入力ウィンドウを表示する
   showGraphInput(): void {
     this.setState('input');
-    this.graphUI.update(
-      this.status,
-      this.suggestions,
-      undefined,
-      this.graphPromptHistory.length,
-    );
-
-    // 入力欄にフォーカスを当てる
-    const inputElement = document.getElementById(
-      'graphUserPromptInput',
-    ) as HTMLInputElement | null;
-    if (inputElement) {
-      requestAnimationFrame(() => {
-        inputElement.focus();
-      });
-    }
+    this.updateGraphUI();
+    this.focusInput('graphUserPromptInput');
   }
 
   // グラフカーブの提案を生成する
@@ -217,73 +164,45 @@ export class SuggestionManager {
       return;
     }
 
-    const trimmedUserPrompt = userPrompt?.trim() ?? '';
+    // 提案を生成
+    await this.executeGeneration(
+      userPrompt,
+      this.graphPromptHistory,
+      () => this.updateGraphUI(),
+      async () => {
+        // カーブをシリアライズ
+        const bbox = { x: 0, y: 0, width: 1, height: 1 };
+        const { anchors, segments } = serializeAnchorsAndSegments(
+          currentCurves,
+          bbox,
+        );
+        const serializedPath: SerializedPath = { anchors, segments, bbox };
 
-    // 履歴に追加
-    if (trimmedUserPrompt) {
-      this.graphPromptHistory.push(trimmedUserPrompt);
-    }
+        // 提案を取得
+        const fetched = await fetchSuggestions(
+          [serializedPath],
+          this.config.graphPrompt || '',
+          this.config,
+          this.graphPromptHistory,
+        );
 
-    this.setState('generating');
-    this.suggestions = [];
-    this.graphUI.update(
-      this.status,
-      this.suggestions,
-      undefined,
-      this.graphPromptHistory.length,
+        // 提案を保存
+        this.suggestions = fetched.map(
+          (item): Suggestion => ({
+            id: this.generateId(),
+            title: item.title,
+            type: 'graph',
+            path: {
+              anchors: item.anchors,
+              segments: item.anchors
+                .slice(0, -1)
+                .map((_, i) => ({ startIndex: i, endIndex: i + 1 })),
+              bbox: bbox,
+            },
+          }),
+        );
+      },
     );
-
-    try {
-      // カーブをシリアライズ
-      const bbox = { x: 0, y: 0, width: 1, height: 1 };
-      const { anchors, segments } = serializeAnchorsAndSegments(
-        currentCurves,
-        bbox,
-      );
-      const serializedPath: SerializedPath = { anchors, segments, bbox };
-
-      // 提案を取得
-      const fetched = await fetchSuggestions(
-        [serializedPath],
-        this.config.graphPrompt || '',
-        this.config,
-        this.graphPromptHistory,
-      );
-
-      // 提案を保存
-      this.suggestions = fetched.map(
-        (item): Suggestion => ({
-          id: this.generateId(),
-          title: item.title,
-          type: 'graph',
-          path: {
-            anchors: item.anchors,
-            segments: item.anchors
-              .slice(0, -1)
-              .map((_, i) => ({ startIndex: i, endIndex: i + 1 })),
-            bbox: bbox,
-          },
-        }),
-      );
-
-      // UIを更新
-      this.setState('idle');
-      this.graphUI.update(
-        this.status,
-        this.suggestions,
-        undefined,
-        this.graphPromptHistory.length,
-      );
-    } catch (error) {
-      console.error(error);
-      this.setState('error');
-      this.graphUI.update(
-        this.status,
-        this.suggestions,
-        undefined,
-        this.graphPromptHistory.length,
-      );
-    }
   }
 
   // 提案をリセットする
@@ -314,6 +233,58 @@ export class SuggestionManager {
   }
 
   // #region プライベート関数
+
+  // スケッチUIを更新
+  private updateSketchUI(): void {
+    this.sketchUI.update(
+      this.status,
+      this.suggestions,
+      this.targetPath,
+      this.sketchPromptHistory.length,
+    );
+  }
+
+  // グラフUIを更新
+  private updateGraphUI(): void {
+    this.graphUI.update(
+      this.status,
+      this.suggestions,
+      undefined,
+      this.graphPromptHistory.length,
+    );
+  }
+
+  // 入力欄にフォーカス
+  private focusInput(id: string): void {
+    const el = document.getElementById(id);
+    if (el) requestAnimationFrame(() => el.focus());
+  }
+
+  // 生成処理の共通実行フロー
+  private async executeGeneration(
+    userPrompt: string | undefined,
+    history: string[],
+    updateUI: () => void,
+    action: () => Promise<void>,
+  ): Promise<void> {
+    const trimmed = userPrompt?.trim();
+    if (trimmed) history.push(trimmed);
+
+    this.clearSuggestions();
+    this.setState('generating');
+    updateUI();
+
+    try {
+      await action();
+      this.setState('idle');
+    } catch (error) {
+      console.error(error);
+      this.setState('error');
+    } finally {
+      updateUI();
+    }
+  }
+  
   // 状態を更新する
   private setState(state: SuggestionState): void {
     this.status = state;
@@ -379,12 +350,7 @@ export class SuggestionManager {
       // グラフ提案の場合は入力待ち状態に戻す
       this.clearSuggestions();
       this.setState('input');
-      this.graphUI.update(
-        this.status,
-        this.suggestions,
-        undefined,
-        this.graphPromptHistory.length,
-      );
+      this.updateGraphUI();
     } else if (
       suggestion.type === 'sketch' &&
       this.targetPath &&
@@ -408,12 +374,7 @@ export class SuggestionManager {
       // スケッチ提案の場合は入力待ち状態に戻す
       this.clearSuggestions();
       this.setState('input');
-      this.sketchUI.update(
-        this.status,
-        this.suggestions,
-        this.targetPath,
-        this.sketchPromptHistory.length,
-      );
+      this.updateSketchUI();
     }
   }
 }
@@ -453,13 +414,14 @@ function buildPrompt(
   // 履歴がある場合は会話形式で追加
   if (promptHistory.length > 0) {
     promptParts.push('', '## ユーザー指示の履歴');
-    promptHistory.forEach((prompt, index) => {
-      const label =
-        index === promptHistory.length - 1 ? '現在の指示' : `指示${index + 1}`;
-      promptParts.push(`- **${label}**: ${prompt}`);
-    });
-    promptParts.push('');
     promptParts.push(
+      ...promptHistory.map(
+        (p, i) =>
+          `- **${i === promptHistory.length - 1 ? '現在の指示' : `指示${i + 1}`}**: ${p}`,
+      ),
+    );
+    promptParts.push(
+      '',
       '上記の履歴を踏まえ、特に最新の「現在の指示」に従ってパスを修正してください。',
     );
   }
