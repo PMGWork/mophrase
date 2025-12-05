@@ -28,6 +28,14 @@ export class SuggestionUI {
     this.onSuggestionClick = onSuggestionClick;
   }
 
+  // 入力フォームにフォーカス
+  focusInput(): void {
+    const { inputId } = this.config;
+    if (!inputId) return;
+    const el = document.getElementById(inputId) as HTMLInputElement | null;
+    if (el) requestAnimationFrame(() => el.focus());
+  }
+
   // UIを非表示
   hide(): void {
     const { containerId, listId } = this.config;

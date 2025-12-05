@@ -27,7 +27,7 @@ export class MotionManager {
 
   // モーション再生を開始
   public play(path: Path): void {
-    if (!path.timeCurve || path.timeCurve.length === 0) return;
+    if (path.timeCurve.length === 0) return;
 
     // パスを設定
     this.currentPath = path;
@@ -139,7 +139,6 @@ export class MotionManager {
 
   // タイミング曲線を生成
   public fitTiming(path: Path, p: p5, fitTolerance: number = 0.01): void {
-    if (!path.points || !path.times) return;
     if (path.points.length < 2 || path.times.length < 2) return;
 
     const totalTime = path.times[path.times.length - 1] - path.times[0];

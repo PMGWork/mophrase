@@ -1,26 +1,33 @@
 import { CURVE_POINT } from './constants';
 import type { HandleSelection, Path, Vector } from './types';
 
+// 定数
+const HANDLE_RADIUS = 12;
+
 // ハンドルの制御クラス
 export class HandleManager {
   private getPaths: () => Pick<Path, 'curves'>[];
   private draggedHandle: HandleSelection | null = null;
-  private radius: number = 12;
 
   private pixelToNormalized: (x: number, y: number) => { x: number; y: number };
-  private normalizedToPixel:
-    | ((x: number, y: number) => { x: number; y: number })
-    | null;
+  private normalizedToPixel: (x: number, y: number) => { x: number; y: number };
 
   constructor(
     getPaths: () => Pick<Path, 'curves'>[],
-    pixelToNormalized: (x: number, y: number) => { x: number; y: number } = (
-      x,
-      y,
-    ) => ({ x, y }),
-    normalizedToPixel:
-      | ((x: number, y: number) => { x: number; y: number })
-      | null = null,
+    pixelToNormalized: (
+      x: number,
+      y: number,
+    ) => {
+      x: number;
+      y: number;
+    } = (x, y) => ({ x, y }),
+    normalizedToPixel: (
+      x: number,
+      y: number,
+    ) => {
+      x: number;
+      y: number;
+    } = (x, y) => ({ x, y }),
   ) {
     this.getPaths = getPaths;
     this.pixelToNormalized = pixelToNormalized;
@@ -97,16 +104,14 @@ export class HandleManager {
     let py = point.y;
 
     // 座標変換がある場合はピクセル座標に変換
-    if (this.normalizedToPixel) {
-      const pixelPos = this.normalizedToPixel(px, py);
-      px = pixelPos.x;
-      py = pixelPos.y;
-    }
+    const pixelPos = this.normalizedToPixel(px, py);
+    px = pixelPos.x;
+    py = pixelPos.y;
 
     // マウス位置との距離を計算
     const dx = px - mouseX;
     const dy = py - mouseY;
-    return dx * dx + dy * dy <= this.radius * this.radius;
+    return dx * dx + dy * dy <= HANDLE_RADIUS * HANDLE_RADIUS;
   }
 
   // ハンドルの位置を更新

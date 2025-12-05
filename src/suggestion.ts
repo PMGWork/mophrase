@@ -47,15 +47,21 @@ export class SuggestionManager {
   private graphUI: SuggestionUI;
 
   // コールバック
-  private onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
-  private onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
+  private onSketchSuggestionSelect?: (path: Path, targetPath?: Path) => void;
+  private onGraphSuggestionSelect?: (
+    path: Pick<Path, 'timeCurve'>,
+    targetPath?: Path,
+  ) => void;
 
   // コンストラクタ
   constructor(
     config: Config,
     options: {
-      onSketchSuggestionSelect?: (paths: Path[], targetPath?: Path) => void;
-      onGraphSuggestionSelect?: (curve: p5.Vector[][]) => void;
+      onSketchSuggestionSelect?: (path: Path, targetPath?: Path) => void;
+      onGraphSuggestionSelect?: (
+        path: Pick<Path, 'timeCurve'>,
+        targetPath?: Path,
+      ) => void;
     } = {},
   ) {
     this.config = config;
@@ -94,6 +100,8 @@ export class SuggestionManager {
     this.config = config;
   }
 
+  // #region メイン関数
+
   // 提案を生成する (スケッチ)
   async generate(
     mode: 'sketch',
@@ -129,11 +137,6 @@ export class SuggestionManager {
     targetPath: Path,
     userPrompt?: string,
   ): Promise<void> {
-    if (!targetPath) {
-      this.setState('error');
-      return;
-    }
-
     this.targetPath = targetPath;
     const serializedPaths = serializePaths([targetPath]);
     const path = serializedPaths[0];
@@ -175,7 +178,7 @@ export class SuggestionManager {
     userPrompt?: string,
   ): Promise<void> {
     const curves = input.timeCurve;
-    if (!curves || curves.length === 0) {
+    if (curves.length === 0) {
       this.setState('error');
       return;
     }
@@ -225,14 +228,14 @@ export class SuggestionManager {
     this.targetPath = targetPath;
     this.setState('input');
     this.updateSketchUI();
-    this.focusInput('userPromptInput');
+    this.sketchUI.focusInput();
   }
 
   // グラフの入力ウィンドウを表示する
   showGraphInput(): void {
     this.setState('input');
     this.updateGraphUI();
-    this.focusInput('graphUserPromptInput');
+    this.graphUI.focusInput();
   }
 
   // 提案をリセットする
@@ -299,12 +302,6 @@ export class SuggestionManager {
     );
   }
 
-  // フォーカスヘルパー
-  private focusInput(elementId: string): void {
-    const el = document.getElementById(elementId) as HTMLInputElement | null;
-    if (el) requestAnimationFrame(() => el.focus());
-  }
-
   // 提案生成の共通処理
   private async executeWithUI(
     updateUI: () => void,
@@ -364,7 +361,7 @@ export class SuggestionManager {
       if (this.onGraphSuggestionSelect) {
         if (!this.pInstance) return;
         const curves = deserializeCurves(suggestion.path, this.pInstance);
-        this.onGraphSuggestionSelect(curves);
+        this.onGraphSuggestionSelect({ timeCurve: curves }, this.targetPath);
       }
 
       // グラフ提案の場合は入力待ち状態に戻す
@@ -388,7 +385,7 @@ export class SuggestionManager {
 
       // コールバックを呼び出す
       if (this.onSketchSuggestionSelect) {
-        this.onSketchSuggestionSelect(restored, this.targetPath);
+        this.onSketchSuggestionSelect(restored[0], this.targetPath);
       }
 
       // スケッチ提案の場合は入力待ち状態に戻す

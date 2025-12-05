@@ -49,8 +49,7 @@ export class SketchEditor {
 
     // 提案マネージャー
     this.suggestionManager = new SuggestionManager(this.config, {
-      onSketchSuggestionSelect: (selectedPaths, targetPath) => {
-        const updated = selectedPaths[0];
+      onSketchSuggestionSelect: (updated, targetPath) => {
         if (!updated) return;
 
         if (targetPath) {

@@ -10,25 +10,24 @@ import type { Path, Vector } from './types';
 // グラフエディタ
 export class GraphEditor {
   // 状態
-  private isVisible: boolean = true;
   private activePath: Path | null = null;
 
   // マネージャー
   private dom: DOMManager;
+  private handleManager!: HandleManager;
   private suggestionManager: SuggestionManager;
-  private handleManager: HandleManager | null = null;
 
   // 設定
   private config: Config;
   private colors: Colors;
 
   // 描画領域の設定
-  private static readonly GRAPH_MARGIN = 40;
+  private static readonly MARGIN = 40;
   private readonly margin = {
-    top: GraphEditor.GRAPH_MARGIN,
-    right: GraphEditor.GRAPH_MARGIN,
-    bottom: GraphEditor.GRAPH_MARGIN,
-    left: GraphEditor.GRAPH_MARGIN,
+    top: GraphEditor.MARGIN,
+    right: GraphEditor.MARGIN,
+    bottom: GraphEditor.MARGIN,
+    left: GraphEditor.MARGIN,
   };
 
   // コンストラクタ
@@ -42,8 +41,8 @@ export class GraphEditor {
 
     // 提案マネージャーの初期化
     this.suggestionManager = new SuggestionManager(config, {
-      onGraphSuggestionSelect: (curves) => {
-        this.applySuggestion(curves);
+      onGraphSuggestionSelect: (path) => {
+        this.applySuggestion(path);
       },
     });
 
@@ -64,7 +63,6 @@ export class GraphEditor {
 
   // 表示/非表示の切り替え
   public toggle(): void {
-    this.isVisible = !this.isVisible;
     this.dom.graphEditorContainer.classList.toggle('hidden');
     window.dispatchEvent(new Event('resize'));
   }
@@ -84,8 +82,9 @@ export class GraphEditor {
   // Durationの更新
   private updateDuration(): void {
     const activePath = this.activePath;
-    const times = activePath?.times;
-    if (!activePath || !times?.length) return;
+    if (!activePath) return;
+    const { times } = activePath;
+    if (!times.length) return;
 
     const newDuration = Number(this.dom.durationInput.value);
     const start = times[0];
@@ -99,21 +98,21 @@ export class GraphEditor {
 
   // 提案の生成
   private async generateSuggestion(): Promise<void> {
-    const currentCurves = this.activePath?.timeCurve;
-    if (!currentCurves) return;
+    const activePath = this.activePath;
+    if (!activePath || activePath.timeCurve.length === 0) return;
 
     const userPrompt = this.dom.graphUserPromptInput.value;
     await this.suggestionManager.generate(
       'graph',
-      { timeCurve: currentCurves },
+      { timeCurve: activePath.timeCurve },
       userPrompt,
     );
   }
 
   // 提案の適用
-  private applySuggestion(curves: Vector[][]): void {
+  private applySuggestion(path: Pick<Path, 'timeCurve'>): void {
     if (!this.activePath) return;
-    this.activePath.timeCurve = curves;
+    this.activePath.timeCurve = path.timeCurve;
   }
 
   // #region p5.js
@@ -123,9 +122,7 @@ export class GraphEditor {
     const sketch = (p: p5) => {
       // アクティブパスのカーブを取得
       const getActiveCurves = (): { curves: Vector[][] }[] =>
-        this.activePath?.timeCurve
-          ? [{ curves: this.activePath.timeCurve }]
-          : [];
+        this.activePath ? [{ curves: this.activePath.timeCurve }] : [];
 
       // ピクセル座標から正規化座標への変換
       const pixelToNormalized = (x: number, y: number) =>
@@ -167,7 +164,7 @@ export class GraphEditor {
       p.draw = () => {
         p.background(this.colors.background);
 
-        if (!this.activePath || !this.activePath.timeCurve) return;
+        if (!this.activePath) return;
 
         const width = p.width;
         const height = p.height;
@@ -221,16 +218,16 @@ export class GraphEditor {
         if (!isLeftClick) return;
 
         if (this.isMouseInGraph(p))
-          if (this.handleManager?.begin(p.mouseX, p.mouseY)) return;
+          if (this.handleManager.begin(p.mouseX, p.mouseY)) return;
       };
 
       p.mouseDragged = () => {
         const mode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
-        this.handleManager?.drag(p.mouseX, p.mouseY, mode);
+        this.handleManager.drag(p.mouseX, p.mouseY, mode);
       };
 
       p.mouseReleased = () => {
-        if (this.handleManager?.end()) return;
+        if (this.handleManager.end()) return;
       };
     };
 

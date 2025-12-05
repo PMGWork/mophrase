@@ -4,4 +4,4 @@ export const CURVE_POINT = {
   START_CONTROL: 1,
   END_CONTROL: 2,
   END_ANCHOR: 3,
-} as const;
+};
