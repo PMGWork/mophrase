@@ -95,7 +95,7 @@ export class SketchEditor {
         p.background(this.colors.background);
         p.textFont('Geist');
 
-        this.motionManager = new MotionManager(p);
+        this.motionManager = new MotionManager(p, this.colors.marker);
       };
 
       p.windowResized = () => {

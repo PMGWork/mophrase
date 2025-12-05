@@ -4,125 +4,103 @@ import { fitCurve } from './fitting';
 import { bezierCurve, curveLength } from './mathUtils';
 import type { Path, Vector } from './types';
 
+// 定数
+const DEFAULT_DURATION = 2000;
+const BISECTION_ITERATIONS = 10;
+const MARKER_SIZE = 10;
+
 // モーション管理クラス
 export class MotionManager {
   private p: p5;
+  private markerColor: string;
   private isPlaying: boolean = false;
-  private startTime: number = 0;
   private currentPath: Path | null = null;
+  private time: number = 0;
   private duration: number = 0;
   private curveLengths: number[] = [];
   private totalLength: number = 0;
-  private lastTimingIndex: number = 0;
 
-  constructor(p: p5) {
+  constructor(p: p5, markerColor: string) {
     this.p = p;
+    this.markerColor = markerColor;
   }
 
   // モーション再生を開始
   public play(path: Path): void {
-    if (!path.timeCurve || path.timeCurve.length === 0) {
-      console.warn('No timing data available for this path.');
-      return;
-    }
+    if (!path.timeCurve || path.timeCurve.length === 0) return;
 
+    // パスを設定
     this.currentPath = path;
     this.isPlaying = true;
-    this.startTime = this.p.millis();
-    this.lastTimingIndex = 0;
+    this.time = 0;
 
     // カーブの長さを事前計算してキャッシュ
     this.curveLengths = path.curves.map((c) => curveLength(c));
     this.totalLength = this.curveLengths.reduce((a, b) => a + b, 0);
 
-    // 最後のタイミングポイントのX座標（時間）が1.0になるように正規化されている前提
-    // 実際の持続時間は別途保存するか、times配列から再計算する必要がある
-    // ここでは、times配列の最後の値を使用する
-    if (path.times && path.times.length > 0) {
-      this.duration = path.times[path.times.length - 1] - path.times[0];
-    } else {
-      this.duration = 2000;
-    }
+    // 持続時間を設定
+    this.duration =
+      path.times && path.times.length > 0
+        ? path.times[path.times.length - 1] - path.times[0]
+        : DEFAULT_DURATION;
   }
 
-  // 描画ループ内で呼び出す
+  // モーションを更新
   public update(): void {
     if (!this.isPlaying || !this.currentPath) return;
 
-    const elapsed = this.p.millis() - this.startTime;
-    let t = elapsed / this.duration;
+    this.time += this.p.deltaTime / this.duration;
 
-    if (t >= 1.0) {
-      t = 1.0;
-      this.isPlaying = false; // アニメーション終了
-    } else if (t < 0) {
-      t = 0;
+    if (this.time >= 1.0) {
+      this.time = 1.0;
+      this.isPlaying = false;
     }
 
-    // タイミング曲線から進行度(progress)を取得
-    const progress = this.evaluateTiming(this.currentPath.timeCurve, t);
-
-    // 進行度に対応する空間上の位置を取得
+    const progress = this.evaluateTiming(this.currentPath.timeCurve, this.time);
     const position = this.evaluatePosition(this.currentPath.curves, progress);
 
-    // 描画
+    this.drawMarker(position);
+  }
+
+  // マーカーを描画
+  private drawMarker(position: Vector): void {
     this.p.push();
-    this.p.fill(255, 0, 0);
+    this.p.fill(this.markerColor);
     this.p.noStroke();
-    this.p.circle(position.x, position.y, 10);
+    this.p.circle(position.x, position.y, MARKER_SIZE);
     this.p.pop();
   }
 
-  // タイミング曲線 (X=Time, Y=Progress) から、指定時刻 t における Progress を求める
-  // Xは単調増加と仮定し、X=t となる点を探索する
-  private evaluateTiming(curves: Vector[][], t: number): number {
-    // 簡易実装: 全曲線を走査して、X座標が t に最も近い点を探す
-    // 本来はXについて解く必要があるが、ここではサンプリングで近似する
-
-    // まず、どのセグメントに含まれるかを探す
-    // しかし、Xは0-1で正規化されているため、単純にtと比較できる
-
-    // 二分探索やニュートン法が正確だが、ここでは高解像度サンプリングで近似
-    // または、tに対応する曲線を特定し、その曲線上でX=tとなるパラメータuを求める
-
-    // 簡易的に、ベジェ曲線の性質を利用
-    // X(u) = t を解いて u を求め、Y(u) を返す
-
-    // 前回のインデックスから探索を開始（最適化）
-    // 時間は単調増加するので、戻る必要はない
-    for (let i = this.lastTimingIndex; i < curves.length; i++) {
+  // タイミング曲線から進行度を求める
+  private evaluateTiming(curves: Vector[][], time: number): number {
+    for (let i = 0; i < curves.length; i++) {
       const curve = curves[i];
       const startX = curve[CURVE_POINT.START_ANCHOR].x;
       const endX = curve[CURVE_POINT.END_ANCHOR].x;
 
-      if (t >= startX && t <= endX) {
-        this.lastTimingIndex = i; // インデックスを更新
-        // このカーブの中に t がある
-        // X(u) = t を解く (u: 0->1)
-        const u = this.solveBezierX(curve, t);
+      if (time >= startX && time <= endX) {
+        const u = this.solveBezierX(curve, time);
         return bezierCurve(curve[0], curve[1], curve[2], curve[3], u).y;
       }
     }
 
-    // 見つからなかった場合（浮動小数点の誤差などで範囲外になった場合など）、
-    // 念のため最初から探索するか、端点を返す
-    if (t < curves[0][CURVE_POINT.START_ANCHOR].x) return 0;
-    if (t > curves[curves.length - 1][CURVE_POINT.END_ANCHOR].x) return 1;
+    if (time < curves[0][CURVE_POINT.START_ANCHOR].x) return 0;
+    if (time > curves[curves.length - 1][CURVE_POINT.END_ANCHOR].x) return 1;
 
-    return t;
+    return time;
   }
 
-  // X(u) = targetX となる u を求める (0 <= u <= 1)
+  // X(u) = targetX となる u を求める
   private solveBezierX(curve: Vector[], targetX: number): number {
     // 二分探索で近似
     let low = 0;
     let high = 1;
-    let u = 0.5;
+    let u = 0;
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < BISECTION_ITERATIONS; i++) {
       u = (low + high) / 2;
-      const p = bezierCurve(curve[0], curve[1], curve[2], curve[3], u);
-      if (p.x < targetX) {
+      const point = bezierCurve(curve[0], curve[1], curve[2], curve[3], u);
+      if (point.x < targetX) {
         low = u;
       } else {
         high = u;
@@ -141,9 +119,8 @@ export class MotionManager {
     for (let i = 0; i < curves.length; i++) {
       const len = this.curveLengths[i];
       if (currentDist + len >= targetDist) {
-        // このカーブ内にある
         const localDist = targetDist - currentDist;
-        const u = localDist / len; // 近似: 弧長パラメータ化されていないため、uは距離に比例しないが、一旦これで
+        const u = localDist / len;
         return bezierCurve(
           curves[i][0],
           curves[i][1],
@@ -160,42 +137,24 @@ export class MotionManager {
     return lastCurve[CURVE_POINT.END_ANCHOR];
   }
 
-  // 描画されたパスからタイミング曲線を生成する
+  // タイミング曲線を生成
   public fitTiming(path: Path, p: p5, fitTolerance: number = 0.01): void {
-    if (
-      !path.points ||
-      path.points.length < 2 ||
-      !path.times ||
-      path.times.length < 2
-    )
-      return;
+    if (!path.points || !path.times) return;
+    if (path.points.length < 2 || path.times.length < 2) return;
 
     const totalTime = path.times[path.times.length - 1] - path.times[0];
     if (totalTime <= 0) return;
 
-    // 累積距離を計算
-    let totalDist = 0;
-    const dists = [0];
-    for (let i = 1; i < path.points.length; i++) {
-      totalDist += path.points[i].dist(path.points[i - 1]);
-      dists.push(totalDist);
-    }
+    const timingPoints = this.createTimingPoints(
+      path.points,
+      path.times,
+      p,
+      totalTime,
+    );
 
-    // (Time, Distance) の点列を作成 (0-1に正規化)
-    const timingPoints: Vector[] = [];
-    for (let i = 0; i < path.points.length; i++) {
-      const t = (path.times[i] - path.times[0]) / totalTime;
-      const d = totalDist > 0 ? dists[i] / totalDist : 0;
-      timingPoints.push(p.createVector(t, d));
-    }
-
-    // フィッティング実行
-    // 既存のfitCurveを利用するが、エラー許容値などは調整が必要かも
-    // Timingカーブは単純な形状が多いので、粗くても良いかもしれない
+    // タイミング曲線をフィッティング
     const timingCurves: Vector[][] = [];
     const fitError = { current: { maxError: Number.MAX_VALUE, index: -1 } };
-
-    // 許容誤差 (デフォルト 0.01 = 1%)
     fitCurve(
       timingPoints,
       timingCurves,
@@ -203,7 +162,39 @@ export class MotionManager {
       fitTolerance * 5,
       fitError,
     );
-
     path.timeCurve = timingCurves;
+  }
+
+  // タイミングポイントを生成
+  private createTimingPoints(
+    points: Vector[],
+    times: number[],
+    p: p5,
+    totalTime: number,
+  ): Vector[] {
+    const { distances, totalDistance } =
+      this.calculateCumulativeDistances(points);
+
+    return points.map((_, i) => {
+      const time = (times[i] - times[0]) / totalTime;
+      const d = totalDistance > 0 ? distances[i] / totalDistance : 0;
+      return p.createVector(time, d);
+    });
+  }
+
+  // 累積距離を計算
+  private calculateCumulativeDistances(points: Vector[]): {
+    distances: number[];
+    totalDistance: number;
+  } {
+    const distances = [0];
+    let totalDistance = 0;
+
+    for (let i = 1; i < points.length; i++) {
+      totalDistance += points[i].dist(points[i - 1]);
+      distances.push(totalDistance);
+    }
+
+    return { distances, totalDistance };
   }
 }

@@ -22,6 +22,7 @@ export interface Colors {
   curve: string; // ベジェ曲線の色
   sketch: string; // スケッチ線の色
   border: string; // 境界線の色
+  marker: string; // マーカーの色
   background: string; // 背景色
 }
 
@@ -45,5 +46,6 @@ export const DEFAULT_COLORS: Colors = {
   curve: '#f9fafb', // Gray-50
   sketch: '#374151', // Gray-700
   border: '#1f2937', // Gray-800
+  marker: '#e11d48', // Rose-600
   background: '#030712', // Gray-950
 };
