@@ -4,7 +4,7 @@ import type { DOMManager } from './domManager';
 import { drawBezierCurve, drawControls } from './draw';
 import { HandleManager } from './handleManager';
 import { isInRect, isLeftMouseButton } from './p5Utils';
-import { SuggestionManager } from './suggestion';
+import { GraphSuggestionManager } from './suggestion/graphSuggestion';
 import type { Path } from './types';
 
 // グラフエディタ
@@ -15,7 +15,7 @@ export class GraphEditor {
   // マネージャー
   private dom: DOMManager;
   private handleManager: HandleManager;
-  private suggestionManager: SuggestionManager;
+  private suggestionManager: GraphSuggestionManager;
 
   // 設定
   private config: Config;
@@ -49,8 +49,8 @@ export class GraphEditor {
     );
 
     // 提案マネージャー
-    this.suggestionManager = new SuggestionManager(config, {
-      onGraphSuggestionSelect: (path) => {
+    this.suggestionManager = new GraphSuggestionManager(config, {
+      onSelect: (path) => {
         if (this.activePath) this.activePath.timeCurve = path.timeCurve;
       },
     });
@@ -76,9 +76,14 @@ export class GraphEditor {
 
   // パスの設定
   public setPath(path: Path | null): void {
+    if (!path || !path.times.length) {
+      this.activePath = null;
+      this.suggestionManager.close();
+      return;
+    }
+
     this.activePath = path;
-    if (!path || !path.times.length) return;
-    this.suggestionManager.start('graph');
+    this.suggestionManager.open(path);
   }
 
   // #region p5.js
@@ -240,8 +245,7 @@ export class GraphEditor {
     if (!activePath || activePath.timeCurve.length === 0) return;
 
     const userPrompt = this.dom.graphPromptInput.value;
-    await this.suggestionManager.generate(
-      'graph',
+    await this.suggestionManager.submit(
       { timeCurve: activePath.timeCurve },
       userPrompt,
     );

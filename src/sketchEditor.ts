@@ -8,7 +8,7 @@ import { HandleManager } from './handleManager';
 import { bezierCurve } from './mathUtils';
 import { MotionManager } from './motionManager';
 import { isInRect, isLeftMouseButton } from './p5Utils';
-import { SuggestionManager } from './suggestion';
+import { SketchSuggestionManager } from './suggestion/sketchSuggestion';
 import type { Path, SketchMode } from './types';
 
 // スケッチエディタ
@@ -23,7 +23,7 @@ export class SketchEditor {
   private dom: DOMManager;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
-  private suggestionManager: SuggestionManager;
+  private suggestionManager: SketchSuggestionManager;
 
   // 設定
   private config: Config;
@@ -51,8 +51,8 @@ export class SketchEditor {
     this.handleManager = new HandleManager(() => this.paths);
 
     // 提案マネージャー
-    this.suggestionManager = new SuggestionManager(this.config, {
-      onSketchSuggestionSelect: (updated, targetPath) => {
+    this.suggestionManager = new SketchSuggestionManager(this.config, {
+      onSelect: (updated, targetPath) => {
         if (!updated) return;
 
         if (targetPath) {
@@ -91,7 +91,7 @@ export class SketchEditor {
 
     if (sketchMode === 'draw') {
       // 描画モード: 選択状態をクリア
-      this.suggestionManager.stop();
+      this.suggestionManager.close();
       this.activePath = null;
       this.onPathSelected(null);
     } else {
@@ -187,17 +187,16 @@ export class SketchEditor {
     if (this.handleManager.start(p.mouseX, p.mouseY)) return;
     if (!isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)) return;
 
-    // 選択モード
+    // 選択モード: パスを選択
     if (this.sketchMode === 'select') {
       this.activePath = this.findPathAtPoint(p.mouseX, p.mouseY);
-      this.suggestionManager.stop();
-
-      if (this.activePath)
-        this.suggestionManager.start('sketch', this.activePath);
-
+      this.suggestionManager.close();
       this.onPathSelected(this.activePath);
       return;
     }
+
+    // 描画モード: 提案UIを開く
+    if (this.activePath) this.suggestionManager.open(this.activePath);
 
     // 新しいパスを開始
     this.draftPath = {
@@ -267,8 +266,8 @@ export class SketchEditor {
     // 確定済みパスに追加
     this.paths.push(this.draftPath);
     this.activePath = this.draftPath;
-    this.suggestionManager.stop();
-    this.suggestionManager.start('sketch', this.activePath);
+    this.suggestionManager.close();
+    this.suggestionManager.open(this.activePath);
 
     // グラフエディタにも反映
     this.onPathCreated(this.activePath);
@@ -346,7 +345,7 @@ export class SketchEditor {
     this.paths = [];
     this.draftPath = null;
     this.activePath = null;
-    this.suggestionManager.stop();
+    this.suggestionManager.close();
     this.motionManager?.stop();
     this.onPathSelected(null);
   }
@@ -367,7 +366,7 @@ export class SketchEditor {
   public generateSuggestion(userPrompt: string): void {
     const targetPath = this.activePath ?? this.paths[this.paths.length - 1];
     if (!targetPath) return;
-    this.suggestionManager.start('sketch', targetPath);
-    void this.suggestionManager.generate('sketch', targetPath, userPrompt);
+    this.suggestionManager.open(targetPath);
+    void this.suggestionManager.submit(targetPath, userPrompt);
   }
 }

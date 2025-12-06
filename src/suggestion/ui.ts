@@ -1,4 +1,4 @@
-import type { Path, Suggestion, SuggestionState } from './types';
+import type { Path, Suggestion, SuggestionState } from '../types';
 
 type SuggestionUIConfig = {
   containerId?: string;
@@ -28,8 +28,8 @@ export class SuggestionUI {
     this.onSuggestionClick = onSuggestionClick;
   }
 
-  // 入力フォームにフォーカス
-  focusInput(): void {
+  // UIを表示
+  show(): void {
     const { inputId } = this.config;
     if (!inputId) return;
     const el = document.getElementById(inputId) as HTMLInputElement | null;
@@ -38,12 +38,12 @@ export class SuggestionUI {
 
   // UIを非表示
   hide(): void {
-    const { containerId, listId } = this.config;
+    const { containerId } = this.config;
     if (containerId) {
       const container = document.getElementById(containerId);
       if (container) container.style.display = 'none';
     }
-    this.clearItems(listId);
+    this.clearItems();
   }
 
   // UIの更新
@@ -57,12 +57,15 @@ export class SuggestionUI {
     const listContainer = document.getElementById(listId);
     if (!listContainer) return;
 
+    // containerの取得
     const container = containerId ? document.getElementById(containerId) : null;
 
+    // 状態の判定
     const showLoading = status === 'generating';
     const showSketchInput = status === 'input';
     const hasSuggestions = suggestions.length > 0;
 
+    // containerの表示/非表示
     if (container) {
       container.style.display =
         showLoading || showSketchInput || hasSuggestions ? 'flex' : 'none';
@@ -80,8 +83,10 @@ export class SuggestionUI {
       }
     }
 
-    this.clearItems(listId);
+    // 提案項目のクリア
+    this.clearItems();
 
+    // loading表示
     if (showLoading) {
       const loading = document.createElement('div');
       loading.className = 'suggestion-loading px-3 py-2 text-sm text-gray-400';
@@ -91,12 +96,14 @@ export class SuggestionUI {
       return;
     }
 
+    // 提案項目の表示
     if (hasSuggestions) {
       suggestions.forEach((suggestion) => {
         listContainer.appendChild(this.createSuggestionItem(suggestion));
       });
     }
 
+    // UIの位置調整
     this.applyPosition(targetPath);
   }
 
@@ -117,16 +124,15 @@ export class SuggestionUI {
   }
 
   // 提案項目のクリア
-  private clearItems(listId: string): void {
-    const container = document.getElementById(listId);
+  private clearItems(): void {
+    const container = document.getElementById(this.config.listId);
     if (container) container.innerHTML = '';
   }
 
   private applyPosition(targetPath?: Path): void {
-    this.config.position?.({
-      container: this.config.containerId
-        ? document.getElementById(this.config.containerId)
-        : null,
+    const { containerId, position } = this.config;
+    position?.({
+      container: containerId ? document.getElementById(containerId) : null,
       targetPath,
     });
   }
@@ -146,7 +152,7 @@ export function positionUI({
   if (!container) return;
 
   if (!targetPath) return;
-  const anchor = getLatestEndPoint([targetPath]);
+  const anchor = getPathEndPoint(targetPath);
   if (!anchor) return;
 
   const parent = container.parentElement;
@@ -160,20 +166,15 @@ export function positionUI({
   container.style.top = `${top}px`;
 }
 
-// 最新のパスの終点を取得
-function getLatestEndPoint(paths: Path[]): { x: number; y: number } | null {
-  for (let pathIndex = paths.length - 1; pathIndex >= 0; pathIndex--) {
-    const path = paths[pathIndex];
-    if (!path) continue;
-    if (path.curves.length > 0) {
-      const lastCurve = path.curves[path.curves.length - 1];
-      const endPoint = lastCurve?.[3];
-      if (endPoint) return { x: endPoint.x, y: endPoint.y };
-    }
-    if (path.points.length > 0) {
-      const fallback = path.points[path.points.length - 1];
-      if (fallback) return { x: fallback.x, y: fallback.y };
-    }
+// パスの終点を取得
+function getPathEndPoint(path: Path): { x: number; y: number } | null {
+  if (path.curves.length > 0) {
+    const endPoint = path.curves.at(-1)?.[3];
+    if (endPoint) return { x: endPoint.x, y: endPoint.y };
+  }
+  if (path.points.length > 0) {
+    const fallback = path.points.at(-1);
+    if (fallback) return { x: fallback.x, y: fallback.y };
   }
   return null;
 }
