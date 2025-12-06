@@ -167,8 +167,8 @@ export class SketchEditor {
       );
     }
 
-    // 提案プレビューの描画
-    this.suggestionManager.draw(p, this.colors);
+    // 提案をプレビュー
+    this.suggestionManager.preview(p, this.colors);
 
     // モーションの更新
     this.motionManager?.draw();

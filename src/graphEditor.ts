@@ -155,8 +155,8 @@ export class GraphEditor {
       (v) => p.createVector(v.x * graphW, (1 - v.y) * graphH),
     );
 
-    // 提案プレビュー
-    this.suggestionManager.draw(p, this.colors, {
+    // 提案をプレビュー
+    this.suggestionManager.preview(p, this.colors, {
       transform: (v) => p.createVector(v.x * graphW, (1 - v.y) * graphH),
     });
 

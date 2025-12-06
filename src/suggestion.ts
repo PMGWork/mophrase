@@ -250,7 +250,7 @@ export class SuggestionManager {
   }
 
   // 提案を描画する
-  draw(
+  preview(
     p: p5,
     colors: Colors,
     options: { transform?: (v: p5.Vector) => p5.Vector } = {},
