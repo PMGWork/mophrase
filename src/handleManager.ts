@@ -6,9 +6,9 @@ const HANDLE_RADIUS = 12;
 
 // ハンドルの制御クラス
 export class HandleManager {
-  private getPaths: () => Pick<Path, 'curves'>[];
   private draggedHandle: HandleSelection | null = null;
 
+  private getPaths: () => Pick<Path, 'curves'>[];
   private pixelToNormalized: (x: number, y: number) => { x: number; y: number };
   private normalizedToPixel: (x: number, y: number) => { x: number; y: number };
 

@@ -31,14 +31,14 @@ export class GraphEditor {
   };
 
   // コンストラクタ
-  constructor(domManager: DOMManager, config: Config, colors: Colors) {
-    this.dom = domManager;
+  constructor(dom: DOMManager, config: Config, colors: Colors) {
+    this.dom = dom;
     this.config = config;
     this.colors = colors;
 
     // ハンドルマネージャー
     this.handleManager = new HandleManager(
-      // アクティブパスのカーブを取得
+      // アクティブパスのタイムカーブを取得
       () => (this.activePath ? [{ curves: this.activePath.timeCurve }] : []),
 
       // ピクセル座標から正規化座標への変換
@@ -56,10 +56,10 @@ export class GraphEditor {
     });
 
     // 提案生成
-    this.dom.graphUserPromptForm.addEventListener('submit', (e) => {
+    this.dom.graphPromptForm.addEventListener('submit', (e) => {
       e.preventDefault();
       this.generateSuggestion();
-      this.dom.graphUserPromptInput.value = '';
+      this.dom.graphPromptInput.value = '';
     });
 
     // p5.jsの初期化
@@ -190,8 +190,8 @@ export class GraphEditor {
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
-    const mode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
-    this.handleManager.drag(p.mouseX, p.mouseY, mode);
+    const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
+    this.handleManager.drag(p.mouseX, p.mouseY, dragMode);
   }
 
   // p5.js マウスリリース
@@ -239,7 +239,7 @@ export class GraphEditor {
     const activePath = this.activePath;
     if (!activePath || activePath.timeCurve.length === 0) return;
 
-    const userPrompt = this.dom.graphUserPromptInput.value;
+    const userPrompt = this.dom.graphPromptInput.value;
     await this.suggestionManager.generate(
       'graph',
       { timeCurve: activePath.timeCurve },

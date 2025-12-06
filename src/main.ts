@@ -102,7 +102,7 @@ const main = (): void => {
     ];
 
     const updateMode = (targetMode: SketchMode) => {
-      sketchEditor.setMode(targetMode);
+      sketchEditor.setSketchMode(targetMode);
       modes.forEach(({ mode, button }) => {
         button.setAttribute('aria-pressed', String(mode === targetMode));
       });
@@ -192,18 +192,18 @@ const main = (): void => {
       config.llmProvider = parsed.provider;
       config.llmModel = parsed.modelId;
     } catch (error) {
-      console.error('Failed to parse model selection', error);
+      console.error('Failed to apply model selection', error);
     }
   }
 
   // ユーザー指示入力欄のセットアップ
   function setupUserPromptInput(): void {
-    domManager.userPromptForm.addEventListener('submit', (event) => {
+    domManager.sketchPromptForm.addEventListener('submit', (event) => {
       event.preventDefault();
-      const userPrompt = domManager.userPromptInput.value.trim();
+      const userPrompt = domManager.sketchPromptInput.value.trim();
       if (!userPrompt) return;
       sketchEditor.generateSuggestion(userPrompt);
-      domManager.userPromptInput.value = '';
+      domManager.sketchPromptInput.value = '';
     });
   }
 

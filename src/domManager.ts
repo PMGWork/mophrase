@@ -8,8 +8,8 @@ type ElementMap = {
   durationInput: HTMLInputElement;
   llmModelSelect: HTMLSelectElement;
   canvasContainer: HTMLDivElement;
-  userPromptForm: HTMLFormElement;
-  userPromptInput: HTMLInputElement;
+  sketchPromptForm: HTMLFormElement;
+  sketchPromptInput: HTMLInputElement;
   clearButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
   drawModeButton: HTMLButtonElement;
@@ -18,8 +18,8 @@ type ElementMap = {
   closeGraphEditorButton: HTMLButtonElement;
   graphEditorContainer: HTMLDivElement;
   graphEditorCanvas: HTMLDivElement;
-  graphUserPromptForm: HTMLFormElement;
-  graphUserPromptInput: HTMLInputElement;
+  graphPromptForm: HTMLFormElement;
+  graphPromptInput: HTMLInputElement;
   graphSuggestionList: HTMLDivElement;
 };
 
@@ -33,8 +33,8 @@ export class DOMManager {
   public readonly durationInput!: HTMLInputElement;
   public readonly llmModelSelect!: HTMLSelectElement;
   public readonly canvasContainer!: HTMLDivElement;
-  public readonly userPromptForm!: HTMLFormElement;
-  public readonly userPromptInput!: HTMLInputElement;
+  public readonly sketchPromptForm!: HTMLFormElement;
+  public readonly sketchPromptInput!: HTMLInputElement;
   public readonly clearButton!: HTMLButtonElement;
   public readonly playButton!: HTMLButtonElement;
   public readonly drawModeButton!: HTMLButtonElement;
@@ -43,8 +43,8 @@ export class DOMManager {
   public readonly closeGraphEditorButton!: HTMLButtonElement;
   public readonly graphEditorContainer!: HTMLDivElement;
   public readonly graphEditorCanvas!: HTMLDivElement;
-  public readonly graphUserPromptForm!: HTMLFormElement;
-  public readonly graphUserPromptInput!: HTMLInputElement;
+  public readonly graphPromptForm!: HTMLFormElement;
+  public readonly graphPromptInput!: HTMLInputElement;
   public readonly graphSuggestionList!: HTMLDivElement;
 
   // コンストラクタ
@@ -58,8 +58,8 @@ export class DOMManager {
       durationInput: 'durationInput',
       llmModelSelect: 'llmModelSelect',
       canvasContainer: 'canvasContainer',
-      userPromptForm: 'userPromptForm',
-      userPromptInput: 'userPromptInput',
+      sketchPromptForm: 'sketchPromptForm',
+      sketchPromptInput: 'sketchPromptInput',
       clearButton: 'clearButton',
       playButton: 'playButton',
       drawModeButton: 'drawModeButton',
@@ -68,8 +68,8 @@ export class DOMManager {
       closeGraphEditorButton: 'closeGraphEditorButton',
       graphEditorContainer: 'graphEditorContainer',
       graphEditorCanvas: 'graphEditorCanvas',
-      graphUserPromptForm: 'graphUserPromptForm',
-      graphUserPromptInput: 'graphUserPromptInput',
+      graphPromptForm: 'graphPromptForm',
+      graphPromptInput: 'graphPromptInput',
       graphSuggestionList: 'graphSuggestionList',
     });
 

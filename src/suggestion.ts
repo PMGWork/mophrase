@@ -71,7 +71,7 @@ export class SuggestionManager {
       {
         containerId: 'sketchSuggestionContainer',
         listId: 'sketchSuggestionList',
-        inputId: 'userPromptInput',
+        inputId: 'sketchPromptInput',
         itemClass:
           'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
         position: positionUI,
@@ -84,7 +84,7 @@ export class SuggestionManager {
     this.graphUI = new SuggestionUI(
       {
         listId: 'graphSuggestionList',
-        inputId: 'graphUserPromptInput',
+        inputId: 'graphPromptInput',
         itemClass:
           'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
       },

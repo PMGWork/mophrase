@@ -16,8 +16,8 @@ export class SketchEditor {
   // データ構造
   private paths: Path[] = [];
   private draftPath: Path | null = null;
-  private selectedPath: Path | null = null;
-  private mode: SketchMode = 'draw';
+  private activePath: Path | null = null;
+  private sketchMode: SketchMode = 'draw';
 
   // マネージャー
   private dom: DOMManager;
@@ -82,17 +82,20 @@ export class SketchEditor {
   // #region メイン関数
 
   // モードを設定
-  public setMode(mode: SketchMode): void {
-    if (this.mode === mode) return;
-    this.mode = mode;
+  public setSketchMode(sketchMode: SketchMode): void {
+    // 既に同じモードなら何もしない
+    if (this.sketchMode === sketchMode) return;
 
-    if (mode === 'draw') {
-      // 描画モードでは選択状態をクリア
-      this.selectedPath = null;
+    // モードを更新
+    this.sketchMode = sketchMode;
+
+    if (sketchMode === 'draw') {
+      // 描画モード: 選択状態をクリア
       this.suggestionManager.stop();
+      this.activePath = null;
       this.onPathSelected(null);
     } else {
-      // 選択モードでは描画中のパスを破棄
+      // 選択モード: 描画中のパスを破棄
       this.draftPath = null;
     }
   }
@@ -136,7 +139,7 @@ export class SketchEditor {
 
     // 確定済みパスの描画
     for (const path of this.paths) {
-      const isSelected = this.selectedPath === path;
+      const isSelected = this.activePath === path;
       if (this.config.showSketch)
         drawPoints(
           p,
@@ -185,14 +188,14 @@ export class SketchEditor {
     if (!isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)) return;
 
     // 選択モード
-    if (this.mode === 'select') {
-      this.selectedPath = this.findPathAtPoint(p.mouseX, p.mouseY);
+    if (this.sketchMode === 'select') {
+      this.activePath = this.findPathAtPoint(p.mouseX, p.mouseY);
       this.suggestionManager.stop();
 
-      if (this.selectedPath)
-        this.suggestionManager.start('sketch', this.selectedPath);
+      if (this.activePath)
+        this.suggestionManager.start('sketch', this.activePath);
 
-      this.onPathSelected(this.selectedPath);
+      this.onPathSelected(this.activePath);
       return;
     }
 
@@ -211,7 +214,7 @@ export class SketchEditor {
     };
 
     // ユーザー指示入力欄をクリア
-    this.dom.userPromptInput.value = '';
+    this.dom.sketchPromptInput.value = '';
   }
 
   // p5.js マウスドラッグ
@@ -219,7 +222,7 @@ export class SketchEditor {
     // ハンドルのドラッグ
     const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
     if (this.handleManager.drag(p.mouseX, p.mouseY, dragMode)) return;
-    if (this.mode !== 'draw') return;
+    if (this.sketchMode !== 'draw') return;
 
     // 現在描画中のパスの点を追加
     if (
@@ -234,7 +237,7 @@ export class SketchEditor {
   // p5.js マウスリリース
   private mouseReleased(p: p5): void {
     if (this.handleManager.stop()) return;
-    if (this.mode !== 'draw' || !this.draftPath) return;
+    if (this.sketchMode !== 'draw' || !this.draftPath) return;
 
     if (this.draftPath.points.length >= 2) {
       this.finalizeDraftPath(p);
@@ -263,13 +266,13 @@ export class SketchEditor {
 
     // 確定済みパスに追加
     this.paths.push(this.draftPath);
-    this.selectedPath = this.draftPath;
+    this.activePath = this.draftPath;
     this.suggestionManager.stop();
-    this.suggestionManager.start('sketch', this.selectedPath);
+    this.suggestionManager.start('sketch', this.activePath);
 
     // グラフエディタにも反映
-    this.onPathCreated(this.selectedPath);
-    this.onPathSelected(this.selectedPath);
+    this.onPathCreated(this.activePath);
+    this.onPathSelected(this.activePath);
   }
 
   // #region プライベート関数
@@ -342,7 +345,7 @@ export class SketchEditor {
   public clearAll(): void {
     this.paths = [];
     this.draftPath = null;
-    this.selectedPath = null;
+    this.activePath = null;
     this.suggestionManager.stop();
     this.motionManager?.stop();
     this.onPathSelected(null);
@@ -362,7 +365,7 @@ export class SketchEditor {
 
   // 提案を生成
   public generateSuggestion(userPrompt: string): void {
-    const targetPath = this.selectedPath ?? this.paths[this.paths.length - 1];
+    const targetPath = this.activePath ?? this.paths[this.paths.length - 1];
     if (!targetPath) return;
     this.suggestionManager.start('sketch', targetPath);
     void this.suggestionManager.generate('sketch', targetPath, userPrompt);
