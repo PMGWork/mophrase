@@ -21,3 +21,15 @@ export function isLeftMouseButton(
 
   return mouseButton === leftConst;
 }
+
+// 座標が矩形領域内にあるかを判定
+export function isInRect(
+  x: number,
+  y: number,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): boolean {
+  return x >= left && x <= left + width && y >= top && y <= top + height;
+}

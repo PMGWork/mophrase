@@ -7,14 +7,14 @@ import { fitCurve } from './fitting';
 import { HandleManager } from './handleManager';
 import { bezierCurve } from './mathUtils';
 import { MotionManager } from './motionManager';
-import { isLeftMouseButton } from './p5Utils';
+import { isInRect, isLeftMouseButton } from './p5Utils';
 import { SuggestionManager } from './suggestion';
 import type { Path, SketchMode } from './types';
 
 // スケッチエディタ
 export class SketchEditor {
   // データ構造
-  public paths: Path[] = [];
+  private paths: Path[] = [];
   private draftPath: Path | null = null;
   private selectedPath: Path | null = null;
   private mode: SketchMode = 'draw';
@@ -173,12 +173,7 @@ export class SketchEditor {
 
   // p5.js マウス押下
   private mousePressed(p: p5): void {
-    const canvas = this.dom.canvasContainer.querySelector('canvas');
-    const rect = canvas?.getBoundingClientRect();
-    const windowX = (rect?.left ?? 0) + p.mouseX;
-    const windowY = (rect?.top ?? 0) + p.mouseY;
-    const target = document.elementFromPoint(windowX, windowY);
-
+    const target = this.getClickTarget(p);
     if (this.shouldIgnoreClick(target)) return;
 
     // 左クリックのみを処理
@@ -187,11 +182,17 @@ export class SketchEditor {
 
     // ハンドルのドラッグ
     if (this.handleManager.start(p.mouseX, p.mouseY)) return;
-    if (!this.inCanvas(p, p.mouseX, p.mouseY)) return;
+    if (!isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)) return;
 
     // 選択モード
     if (this.mode === 'select') {
-      this.selectPathAt(p.mouseX, p.mouseY);
+      this.selectedPath = this.findPathAtPoint(p.mouseX, p.mouseY);
+      this.suggestionManager.stop();
+
+      if (this.selectedPath)
+        this.suggestionManager.start('sketch', this.selectedPath);
+
+      this.onPathSelected(this.selectedPath);
       return;
     }
 
@@ -221,7 +222,10 @@ export class SketchEditor {
     if (this.mode !== 'draw') return;
 
     // 現在描画中のパスの点を追加
-    if (this.draftPath && this.inCanvas(p, p.mouseX, p.mouseY)) {
+    if (
+      this.draftPath &&
+      isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)
+    ) {
       this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
       this.draftPath.times.push(p.millis());
     }
@@ -233,36 +237,51 @@ export class SketchEditor {
     if (this.mode !== 'draw' || !this.draftPath) return;
 
     if (this.draftPath.points.length >= 2) {
-      // フィッティングを実行
-      fitCurve(
-        this.draftPath.points,
-        this.draftPath.curves,
-        this.config.sketchFitTolerance,
-        this.config.sketchFitTolerance * this.config.coarseErrorWeight,
-        this.draftPath.fitError,
-      );
-
-      // モーションのタイミングをフィッティング
-      const normalizedTol = this.config.graphFitTolerance / 100;
-      this.motionManager?.fitTiming(this.draftPath, p, normalizedTol);
-
-      // 確定済みパスに追加
-      this.paths.push(this.draftPath);
-      this.selectedPath = this.draftPath;
-      this.suggestionManager.stop();
-      this.suggestionManager.start('sketch', this.paths[this.paths.length - 1]);
-
-      // グラフエディタにも反映
-      const newPath = this.paths[this.paths.length - 1];
-      this.onPathCreated(newPath);
-      this.onPathSelected(newPath);
+      this.finalizeDraftPath(p);
     }
 
     // 描画中のパスをリセット
     this.draftPath = null;
   }
 
+  // 描画中のパスを確定
+  private finalizeDraftPath(p: p5): void {
+    if (!this.draftPath) return;
+
+    // フィッティングを実行
+    fitCurve(
+      this.draftPath.points,
+      this.draftPath.curves,
+      this.config.sketchFitTolerance,
+      this.config.sketchFitTolerance * this.config.coarseErrorWeight,
+      this.draftPath.fitError,
+    );
+
+    // モーションのタイミングをフィッティング
+    const normalizedTol = this.config.graphFitTolerance / 100;
+    this.motionManager?.fitTiming(this.draftPath, p, normalizedTol);
+
+    // 確定済みパスに追加
+    this.paths.push(this.draftPath);
+    this.selectedPath = this.draftPath;
+    this.suggestionManager.stop();
+    this.suggestionManager.start('sketch', this.selectedPath);
+
+    // グラフエディタにも反映
+    this.onPathCreated(this.selectedPath);
+    this.onPathSelected(this.selectedPath);
+  }
+
   // #region プライベート関数
+
+  // クリック対象の要素を取得
+  private getClickTarget(p: p5): Element | null {
+    const canvas = this.dom.canvasContainer.querySelector('canvas');
+    const rect = canvas?.getBoundingClientRect();
+    const windowX = (rect?.left ?? 0) + p.mouseX;
+    const windowY = (rect?.top ?? 0) + p.mouseY;
+    return document.elementFromPoint(windowX, windowY);
+  }
 
   // UI要素クリック判定
   private shouldIgnoreClick(target: Element | null): boolean {
@@ -273,21 +292,6 @@ export class SketchEditor {
       !!target?.closest('form') ||
       !!target?.closest('#sketchSuggestionContainer')
     );
-  }
-
-  // マウス位置がキャンバス内か
-  private inCanvas(p: p5, x: number, y: number): boolean {
-    return x >= 0 && x <= p.width && y >= 0 && y <= p.height;
-  }
-
-  // クリック位置のパスを選択し、提案UIを表示
-  private selectPathAt(x: number, y: number): void {
-    this.selectedPath = this.findPathAtPoint(x, y);
-    this.suggestionManager.stop();
-    if (this.selectedPath) {
-      this.suggestionManager.start('sketch', this.selectedPath);
-    }
-    this.onPathSelected(this.selectedPath);
   }
 
   // 指定座標に近いパスを検索
