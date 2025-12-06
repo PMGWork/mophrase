@@ -1,18 +1,29 @@
-import type { DOMManager } from './domManager';
-import type { Path } from './types';
+import type { Config } from '../config';
+import type { DomRefs } from '../dom';
+import type { Path } from '../types';
 
 // プロパティエディタ
 export class PropertyEditor {
-  private dom: DOMManager;
+  private dom: DomRefs;
+  private config: Config;
   private activePath: Path | null = null;
 
-  constructor(domManager: DOMManager) {
-    this.dom = domManager;
+  constructor(dom: DomRefs, config: Config) {
+    this.dom = dom;
+    this.config = config;
+
+    // Toleranceスライダーのイベント
+    this.dom.graphThresholdSlider.addEventListener('input', () =>
+      this.updateToleranceLabel(),
+    );
 
     // Durationの更新イベント
     this.dom.durationInput.addEventListener('change', () =>
       this.updateDuration(),
     );
+
+    // 初期値の設定
+    this.syncToleranceSlider();
   }
 
   // パスの設定
@@ -22,6 +33,23 @@ export class PropertyEditor {
 
     const duration = path.times[path.times.length - 1] - path.times[0];
     this.dom.durationInput.value = Math.round(duration).toString();
+  }
+
+  // Toleranceスライダーを同期
+  private syncToleranceSlider(): void {
+    this.dom.graphThresholdSlider.value = Math.round(
+      this.config.graphFitTolerance,
+    ).toString();
+    this.updateToleranceLabel();
+  }
+
+  // Toleranceラベルを更新
+  private updateToleranceLabel(): void {
+    const value = Number(this.dom.graphThresholdSlider.value);
+    if (!Number.isNaN(value)) {
+      this.config.graphFitTolerance = value;
+    }
+    this.dom.graphThresholdLabel.textContent = `${value.toFixed(0)}%`;
   }
 
   // Durationの更新

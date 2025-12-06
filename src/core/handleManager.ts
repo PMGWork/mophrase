@@ -1,5 +1,5 @@
-import { CURVE_POINT } from './constants';
-import type { HandleSelection, Path, Vector } from './types';
+import { CURVE_POINT } from '../constants';
+import type { HandleSelection, Path, Vector } from '../types';
 
 // 定数
 const HANDLE_RADIUS = 12;

@@ -1,11 +1,11 @@
+import type { FitErrorResult, Range, Tangents, Vector } from '../types';
 import {
   bernstein,
   bezierCurve,
   refineParameter,
   splitTangent,
   unitTangent,
-} from './mathUtils';
-import type { FitErrorResult, Range, Tangents, Vector } from './types';
+} from '../utils/math';
 
 // #region プライベート関数
 // ベジェ曲線の始点と終点の接ベクトルを計算する

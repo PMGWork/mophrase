@@ -1,15 +1,15 @@
 import p5 from 'p5';
-import type { Colors, Config } from './config';
-import { BEZIER_T_STEP, CURVE_POINT } from './constants';
-import type { DOMManager } from './domManager';
-import { drawBezierCurve, drawControls, drawPoints } from './draw';
-import { fitCurve } from './fitting';
-import { HandleManager } from './handleManager';
-import { bezierCurve } from './mathUtils';
-import { MotionManager } from './motionManager';
-import { isInRect, isLeftMouseButton } from './p5Utils';
-import { SketchSuggestionManager } from './suggestion/sketchSuggestion';
-import type { Path, SketchMode } from './types';
+import type { Colors, Config } from '../config';
+import { BEZIER_T_STEP, CURVE_POINT } from '../constants';
+import { fitCurve } from '../core/fitting';
+import { HandleManager } from '../core/handleManager';
+import { MotionManager } from '../core/motionManager';
+import type { DomRefs } from '../dom';
+import { SketchSuggestionManager } from '../suggestion/sketchSuggestion';
+import type { Path, SketchMode } from '../types';
+import { drawBezierCurve, drawControls, drawPoints } from '../utils/draw';
+import { bezierCurve } from '../utils/math';
+import { isInRect, isLeftMouseButton } from '../utils/p5Helpers';
 
 // スケッチエディタ
 export class SketchEditor {
@@ -20,7 +20,7 @@ export class SketchEditor {
   private sketchMode: SketchMode = 'draw';
 
   // マネージャー
-  private dom: DOMManager;
+  private dom: DomRefs;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
   private suggestionManager: SketchSuggestionManager;
@@ -35,13 +35,13 @@ export class SketchEditor {
 
   // コンストラクタ
   constructor(
-    domManager: DOMManager,
+    dom: DomRefs,
     config: Config,
     colors: Colors,
     onPathCreated: (path: Path) => void,
     onPathSelected: (path: Path | null) => void,
   ) {
-    this.dom = domManager;
+    this.dom = dom;
     this.config = config;
     this.colors = colors;
     this.onPathCreated = onPathCreated;

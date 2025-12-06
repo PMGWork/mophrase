@@ -1,6 +1,6 @@
 import type { Config } from '../config';
-import { deserializePaths, serializePaths } from '../serialization';
 import type { Path, Suggestion } from '../types';
+import { deserializePaths, serializePaths } from '../utils/serialization';
 import { fetchSuggestions, SuggestionManager } from './base';
 import { positionUI, SuggestionUI } from './ui';
 

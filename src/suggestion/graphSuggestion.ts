@@ -1,9 +1,9 @@
 import type { Config } from '../config';
+import type { Path, SerializedPath, Suggestion } from '../types';
 import {
   deserializeCurves,
   serializeAnchorsAndSegments,
-} from '../serialization';
-import type { Path, SerializedPath, Suggestion } from '../types';
+} from '../utils/serialization';
 import { fetchSuggestions, SuggestionManager } from './base';
 import { SuggestionUI } from './ui';
 

@@ -1,19 +1,19 @@
 import p5 from 'p5';
-import type { Colors, Config } from './config';
-import type { DOMManager } from './domManager';
-import { drawBezierCurve, drawControls } from './draw';
-import { HandleManager } from './handleManager';
-import { isInRect, isLeftMouseButton } from './p5Utils';
-import { GraphSuggestionManager } from './suggestion/graphSuggestion';
-import type { Path } from './types';
+import type { Colors, Config } from '../config';
+import { HandleManager } from '../core/handleManager';
+import type { DomRefs } from '../dom';
+import { GraphSuggestionManager } from '../suggestion/graphSuggestion';
+import type { Path } from '../types';
+import { drawBezierCurve, drawControls } from '../utils/draw';
+import { isInRect, isLeftMouseButton } from '../utils/p5Helpers';
 
 // グラフエディタ
 export class GraphEditor {
-  // データ構造
+  // データ
   private activePath: Path | null = null;
+  private dom: DomRefs;
 
   // マネージャー
-  private dom: DOMManager;
   private handleManager: HandleManager;
   private suggestionManager: GraphSuggestionManager;
 
@@ -31,7 +31,7 @@ export class GraphEditor {
   };
 
   // コンストラクタ
-  constructor(dom: DOMManager, config: Config, colors: Colors) {
+  constructor(dom: DomRefs, config: Config, colors: Colors) {
     this.dom = dom;
     this.config = config;
     this.colors = colors;

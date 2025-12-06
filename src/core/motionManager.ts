@@ -1,8 +1,8 @@
 import type p5 from 'p5';
-import { CURVE_POINT } from './constants';
+import { CURVE_POINT } from '../constants';
+import type { Path, Vector } from '../types';
+import { bezierCurve, curveLength } from '../utils/math';
 import { fitCurve } from './fitting';
-import { bezierCurve, curveLength } from './mathUtils';
-import type { Path, Vector } from './types';
 
 // 定数
 const DEFAULT_DURATION = 2000;

@@ -1,5 +1,4 @@
 import type p5 from 'p5';
-import { roundNormalizedValue } from './mathUtils';
 import type {
   Path,
   SerializedAnchorPoint,
@@ -7,7 +6,8 @@ import type {
   SerializedHandlePoint,
   SerializedPath,
   SerializedSegment,
-} from './types';
+} from '../types';
+import { roundNormalizedValue } from './math';
 
 // #region シリアライズ
 // p5.Vector -> アンカーポイント（正規化）

@@ -1,11 +1,11 @@
 import '../style.css';
 import { createIcons, icons } from 'lucide';
 import { DEFAULT_COLORS, DEFAULT_CONFIG } from './config';
-import { DOMManager } from './domManager';
-import { GraphEditor } from './graphEditor';
-import { getProviderModelOptions } from './llmService';
-import { PropertyEditor } from './propertyEditor';
-import { SketchEditor } from './sketchEditor';
+import { DomRefs } from './dom';
+import { GraphEditor } from './editor/graphEditor';
+import { PropertyEditor } from './editor/propertyEditor';
+import { SketchEditor } from './editor/sketchEditor';
+import { getProviderModelOptions } from './services/llm';
 import type { LLMProvider, SketchMode } from './types';
 
 // メイン処理
@@ -15,14 +15,13 @@ const main = (): void => {
   const colors = { ...DEFAULT_COLORS };
 
   // DOMマネージャー
-  const domManager = new DOMManager();
+  const dom = new DomRefs();
 
   // エディタ
-  const graphEditor = new GraphEditor(domManager, config, colors);
-  const propertyEditor = new PropertyEditor(domManager);
-
+  const graphEditor = new GraphEditor(dom, config, colors);
+  const propertyEditor = new PropertyEditor(dom, config);
   const sketchEditor = new SketchEditor(
-    domManager,
+    dom,
     config,
     colors,
     (path) => {
@@ -40,10 +39,10 @@ const main = (): void => {
   // UIのセットアップ
   const setupUI = (): void => {
     // ボタンのイベントを登録
-    bindButton(domManager.clearButton, () => sketchEditor.clearAll());
-    bindButton(domManager.playButton, () => sketchEditor.playMotion());
-    bindButton(domManager.closeGraphEditorButton, () => graphEditor.toggle());
-    bindButton(domManager.editMotionButton, () => {
+    bindButton(dom.clearButton, () => sketchEditor.clearAll());
+    bindButton(dom.playButton, () => sketchEditor.playMotion());
+    bindButton(dom.closeGraphEditorButton, () => graphEditor.toggle());
+    bindButton(dom.editMotionButton, () => {
       graphEditor.toggle();
       const target = sketchEditor.getLatestPath();
       if (target) {
@@ -56,14 +55,14 @@ const main = (): void => {
     setupModeToggle();
 
     // チェックボックスのイベントを登録
-    bindCheckbox(domManager.sketchCheckbox, config.showSketch, (value) => {
+    bindCheckbox(dom.sketchCheckbox, config.showSketch, (value) => {
       config.showSketch = value;
     });
 
     // スライダーのイベントを登録
     bindSlider(
-      domManager.thresholdSlider,
-      domManager.thresholdLabel,
+      dom.thresholdSlider,
+      dom.thresholdLabel,
       config.sketchFitTolerance,
       (value) => {
         config.sketchFitTolerance = value;
@@ -71,19 +70,9 @@ const main = (): void => {
       (value) => `${value.toFixed(0)}px`,
     );
 
-    bindSlider(
-      domManager.graphThresholdSlider,
-      domManager.graphThresholdLabel,
-      config.graphFitTolerance,
-      (value) => {
-        config.graphFitTolerance = value;
-      },
-      (value) => `${value.toFixed(0)}%`,
-    );
-
     // LLMモデルの選択肢を更新
     populateModelOptions();
-    domManager.llmModelSelect.addEventListener('change', updateLLMModel);
+    dom.llmModelSelect.addEventListener('change', updateLLMModel);
 
     // プロンプト入力欄のセットアップ
     setupUserPromptInput();
@@ -97,8 +86,8 @@ const main = (): void => {
   // モード切り替えのセットアップ
   function setupModeToggle(): void {
     const modes: { mode: SketchMode; button: HTMLButtonElement }[] = [
-      { mode: 'draw', button: domManager.drawModeButton },
-      { mode: 'select', button: domManager.selectModeButton },
+      { mode: 'draw', button: dom.drawModeButton },
+      { mode: 'select', button: dom.selectModeButton },
     ];
 
     const updateMode = (targetMode: SketchMode) => {
@@ -147,7 +136,7 @@ const main = (): void => {
   // LLMモデル選択肢の更新
   function populateModelOptions(): void {
     const options = getProviderModelOptions();
-    domManager.llmModelSelect.innerHTML = '';
+    dom.llmModelSelect.innerHTML = '';
 
     for (const optionInfo of options) {
       const option = document.createElement('option');
@@ -157,7 +146,7 @@ const main = (): void => {
       });
       const displayName = optionInfo.name || optionInfo.modelId;
       option.textContent = `${displayName} (${optionInfo.provider})`;
-      domManager.llmModelSelect.appendChild(option);
+      dom.llmModelSelect.appendChild(option);
     }
 
     const current =
@@ -172,14 +161,14 @@ const main = (): void => {
         provider: current.provider,
         modelId: current.modelId,
       });
-      domManager.llmModelSelect.value = value;
+      dom.llmModelSelect.value = value;
       applyModelSelection(value);
     }
   }
 
   // LLMモデルの更新
   function updateLLMModel(): void {
-    applyModelSelection(domManager.llmModelSelect.value);
+    applyModelSelection(dom.llmModelSelect.value);
   }
 
   // モデル選択の適用
@@ -192,18 +181,18 @@ const main = (): void => {
       config.llmProvider = parsed.provider;
       config.llmModel = parsed.modelId;
     } catch (error) {
-      console.error('Failed to apply model selection', error);
+      console.error('モデル選択の適用に失敗しました', error);
     }
   }
 
   // ユーザー指示入力欄のセットアップ
   function setupUserPromptInput(): void {
-    domManager.sketchPromptForm.addEventListener('submit', (event) => {
+    dom.sketchPromptForm.addEventListener('submit', (event) => {
       event.preventDefault();
-      const userPrompt = domManager.sketchPromptInput.value.trim();
+      const userPrompt = dom.sketchPromptInput.value.trim();
       if (!userPrompt) return;
       sketchEditor.generateSuggestion(userPrompt);
-      domManager.sketchPromptInput.value = '';
+      dom.sketchPromptInput.value = '';
     });
   }
 

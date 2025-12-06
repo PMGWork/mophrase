@@ -1,7 +1,7 @@
 import type p5 from 'p5';
-import { CURVE_POINT } from './constants';
-import { bezierCurve } from './mathUtils';
-import type { Vector } from './types';
+import { CURVE_POINT } from '../constants';
+import type { Vector } from '../types';
+import { bezierCurve } from './math';
 
 // 入力点の描画
 export function drawPoints(

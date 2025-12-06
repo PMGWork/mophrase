@@ -2,9 +2,7 @@ import { encode } from '@toon-format/toon';
 import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
-import { drawBezierCurve } from '../draw';
-import { generateStructured } from '../llmService';
-import { deserializeCurves } from '../serialization';
+import { generateStructured } from '../services/llm';
 import type {
   Path,
   SerializedPath,
@@ -14,6 +12,8 @@ import type {
   SuggestionState,
 } from '../types';
 import { suggestionResponseSchema } from '../types';
+import { drawBezierCurve } from '../utils/draw';
+import { deserializeCurves } from '../utils/serialization';
 import type { SuggestionUI } from './ui';
 
 // 共通の提案マネージャー

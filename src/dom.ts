@@ -21,10 +21,11 @@ type ElementMap = {
   graphPromptForm: HTMLFormElement;
   graphPromptInput: HTMLInputElement;
   graphSuggestionList: HTMLDivElement;
+  propertyEditorContainer: HTMLDivElement;
 };
 
-// DOMマネージャー
-export class DOMManager {
+// DOM参照の束ね役
+export class DomRefs {
   public readonly sketchCheckbox!: HTMLInputElement;
   public readonly thresholdSlider!: HTMLInputElement;
   public readonly thresholdLabel!: HTMLElement;
@@ -46,6 +47,7 @@ export class DOMManager {
   public readonly graphPromptForm!: HTMLFormElement;
   public readonly graphPromptInput!: HTMLInputElement;
   public readonly graphSuggestionList!: HTMLDivElement;
+  public readonly propertyEditorContainer!: HTMLDivElement;
 
   // コンストラクタ
   constructor() {
@@ -71,6 +73,7 @@ export class DOMManager {
       graphPromptForm: 'graphPromptForm',
       graphPromptInput: 'graphPromptInput',
       graphSuggestionList: 'graphSuggestionList',
+      propertyEditorContainer: 'propertyEditorContainer',
     });
 
     Object.assign(this, elements);

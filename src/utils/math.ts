@@ -1,4 +1,4 @@
-import type { Vector } from './types';
+import type { Vector } from '../types';
 
 // バーンスタイン多項式
 export function bernstein(i: number, n: number, t: number): number {
