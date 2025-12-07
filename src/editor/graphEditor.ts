@@ -22,7 +22,7 @@ export class GraphEditor {
   private colors: Colors;
 
   // 描画領域の設定
-  private static readonly MARGIN = 40;
+  private static readonly MARGIN = 30;
   private readonly margin = {
     top: GraphEditor.MARGIN,
     right: GraphEditor.MARGIN,
@@ -62,6 +62,10 @@ export class GraphEditor {
       this.dom.graphPromptInput.value = '';
     });
 
+    // 初期状態では入力不可
+    this.dom.graphPromptInput.readOnly = true;
+    this.dom.graphPromptInput.style.cursor = 'not-allowed';
+
     // p5.jsの初期化
     this.init();
   }
@@ -79,11 +83,15 @@ export class GraphEditor {
     if (!path || !path.times.length) {
       this.activePath = null;
       this.suggestionManager.close();
+      this.dom.graphPromptInput.readOnly = true;
+      this.dom.graphPromptInput.style.cursor = 'not-allowed';
       return;
     }
 
     this.activePath = path;
     this.suggestionManager.open(path);
+    this.dom.graphPromptInput.readOnly = false;
+    this.dom.graphPromptInput.style.cursor = 'text';
   }
 
   // #region p5.js
@@ -120,8 +128,6 @@ export class GraphEditor {
   private draw(p: p5): void {
     p.background(this.colors.background);
 
-    if (!this.activePath) return;
-
     const width = p.width;
     const height = p.height;
 
@@ -134,9 +140,28 @@ export class GraphEditor {
 
     // グリッド
     p.noFill();
+
+    // 内側のグリッド線
+    p.stroke(`${this.colors.border}80`);
+    p.strokeWeight(0.5);
+    const gridSize = 5;
+    for (let i = 1; i < gridSize; i++) {
+      const x = (graphW / gridSize) * i;
+      const y = (graphH / gridSize) * i;
+      p.line(x, 0, x, graphH);
+      p.line(0, y, graphW, y);
+    }
+
+    // 外枠
     p.stroke(this.colors.border);
     p.strokeWeight(1);
     p.rect(0, 0, graphW, graphH);
+
+    // パスが存在しない場合は描画しない
+    if (!this.activePath) {
+      p.pop();
+      return;
+    }
 
     // ベジェ曲線
     p.push();

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./src/styles/corner-shape.css";
 
 @theme {
   --font-sans: "Geist", sans-serif;

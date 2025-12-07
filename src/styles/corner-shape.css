@@ -1,0 +1,19 @@
+/**
+ * Corner Shape Utilities for Tailwind CSS v4
+ * @see https://developer.chrome.com/blog/new-in-chrome-138#corner-shape
+ *
+ * Note: corner-shape is an experimental CSS property.
+ * Currently supported in Safari Technology Preview and Chrome 138+.
+ */
+
+@utility corner-sm {
+  corner-shape: superellipse(1.1);
+}
+
+@utility corner-md {
+  corner-shape: superellipse(1.3);
+}
+
+@utility corner-lg {
+  corner-shape: superellipse(1.5);
+}

@@ -27,7 +27,7 @@
             class="
               pl-4 pr-10 py-2 h-9 min-w-48
               bg-gray-800 text-gray-50 text-left text-sm
-              appearance-none cursor-pointer rounded
+              appearance-none cursor-pointer rounded-lg corner-lg
               hover:bg-gray-700 transition-colors
               focus:outline-none focus:ring-1 focus:ring-gray-700
             "
@@ -42,7 +42,7 @@
         <label class="
           flex items-center gap-3 px-4 py-2 h-9
           bg-gray-800 text-gray-50 text-sm
-          rounded cursor-pointer
+          rounded-lg corner-lg cursor-pointer
           hover:bg-gray-700 transition-colors
         ">
           <span>Sketch</span>
@@ -53,7 +53,7 @@
               aria-label="Toggle sketch visibility"
               class="
                 peer w-4 h-4
-                rounded cursor-pointer appearance-none
+                rounded-lg corner-lg cursor-pointer appearance-none
                 bg-gray-700 border-0
                 checked:bg-gray-50 transition-colors
               "
@@ -71,14 +71,14 @@
         </label>
 
         <!-- 許容誤差スライダー -->
-        <div class="flex items-center gap-3 px-4 py-2 h-9 bg-gray-800 text-gray-50 text-sm rounded">
+        <div class="flex items-center gap-3 px-4 py-2 h-9 bg-gray-800 text-gray-50 text-sm rounded-lg corner-lg">
           <span>Tol</span>
           <input
             id="thresholdSlider"
             type="range"
             min="5" max="50" step="1" value="10"
             class="
-              w-16 h-1 bg-gray-700 rounded cursor-grab appearance-none
+              w-16 h-1 bg-gray-700 rounded-lg corner-lg cursor-grab appearance-none
               [&::-webkit-slider-thumb]:appearance-none
               [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
               [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50
@@ -98,7 +98,7 @@
           aria-pressed="true"
           class="
             w-9 h-9 flex items-center justify-center
-            text-sm font-medium rounded cursor-pointer
+            text-sm font-medium rounded-lg corner-lg cursor-pointer
             bg-gray-800 text-gray-50
             hover:bg-gray-700 transition-colors
             aria-pressed:bg-blue-500 aria-pressed:text-gray-50 aria-pressed:hover:bg-blue-500
@@ -111,7 +111,7 @@
           aria-pressed="false"
           class="
             w-9 h-9 flex items-center justify-center
-            text-sm font-medium rounded cursor-pointer
+            text-sm font-medium rounded-lg corner-lg cursor-pointer
             bg-gray-800 text-gray-50
             hover:bg-gray-700 transition-colors
             aria-pressed:bg-blue-500 aria-pressed:text-gray-50 aria-pressed:hover:bg-blue-500
@@ -128,7 +128,7 @@
           class="
             px-4 py-2 h-9 flex items-center gap-2
             bg-gray-800 text-gray-50 text-sm
-            cursor-pointer rounded
+            cursor-pointer rounded-lg corner-lg
             hover:bg-gray-700 transition-colors
           "
         >
@@ -140,7 +140,7 @@
           class="
             px-4 py-2 h-9 flex items-center gap-2
             bg-blue-900/50 text-blue-50 text-sm
-            cursor-pointer rounded
+            cursor-pointer rounded-lg corner-lg
             hover:bg-blue-900 transition-colors
           "
         >
@@ -152,7 +152,7 @@
           class="
             px-4 py-2 h-9 flex items-center gap-2
             bg-red-900/50 text-red-50 text-sm
-            cursor-pointer rounded
+            cursor-pointer rounded-lg corner-lg
             hover:bg-red-900 transition-colors
           "
         >
@@ -166,12 +166,12 @@
     <div class="flex-1 flex overflow-hidden mx-4 mb-4 gap-3">
 
       <!-- スケッチキャンバス -->
-      <main id="canvasContainer" class="flex-1 rounded-xl border border-gray-800 relative bg-gray-950 min-w-0 overflow-hidden">
+      <main id="canvasContainer" class="flex-1 rounded-3xl corner-lg border border-gray-800 relative min-w-0 overflow-hidden">
 
         <!-- スケッチ提案ポップアップ -->
         <div
           id="sketchSuggestionContainer"
-          class="absolute z-10 bg-gray-950 border border-gray-800 rounded min-w-60 overflow-hidden"
+          class="absolute z-10 bg-gray-900 border border-gray-800 rounded-xl shadow-[0_0_15px_0_rgba(16,24,40,0.5)] corner-lg min-w-60 overflow-hidden"
           style="display: none;"
         >
           <form id="sketchPromptForm" class="flex items-center">
@@ -182,99 +182,103 @@
               autocomplete="off"
               class="
                 flex-1 p-3 text-sm
-                bg-gray-950 text-gray-50
+                text-gray-50
                 placeholder:text-gray-500
-                focus:outline-none focus:ring-gray-700
+                focus:outline-none
               "
             />
             <button type="submit" class="p-3 cursor-pointer">
               <i data-lucide="send" class="w-4 h-4"></i>
             </button>
           </form>
-          <div id="sketchSuggestionList" class="flex flex-col *:border-t *:border-gray-800"></div>
+          <div id="sketchSuggestionList" class="empty:hidden flex flex-col *:border-t *:border-gray-800 max-h-60 overflow-y-auto">
+            <!-- ここに提案が挿入される -->
+          </div>
         </div>
       </main>
 
       <!-- グラフエディタ -->
       <aside
         id="graphEditorContainer"
-        class="w-[400px] bg-gray-950 rounded-xl border border-gray-800 flex flex-col transition-all duration-300 overflow-hidden"
+        class="w-[400px] bg-gray-950 rounded-3xl corner-lg border border-gray-800 flex flex-col transition-all duration-300 overflow-hidden"
       >
         <!-- ヘッダー -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-800 bg-gray-900/50">
           <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
           <button
             id="closeGraphEditorButton"
-            class="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-gray-200 transition-colors"
+            class="p-1 hover:bg-gray-800 text-gray-400 hover:text-gray-200 transition-colors"
           >
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
         <!-- キャンバス -->
-        <div id="graphEditorCanvas" class="w-full aspect-square border-b border-gray-800 relative">
+        <div id="graphEditorCanvas" class="w-full aspect-square border-gray-800 relative">
           <!-- ここにモーションエディタのキャンバスが挿入される -->
         </div>
 
 
         <!-- 提案機能 -->
-        <div class="flex flex-col border-b border-gray-800">
-          <form id="graphPromptForm" class="p-3 flex items-center gap-2">
-            <div class="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-950 border border-gray-800 rounded">
+        <div class="flex flex-wrap px-4 gap-4">
+          <!-- 提案機能 -->
+          <div class="graphSuggestionContainer border bg-gray-900 border-gray-800 rounded-xl shadow-[0_0_15px_0_rgba(16,24,40,0.5)] corner-lg min-w-60 overflow-hidden w-full">
+            <form id="graphPromptForm" class="flex items-center">
               <input
                 id="graphPromptInput"
                 type="text"
                 placeholder="Enter instructions..."
                 autocomplete="off"
-                class="flex-1 bg-transparent text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
+                class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
               />
-              <button type="submit" class="p-1 cursor-pointer text-gray-400 hover:text-white transition-colors">
+              <button type="submit" class="p-3 cursor-pointer">
                 <i data-lucide="send" class="w-3.5 h-3.5"></i>
               </button>
+            </form>
+            <div id="graphSuggestionList" class="empty:hidden flex flex-col *:border-t *:border-gray-800 max-h-60 overflow-y-auto">
+              <!-- ここに提案が挿入される -->
             </div>
-          </form>
-          <div id="graphSuggestionList" class="empty:hidden flex flex-col gap-2 p-3 pt-0 max-h-60 overflow-y-auto">
-            <!-- ここに提案が挿入される -->
-          </div>
-        </div>
-
-        <!-- プロパティエディタ -->
-        <div id="propertyEditorContainer" class="p-4 text-sm text-gray-400 flex flex-col gap-4">
-          <!-- 許容誤差 -->
-          <div class="flex items-center gap-3">
-            <span class="w-16">Tolerance</span>
-            <input
-              id="graphThresholdSlider"
-              type="range"
-              min="1" max="20" step="1" value="3"
-              class="
-                flex-1 h-1 bg-gray-700 rounded cursor-grab appearance-none
-                [&::-webkit-slider-thumb]:appearance-none
-                [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50
-                [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3
-                [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gray-50
-                [&::-moz-range-thumb]:border-0
-              "
-            />
-            <span id="graphThresholdLabel" class="w-12 text-right">3%</span>
           </div>
 
-          <!-- 再生時間 -->
-          <div class="flex items-center gap-3">
-            <span class="w-16">Duration</span>
-            <input
-              id="durationInput"
-              type="number"
-              min="100" step="100" value="2000"
-              class="
-                flex-1 px-2 py-1
-                bg-gray-800 text-gray-50 text-sm rounded
-                focus:outline-none focus:ring-1 focus:ring-gray-700
-                appearance-none
-              "
-            />
-            <span class="w-12 text-right">ms</span>
+
+          <!-- プロパティエディタ -->
+          <div id="propertyEditorContainer" class="p-3 text-sm text-gray-400 flex flex-col gap-4 w-full">
+            <!-- 許容誤差 -->
+            <div class="flex items-center gap-3">
+              <span class="w-20">Tolerance</span>
+              <input
+                id="graphThresholdSlider"
+                type="range"
+                min="1" max="20" step="1" value="3"
+                class="
+                  flex-1 h-1 bg-gray-700 rounded-lg corner-lg cursor-grab appearance-none
+                  [&::-webkit-slider-thumb]:appearance-none
+                  [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50
+                  [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3
+                  [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-gray-50
+                  [&::-moz-range-thumb]:border-0
+                "
+              />
+              <span id="graphThresholdLabel" class="w-6 text-right">3%</span>
+            </div>
+
+            <!-- 再生時間 -->
+            <div class="flex items-center gap-3">
+              <span class="w-20">Duration</span>
+              <input
+                id="durationInput"
+                type="number"
+                min="100" step="100" value="2000"
+                class="
+                  flex-1 px-3 py-2
+                  bg-gray-800 text-gray-50 text-sm rounded-lg corner-lg
+                  focus:outline-none focus:ring-1 focus:ring-gray-700
+                  appearance-none
+                "
+              />
+              <span class="w-6 text-right">ms</span>
+            </div>
           </div>
         </div>
       </aside>

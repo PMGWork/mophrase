@@ -25,7 +25,7 @@ export class GraphSuggestionManager extends SuggestionManager {
         listId: 'graphSuggestionList',
         inputId: 'graphPromptInput',
         itemClass:
-          'w-full px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
+          'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
       },
       (id) => {
         this.hoveredId = id;

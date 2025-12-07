@@ -24,15 +24,27 @@ export class PropertyEditor {
 
     // 初期値の設定
     this.syncToleranceSlider();
+    this.updateVisibility();
   }
 
   // パスの設定
   public setPath(path: Path | null): void {
     this.activePath = path;
+    this.updateVisibility();
+
     if (!path || !path.times.length) return;
 
     const duration = path.times[path.times.length - 1] - path.times[0];
     this.dom.durationInput.value = Math.round(duration).toString();
+  }
+
+  // 表示更新
+  private updateVisibility(): void {
+    if (this.activePath) {
+      this.dom.propertyEditorContainer.style.display = 'flex';
+    } else {
+      this.dom.propertyEditorContainer.style.display = 'none';
+    }
   }
 
   // Toleranceスライダーを同期

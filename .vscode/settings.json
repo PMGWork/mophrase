@@ -12,6 +12,11 @@
   "[typescriptreact]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  "[css]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "css.validate": false,
+  "css.lint.unknownProperties": "ignore",
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit"
   }
