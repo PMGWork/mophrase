@@ -1,4 +1,7 @@
 {
+  "files.associations": {
+    "bun.lock": "plaintext"
+  },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "css.validate": false,
