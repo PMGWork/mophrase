@@ -4,22 +4,41 @@ import { OpenAI } from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import type { LLMProvider } from './types';
+import type { LLMProvider } from '../types';
 
 // インスタンス
-const genai = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY,
-});
+let genai: GoogleGenAI | null = null;
+let openai: OpenAI | null = null;
+let groq: Groq | null = null;
 
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+function getGenAI(): GoogleGenAI {
+  if (!genai) {
+    genai = new GoogleGenAI({
+      apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+    });
+  }
+  return genai;
+}
 
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+      dangerouslyAllowBrowser: true,
+    });
+  }
+  return openai;
+}
+
+function getGroq(): Groq {
+  if (!groq) {
+    groq = new Groq({
+      apiKey: import.meta.env.VITE_GROQ_API_KEY,
+      dangerouslyAllowBrowser: true,
+    });
+  }
+  return groq;
+}
 
 // 型定義
 type ProviderConfig = {
@@ -50,7 +69,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     generate: async (prompt, schema, model) => {
       const reasoningEffort = model === 'gpt-5.1' ? 'none' : 'minimal';
 
-      const response = await openai.responses.parse({
+      const response = await getOpenAI().responses.parse({
         model,
         input: [{ role: 'user', content: prompt }],
         reasoning: { effort: reasoningEffort },
@@ -71,7 +90,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     ],
     generate: async (prompt, schema, model) => {
-      const response = await genai.models.generateContent({
+      const response = await getGenAI().models.generateContent({
         model,
         contents: prompt,
         config: {
@@ -91,7 +110,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct' },
     ],
     generate: async (prompt, schema, model) => {
-      const response = await groq.chat.completions.create({
+      const response = await getGroq().chat.completions.create({
         model,
         messages: [{ role: 'user', content: prompt }],
         response_format: {
