@@ -3,17 +3,122 @@
  * @see https://developer.chrome.com/blog/new-in-chrome-138#corner-shape
  *
  * Note: corner-shape is an experimental CSS property.
- * Currently supported in Safari Technology Preview and Chrome 138+.
+ * Currently supported in Chrome 138+.
  */
 
+@layer base {
+  :root {
+    /* Base Radius Values */
+    --radius-xs: 0.125rem;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --radius-3xl: 1.5rem;
+    --radius-4xl: 2rem;
+
+    /* Smoothing Factors */
+    --corner-scale: 1.5;
+    --corner-n: 1.5;
+  }
+}
+
+@utility corner-xs {
+  border-radius: var(--radius-xs);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-xs {
+    border-radius: calc(var(--radius-xs) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
+}
+
 @utility corner-sm {
-  corner-shape: superellipse(1.1);
+  border-radius: var(--radius-sm);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-sm {
+    border-radius: calc(var(--radius-sm) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
 }
 
 @utility corner-md {
-  corner-shape: superellipse(1.3);
+  border-radius: var(--radius-md);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-md {
+    border-radius: calc(var(--radius-md) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
 }
 
 @utility corner-lg {
-  corner-shape: superellipse(1.5);
+  border-radius: var(--radius-lg);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-lg {
+    border-radius: calc(var(--radius-lg) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
+}
+
+@utility corner-xl {
+  border-radius: var(--radius-xl);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-xl {
+    border-radius: calc(var(--radius-xl) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
+}
+
+@utility corner-2xl {
+  border-radius: var(--radius-2xl);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-2xl {
+    border-radius: calc(var(--radius-2xl) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
+}
+
+@utility corner-3xl {
+  border-radius: var(--radius-3xl);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-3xl {
+    border-radius: calc(var(--radius-3xl) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
+}
+
+@utility corner-4xl {
+  border-radius: var(--radius-4xl);
+}
+
+@supports (corner-shape: squircle) {
+  .corner-4xl {
+    border-radius: calc(var(--radius-4xl) * var(--corner-scale));
+    corner-shape: superellipse(var(--corner-n));
+  }
+}
+
+@utility corner-full {
+  border-radius: 100%;
+}
+
+@supports (corner-shape: squircle) {
+  .corner-full {
+    border-radius: 100%;
+    corner-shape: superellipse(1.1);
+  }
 }

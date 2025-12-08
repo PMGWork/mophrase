@@ -104,7 +104,7 @@ export class GraphEditor {
       p.draw = () => this.draw(p);
       p.mouseDragged = () => this.mouseDragged(p);
       p.mousePressed = () => this.mousePressed(p);
-      p.mouseReleased = () => this.mouseReleased(p);
+      p.mouseReleased = () => this.mouseReleased();
     };
 
     new p5(sketch);
@@ -225,7 +225,7 @@ export class GraphEditor {
   }
 
   // p5.js マウスリリース
-  private mouseReleased(_p: p5): void {
+  private mouseReleased(): void {
     if (this.handleManager.stop()) return;
   }
 

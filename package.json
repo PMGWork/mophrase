@@ -6,12 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "eslint . && prettier --check .",
+    "fix": "eslint . --fix && prettier --write ."
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.8",
     "@types/p5": "^1.7.7",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "~5.9.3",
+    "typescript-eslint": "^8.48.1",
     "vite": "^7.2.2"
   },
   "dependencies": {
