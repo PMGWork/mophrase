@@ -1,5 +1,5 @@
 import { CURVE_POINT } from '../constants';
-import type { HandleSelection, Path, Vector } from '../types';
+import type { HandleSelection, MarqueeRect, Path, SelectionRange, Vector } from '../types';
 
 // 定数
 const HANDLE_RADIUS = 12;
@@ -7,6 +7,7 @@ const HANDLE_RADIUS = 12;
 // ハンドルの制御クラス
 export class HandleManager {
   private draggedHandle: HandleSelection | null = null;
+  private selectedHandles: HandleSelection[] = [];
 
   private getPaths: () => Pick<Path, 'curves'>[];
   private pixelToNormalized: (x: number, y: number) => { x: number; y: number };
@@ -38,7 +39,15 @@ export class HandleManager {
 
   // ドラッグを開始
   start(x: number, y: number): boolean {
-    this.draggedHandle = this.findHandle(x, y);
+    const handle = this.findHandle(x, y);
+
+    // 選択されていないハンドルをクリックした場合は、選択をリセットしてそのハンドルを選択
+    if (handle && !this.isSelected(handle)) {
+      this.clearSelection();
+      this.selectedHandles.push(handle);
+    }
+
+    this.draggedHandle = handle;
     return this.draggedHandle !== null;
   }
 
@@ -61,6 +70,105 @@ export class HandleManager {
     // ハンドルの位置を更新できなかった場合
     this.draggedHandle = null;
     return false;
+  }
+
+  // 選択されたハンドルを取得
+  getSelectedHandles(): HandleSelection[] {
+    return this.selectedHandles;
+  }
+
+  // 選択範囲を取得（連続するカーブの範囲）
+  getSelectionRange(): SelectionRange | null {
+    if (this.selectedHandles.length === 0) return null;
+
+    // パスインデックスごとにグループ化
+    const handles = this.selectedHandles;
+    const pathIndex = handles[0].pathIndex;
+
+    // 全て同じパスか確認
+    if (handles.some(h => h.pathIndex !== pathIndex)) return null;
+
+    // 最も若いカーブインデックスと最も古いカーブインデックスを取得
+    let minCurveIndex = Number.MAX_VALUE;
+    let maxCurveIndex = Number.MIN_VALUE;
+
+    handles.forEach((h) => {
+      minCurveIndex = Math.min(minCurveIndex, h.curveIndex);
+      maxCurveIndex = Math.max(maxCurveIndex, h.curveIndex);
+    });
+
+    // 範囲の端における選択内容の確認
+    // 最小カーブで、終点以外(0,1,2)が選ばれているか
+    const hasStartContent = handles.some(
+      (h) => h.curveIndex === minCurveIndex && h.pointIndex !== CURVE_POINT.END_ANCHOR
+    );
+    const startCurveIndex = hasStartContent ? minCurveIndex : minCurveIndex + 1;
+
+    // 最大カーブで、始点以外(1,2,3)が選ばれているか
+    const hasEndContent = handles.some(
+      (h) => h.curveIndex === maxCurveIndex && h.pointIndex !== CURVE_POINT.START_ANCHOR
+    );
+    const endCurveIndex = hasEndContent ? maxCurveIndex : maxCurveIndex - 1;
+
+    // 有効な範囲がない場合
+    if (startCurveIndex > endCurveIndex) return null;
+
+    return {
+      pathIndex,
+      startCurveIndex,
+      endCurveIndex,
+    };
+  }
+
+  // 選択をクリア
+  clearSelection(): void {
+    this.selectedHandles = [];
+  }
+
+  // 矩形内のハンドルを選択
+  selectInRect(rect: MarqueeRect): HandleSelection[] {
+    this.clearSelection();
+
+    const paths = this.getPaths();
+    const { startX, startY, endX, endY } = rect;
+    const minX = Math.min(startX, endX);
+    const maxX = Math.max(startX, endX);
+    const minY = Math.min(startY, endY);
+    const maxY = Math.max(startY, endY);
+
+    for (let pathIndex = 0; pathIndex < paths.length; pathIndex++) {
+      const path = paths[pathIndex];
+      for (let curveIndex = 0; curveIndex < path.curves.length; curveIndex++) {
+        const curve = path.curves[curveIndex];
+        for (let pointIndex = 0; pointIndex < curve.length; pointIndex++) {
+          const point = curve[pointIndex];
+          if (!point) continue;
+
+          // ピクセル座標に変換
+          const pos = this.normalizedToPixel(point.x, point.y);
+          if (
+            pos.x >= minX &&
+            pos.x <= maxX &&
+            pos.y >= minY &&
+            pos.y <= maxY
+          ) {
+            this.selectedHandles.push({ pathIndex, curveIndex, pointIndex });
+          }
+        }
+      }
+    }
+
+    return this.selectedHandles;
+  }
+
+  // ハンドルが選択されているか
+  isSelected(handle: HandleSelection): boolean {
+    return this.selectedHandles.some(
+      h =>
+        h.pathIndex === handle.pathIndex &&
+        h.curveIndex === handle.curveIndex &&
+        h.pointIndex === handle.pointIndex,
+    );
   }
 
   // #region プライベート関数

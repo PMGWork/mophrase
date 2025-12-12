@@ -76,45 +76,39 @@ export function drawControls(
   size: number,
   color: string,
   transform: (v: Vector) => Vector = (v) => v,
+  getColor?: (curveIndex: number, pointIndex: number) => string,
 ): void {
   if (curves.length === 0) return;
 
   // 制御点の描画
-  p.fill(color);
-  p.noStroke();
   p.rectMode(p.CENTER);
 
-  for (const curve of curves) {
+  for (let i = 0; i < curves.length; i++) {
+    const curve = curves[i];
     const p0 = transform(curve[CURVE_POINT.START_ANCHOR].copy());
     const p1 = transform(curve[CURVE_POINT.START_CONTROL].copy());
     const p2 = transform(curve[CURVE_POINT.END_CONTROL].copy());
     const p3 = transform(curve[CURVE_POINT.END_ANCHOR].copy());
 
+    // 制御ポリゴン（線）
+    p.strokeWeight(1);
+    p.noFill();
+    p.stroke(getColor ? getColor(i, CURVE_POINT.START_CONTROL) : color);
+    p.line(p0.x, p0.y, p1.x, p1.y);
+    p.stroke(getColor ? getColor(i, CURVE_POINT.END_CONTROL) : color);
+    p.line(p2.x, p2.y, p3.x, p3.y);
+
+    // 制御点（アンカー：四角、ハンドル：丸）
+    p.noStroke();
+    p.fill(getColor ? getColor(i, CURVE_POINT.START_ANCHOR) : color);
     p.rect(p0.x, p0.y, size, size);
+    p.fill(getColor ? getColor(i, CURVE_POINT.END_ANCHOR) : color);
     p.rect(p3.x, p3.y, size, size);
+    p.fill(getColor ? getColor(i, CURVE_POINT.START_CONTROL) : color);
     p.circle(p1.x, p1.y, size);
+    p.fill(getColor ? getColor(i, CURVE_POINT.END_CONTROL) : color);
     p.circle(p2.x, p2.y, size);
   }
 
-  // 制御ポリゴンの描画
-  p.stroke(color);
-  p.strokeWeight(1);
-  p.noFill();
-
-  for (const curve of curves) {
-    const p0 = transform(curve[CURVE_POINT.START_ANCHOR].copy());
-    const p1 = transform(curve[CURVE_POINT.START_CONTROL].copy());
-    const p2 = transform(curve[CURVE_POINT.END_CONTROL].copy());
-    const p3 = transform(curve[CURVE_POINT.END_ANCHOR].copy());
-
-    p.beginShape();
-    p.vertex(p0.x, p0.y);
-    p.vertex(p1.x, p1.y);
-    p.endShape();
-
-    p.beginShape();
-    p.vertex(p2.x, p2.y);
-    p.vertex(p3.x, p3.y);
-    p.endShape();
-  }
+  p.rectMode(p.CORNER);
 }

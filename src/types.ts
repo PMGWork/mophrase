@@ -9,6 +9,21 @@ export type Vector = p5.Vector;
 // エディタモード
 export type SketchMode = 'draw' | 'select';
 
+// マーキー選択用の矩形
+export interface MarqueeRect {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+}
+
+// 選択範囲（制御点のインデックス範囲）
+export interface SelectionRange {
+  pathIndex: number;
+  startCurveIndex: number;
+  endCurveIndex: number;
+}
+
 // LLMプロバイダの種類
 export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
 

@@ -25,6 +25,8 @@ export interface Colors {
   border: string; // 境界線の色
   marker: string; // マーカーの色
   background: string; // 背景色
+  marquee: string; // マーキーの色
+  selection: string; // 選択のハイライト色
 }
 
 // デフォルト設定
@@ -44,10 +46,12 @@ export const DEFAULT_CONFIG: Config = {
 };
 
 export const DEFAULT_COLORS: Colors = {
-  handle: '#fbbf24', // Amber-400
+  handle: '#ffffff', // White
   curve: '#f9fafb', // Gray-50
   sketch: '#374151', // Gray-700
   border: '#1f2937', // Gray-800
   marker: '#e11d48', // Rose-600
   background: '#030712', // Gray-950
+  marquee: '#60a5fa', // Blue-400
+  selection: '#eab308', // Yellow-500
 };

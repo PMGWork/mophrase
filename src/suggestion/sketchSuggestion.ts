@@ -1,5 +1,5 @@
 import type { Config } from '../config';
-import type { Path, Suggestion } from '../types';
+import type { Path, SelectionRange, Suggestion } from '../types';
 import { deserializePaths, serializePaths } from '../utils/serialization';
 import { fetchSuggestions, SuggestionManager } from './base';
 import { positionUI, SuggestionUI } from './ui';
@@ -12,6 +12,7 @@ type SketchSuggestionOptions = {
 // スケッチ用の提案マネージャー
 export class SketchSuggestionManager extends SuggestionManager {
   private onSelect?: (path: Path, targetPath?: Path) => void;
+  private selectionRange?: SelectionRange;
 
   // コンストラクタ
   constructor(config: Config, options: SketchSuggestionOptions = {}) {
@@ -34,14 +35,35 @@ export class SketchSuggestionManager extends SuggestionManager {
   }
 
   // 提案を送信
-  async submit(path: Path, prompt?: string): Promise<void> {
-    await this.generateSuggestion(path, prompt);
+  async submit(
+    path: Path,
+    prompt?: string,
+    selectionRange?: SelectionRange,
+  ): Promise<void> {
+    await this.generateSuggestion(path, prompt, selectionRange);
   }
 
   // #region プライベート関数
-  private async generateSuggestion(path: Path, prompt?: string): Promise<void> {
+  private async generateSuggestion(
+    path: Path,
+    prompt?: string,
+    selectionRange?: SelectionRange,
+  ): Promise<void> {
     this.targetPath = path;
-    const serializedPaths = serializePaths([path]);
+    this.selectionRange = selectionRange;
+
+    // 選択範囲がある場合は、その部分だけを切り出してシリアライズする
+    let curvesToSerialize = path.curves;
+    if (selectionRange) {
+      curvesToSerialize = path.curves.slice(
+        selectionRange.startCurveIndex,
+        selectionRange.endCurveIndex + 1,
+      );
+    }
+
+    // 部分パスを作成（シリアライズ用）
+    const partialPath: Path = { ...path, curves: curvesToSerialize };
+    const serializedPaths = serializePaths([partialPath]);
     const serializedPath = serializedPaths[0];
 
     // プロンプトの保存
@@ -96,9 +118,18 @@ export class SketchSuggestionManager extends SuggestionManager {
       return;
     }
 
+    // 部分パスとして復元
+    const curvesToSerialize = this.selectionRange
+      ? this.targetPath.curves.slice(
+          this.selectionRange.startCurveIndex,
+          this.selectionRange.endCurveIndex + 1,
+        )
+      : this.targetPath.curves;
+    const partialPath: Path = { ...this.targetPath, curves: curvesToSerialize };
+
     const restored = deserializePaths(
       [suggestion.path],
-      [this.targetPath],
+      [partialPath],
       this.pInstance,
     );
     if (restored.length === 0) {
@@ -107,7 +138,30 @@ export class SketchSuggestionManager extends SuggestionManager {
       return;
     }
 
-    this.onSelect?.(restored[0], this.targetPath);
+    if (this.selectionRange) {
+      // 選択範囲がある場合、元のパスの一部を置換する
+      const { startCurveIndex, endCurveIndex } = this.selectionRange;
+      const restoredCurves = restored[0].curves;
+
+      // 新しいcurves配列を作成
+      const newCurves = [
+        ...this.targetPath.curves.slice(0, startCurveIndex),
+        ...restoredCurves,
+        ...this.targetPath.curves.slice(endCurveIndex + 1),
+      ];
+
+      // パスを更新（deep copyせずにcurvesだけ差し替える形）
+      const updatedPath: Path = {
+        ...this.targetPath,
+        curves: newCurves,
+        points: [], // pointsは再計算が必要だが、今回はcurvesで表現されるため空でも動作する想定か、もしくは全体更新が必要
+      };
+
+      this.onSelect?.(updatedPath, this.targetPath);
+    } else {
+      // 全体置換
+      this.onSelect?.(restored[0], this.targetPath);
+    }
 
     this.clearSuggestions();
     this.setState('input');
