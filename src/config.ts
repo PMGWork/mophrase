@@ -15,6 +15,7 @@ export interface Config {
   llmModel: string; // LLMモデル名
   sketchPrompt: string; // スケッチ指示プロンプト
   graphPrompt: string; // グラフ指示プロンプト
+  markerSize: number; // モーションマーカーのサイズ
 }
 
 export interface Colors {
@@ -36,9 +37,10 @@ export const DEFAULT_CONFIG: Config = {
   lineWeight: 1,
   pointSize: 6,
   llmProvider: 'OpenAI',
-  llmModel: 'gpt-5.1',
+  llmModel: 'gpt-5.2',
   sketchPrompt: sketchPrompt,
   graphPrompt: graphPrompt,
+  markerSize: 20,
 };
 
 export const DEFAULT_COLORS: Colors = {

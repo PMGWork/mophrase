@@ -124,7 +124,7 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.motionManager = new MotionManager(p, this.colors.marker);
+    this.motionManager = new MotionManager(p, this.colors.marker, this.config.markerSize);
   }
 
   // p5.js リサイズ

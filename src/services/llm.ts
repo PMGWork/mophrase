@@ -15,6 +15,9 @@ function getGenAI(): GoogleGenAI {
   if (!genai) {
     genai = new GoogleGenAI({
       apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+      httpOptions: {
+        baseUrl: `${window.location.origin}/api/gemini`,
+      },
     });
   }
   return genai;
@@ -24,6 +27,7 @@ function getOpenAI(): OpenAI {
   if (!openai) {
     openai = new OpenAI({
       apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+      baseURL: `${window.location.origin}/api/openai/v1`,
       dangerouslyAllowBrowser: true,
     });
   }
@@ -34,6 +38,7 @@ function getGroq(): Groq {
   if (!groq) {
     groq = new Groq({
       apiKey: import.meta.env.VITE_GROQ_API_KEY,
+      baseURL: `${window.location.origin}/api/groq/openai/v1`,
       dangerouslyAllowBrowser: true,
     });
   }
@@ -60,14 +65,14 @@ type ProviderModelOption = {
 // プロバイダ設定
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
-    defaultModel: 'gpt-5.1',
+    defaultModel: 'gpt-5.2',
     models: [
+      { id: 'gpt-5.2', name: 'GPT-5.2' },
       { id: 'gpt-5.1', name: 'GPT-5.1' },
-      { id: 'gpt-5', name: 'GPT-5' },
       { id: 'gpt-5-mini', name: 'GPT-5 mini' },
     ],
     generate: async (prompt, schema, model) => {
-      const reasoningEffort = model === 'gpt-5.1' ? 'none' : 'minimal';
+      const reasoningEffort = ['gpt-5.2', 'gpt-5.1'].includes(model) ? 'none' : 'minimal';
 
       const response = await getOpenAI().responses.parse({
         model,

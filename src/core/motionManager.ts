@@ -7,12 +7,12 @@ import { fitCurve } from './fitting';
 // 定数
 const DEFAULT_DURATION = 2000;
 const BISECTION_ITERATIONS = 10;
-const MARKER_SIZE = 10;
 
 // モーション管理クラス
 export class MotionManager {
   private p: p5;
   private markerColor: string;
+  private markerSize: number;
   private isPlaying: boolean = false;
   private currentPath: Path | null = null;
   private time: number = 0;
@@ -20,9 +20,10 @@ export class MotionManager {
   private curveLengths: number[] = [];
   private totalLength: number = 0;
 
-  constructor(p: p5, markerColor: string) {
+  constructor(p: p5, markerColor: string, markerSize: number) {
     this.p = p;
     this.markerColor = markerColor;
+    this.markerSize = markerSize;
   }
 
   // #region メイン関数
@@ -78,7 +79,7 @@ export class MotionManager {
     this.p.push();
     this.p.fill(this.markerColor);
     this.p.noStroke();
-    this.p.circle(position.x, position.y, MARKER_SIZE);
+    this.p.circle(position.x, position.y, this.markerSize);
     this.p.pop();
   }
 
