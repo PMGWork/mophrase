@@ -198,7 +198,7 @@ export class SketchEditor {
     if (!isLeftClick) return;
 
     // ハンドルのドラッグ
-    if (this.handleManager.start(p.mouseX, p.mouseY)) return;
+    if (this.handleManager.startDrag(p.mouseX, p.mouseY)) return;
     if (!isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)) return;
 
     // 選択モード: パスを選択 または 範囲選択開始
@@ -249,7 +249,7 @@ export class SketchEditor {
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
     const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
-    if (this.handleManager.drag(p.mouseX, p.mouseY, dragMode)) return;
+    if (this.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode)) return;
 
     // 範囲選択の更新
     if (this.sketchMode === 'select' && this.marqueeRect) {
@@ -272,7 +272,7 @@ export class SketchEditor {
 
   // p5.js マウスリリース
   private mouseReleased(p: p5): void {
-    if (this.handleManager.stop()) return;
+    if (this.handleManager.endDrag()) return;
 
     // 範囲選択の完了
     if (this.sketchMode === 'select' && this.marqueeRect) {

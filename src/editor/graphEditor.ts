@@ -199,7 +199,7 @@ export class GraphEditor {
     if (!isLeftClick) return;
 
     // ハンドルのドラッグ
-    if (this.handleManager.start(p.mouseX, p.mouseY)) return;
+    if (this.handleManager.startDrag(p.mouseX, p.mouseY)) return;
 
     // キャンバス内クリックなら何もしない
     const graphW = p.width - this.margin.left - this.margin.right;
@@ -221,12 +221,12 @@ export class GraphEditor {
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
     const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
-    this.handleManager.drag(p.mouseX, p.mouseY, dragMode);
+    this.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
   }
 
   // p5.js マウスリリース
   private mouseReleased(): void {
-    if (this.handleManager.stop()) return;
+    if (this.handleManager.endDrag()) return;
   }
 
   // #region プライベート関数
