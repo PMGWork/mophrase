@@ -6,7 +6,7 @@ import { HandleManager } from '../core/handleManager';
 import { MotionManager } from '../core/motionManager';
 import type { DomRefs } from '../dom';
 import { SketchSuggestionManager } from '../suggestion/sketchSuggestion';
-import type { MarqueeRect, Path, SelectionRange, SketchMode } from '../types';
+import type { MarqueeRect, Path, SelectionRange } from '../types';
 import { drawBezierCurve, drawControls, drawPoints } from '../utils/draw';
 import { bezierCurve } from '../utils/math';
 import { isInRect, isLeftMouseButton } from '../utils/p5Helpers';
@@ -17,7 +17,6 @@ export class SketchEditor {
   private paths: Path[] = [];
   private draftPath: Path | null = null;
   private activePath: Path | null = null;
-  private sketchMode: SketchMode = 'draw';
 
   // 範囲選択
   private marqueeRect: MarqueeRect | null = null;
@@ -81,26 +80,6 @@ export class SketchEditor {
   }
 
   // #region メイン関数
-
-  // モードを設定
-  public setSketchMode(sketchMode: SketchMode): void {
-    // 既に同じモードなら何もしない
-    if (this.sketchMode === sketchMode) return;
-
-    // モードを更新
-    this.sketchMode = sketchMode;
-
-    if (sketchMode === 'draw') {
-      // 描画モード: 選択状態をクリア
-      this.suggestionManager.close();
-      this.activePath = null;
-      this.onPathSelected(null);
-      this.handleManager.clearSelection();
-    } else {
-      // 選択モード: 描画中のパスを破棄
-      this.draftPath = null;
-    }
-  }
 
   // #region p5.js
 
@@ -194,12 +173,14 @@ export class SketchEditor {
     const isLeftClick = isLeftMouseButton(p.mouseButton, p.LEFT);
     if (!isLeftClick) return;
 
+    const isShift = p.keyIsDown(p.SHIFT);
+
     // ハンドルのドラッグ
     if (this.handleManager.startDrag(p.mouseX, p.mouseY)) return;
     if (!isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)) return;
 
-    // 選択モード: パスを選択 または 範囲選択開始
-    if (this.sketchMode === 'select') {
+    // Shift押下時: パス選択 or 範囲選択（マーキー）
+    if (isShift) {
       const path = this.findPathAtPoint(p.mouseX, p.mouseY);
 
       if (path) {
@@ -221,7 +202,7 @@ export class SketchEditor {
       return;
     }
 
-    // 描画モード: 提案UIを開く
+    // 描画: 提案UIを開く
     if (this.activePath) this.suggestionManager.open(this.activePath);
 
     // 新しいパスを開始
@@ -245,17 +226,15 @@ export class SketchEditor {
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
-    const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
+    const dragMode = p.keyIsDown(p.ALT) ? 0 : this.config.defaultDragMode;
     if (this.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode)) return;
 
     // 範囲選択の更新
-    if (this.sketchMode === 'select' && this.marqueeRect) {
+    if (this.marqueeRect) {
       this.marqueeRect.endX = p.mouseX;
       this.marqueeRect.endY = p.mouseY;
       return;
     }
-
-    if (this.sketchMode !== 'draw') return;
 
     // 現在描画中のパスの点を追加
     if (
@@ -272,7 +251,7 @@ export class SketchEditor {
     if (this.handleManager.endDrag()) return;
 
     // 範囲選択の完了
-    if (this.sketchMode === 'select' && this.marqueeRect) {
+    if (this.marqueeRect) {
       // 矩形内のハンドルを選択
       const selected = this.handleManager.selectInRect(this.marqueeRect);
       this.marqueeRect = null;
@@ -283,12 +262,17 @@ export class SketchEditor {
         if (this.paths[pathIndex]) {
           this.activePath = this.paths[pathIndex];
           this.onPathSelected(this.activePath);
+
+          // 選択範囲を取得してポップアップを更新
+          const selectionRange = this.handleManager.getSelectionRange();
+          this.suggestionManager.open(this.activePath);
+          this.suggestionManager.updateSelectionRange(selectionRange ?? undefined);
         }
       }
       return;
     }
 
-    if (this.sketchMode !== 'draw' || !this.draftPath) return;
+    if (!this.draftPath) return;
     if (this.draftPath.points.length >= 2) this.finalizeDraftPath(p);
 
     // 描画中のパスをリセット

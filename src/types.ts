@@ -6,9 +6,6 @@ import { z } from 'zod';
 // p5.jsベクトル
 export type Vector = p5.Vector;
 
-// エディタモード
-export type SketchMode = 'draw' | 'select';
-
 // マーキー選択用の矩形
 export interface MarqueeRect {
   startX: number;

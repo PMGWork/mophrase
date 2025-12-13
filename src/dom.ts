@@ -12,8 +12,6 @@ type ElementMap = {
   sketchPromptInput: HTMLInputElement;
   clearButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
-  drawModeButton: HTMLButtonElement;
-  selectModeButton: HTMLButtonElement;
   editMotionButton: HTMLButtonElement;
   closeGraphEditorButton: HTMLButtonElement;
   graphEditorContainer: HTMLDivElement;
@@ -38,8 +36,6 @@ export class DomRefs {
   public readonly sketchPromptInput!: HTMLInputElement;
   public readonly clearButton!: HTMLButtonElement;
   public readonly playButton!: HTMLButtonElement;
-  public readonly drawModeButton!: HTMLButtonElement;
-  public readonly selectModeButton!: HTMLButtonElement;
   public readonly editMotionButton!: HTMLButtonElement;
   public readonly closeGraphEditorButton!: HTMLButtonElement;
   public readonly graphEditorContainer!: HTMLDivElement;
@@ -64,8 +60,6 @@ export class DomRefs {
       sketchPromptInput: 'sketchPromptInput',
       clearButton: 'clearButton',
       playButton: 'playButton',
-      drawModeButton: 'drawModeButton',
-      selectModeButton: 'selectModeButton',
       editMotionButton: 'editMotionButton',
       closeGraphEditorButton: 'closeGraphEditorButton',
       graphEditorContainer: 'graphEditorContainer',

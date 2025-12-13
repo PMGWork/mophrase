@@ -6,7 +6,7 @@ import { GraphEditor } from './editor/graphEditor';
 import { PropertyEditor } from './editor/propertyEditor';
 import { SketchEditor } from './editor/sketchEditor';
 import { getProviderModelOptions } from './services/llm';
-import type { LLMProvider, SketchMode } from './types';
+import type { LLMProvider } from './types';
 
 // メイン処理
 const main = (): void => {
@@ -51,9 +51,6 @@ const main = (): void => {
       }
     });
 
-    // トグルのイベントを登録
-    setupModeToggle();
-
     // チェックボックスのイベントを登録
     bindCheckbox(dom.sketchCheckbox, config.showSketch, (value) => {
       config.showSketch = value;
@@ -81,27 +78,6 @@ const main = (): void => {
   // ボタンイベント
   function bindButton(el: HTMLButtonElement, handler: () => void): void {
     el.addEventListener('click', handler);
-  }
-
-  // モード切り替えのセットアップ
-  function setupModeToggle(): void {
-    const modes: { mode: SketchMode; button: HTMLButtonElement }[] = [
-      { mode: 'draw', button: dom.drawModeButton },
-      { mode: 'select', button: dom.selectModeButton },
-    ];
-
-    const updateMode = (targetMode: SketchMode) => {
-      sketchEditor.setSketchMode(targetMode);
-      modes.forEach(({ mode, button }) => {
-        button.setAttribute('aria-pressed', String(mode === targetMode));
-      });
-    };
-
-    modes.forEach(({ mode, button }) => {
-      button.addEventListener('click', () => updateMode(mode));
-    });
-
-    updateMode('draw');
   }
 
   // チェックボックスイベント

@@ -211,7 +211,7 @@ export class GraphEditor {
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
-    const dragMode = p.keyIsDown(p.SHIFT) ? 0 : this.config.defaultDragMode;
+    const dragMode = p.keyIsDown(p.ALT) ? 0 : this.config.defaultDragMode;
     this.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
   }
 

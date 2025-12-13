@@ -34,6 +34,13 @@ export class SketchSuggestionManager extends SuggestionManager {
     );
   }
 
+  // 選択範囲を設定してUIを更新
+  updateSelectionRange(selectionRange?: SelectionRange): void {
+    this.selectionRange = selectionRange;
+    this.ui.setSelectionRange(selectionRange);
+    this.updateUI();
+  }
+
   // 提案を送信
   async submit(
     path: Path,

@@ -1,4 +1,4 @@
-import type { Path, Suggestion, SuggestionState } from '../types';
+import type { Path, SelectionRange, Suggestion, SuggestionState } from '../types';
 
 type SuggestionUIConfig = {
   containerId?: string;
@@ -8,6 +8,7 @@ type SuggestionUIConfig = {
   position?: (args: {
     container: HTMLElement | null;
     targetPath?: Path;
+    selectionRange?: SelectionRange;
   }) => void;
 };
 
@@ -129,11 +130,19 @@ export class SuggestionUI {
     if (container) container.innerHTML = '';
   }
 
+  private selectionRange?: SelectionRange;
+
+  // 選択範囲を設定
+  setSelectionRange(range?: SelectionRange): void {
+    this.selectionRange = range;
+  }
+
   private applyPosition(targetPath?: Path): void {
     const { containerId, position } = this.config;
     position?.({
       container: containerId ? document.getElementById(containerId) : null,
       targetPath,
+      selectionRange: this.selectionRange,
     });
   }
 }
@@ -145,14 +154,16 @@ const POPUP_OFFSET = 20;
 export function positionUI({
   container,
   targetPath,
+  selectionRange,
 }: {
   container: HTMLElement | null;
   targetPath?: Path;
+  selectionRange?: SelectionRange;
 }) {
   if (!container) return;
 
   if (!targetPath) return;
-  const anchor = getPathEndPoint(targetPath);
+  const anchor = getSelectionEndPoint(targetPath, selectionRange);
   if (!anchor) return;
 
   const parent = container.parentElement;
@@ -166,10 +177,15 @@ export function positionUI({
   container.style.top = `${top}px`;
 }
 
-// パスの終点を取得
-function getPathEndPoint(path: Path): { x: number; y: number } | null {
+// 選択範囲または全体の終点を取得
+function getSelectionEndPoint(
+  path: Path,
+  selectionRange?: SelectionRange,
+): { x: number; y: number } | null {
   if (path.curves.length > 0) {
-    const endPoint = path.curves.at(-1)?.[3];
+    // 選択範囲がある場合はその終点、なければパス全体の終点
+    const endCurveIndex = selectionRange?.endCurveIndex ?? path.curves.length - 1;
+    const endPoint = path.curves[endCurveIndex]?.[3];
     if (endPoint) return { x: endPoint.x, y: endPoint.y };
   }
   if (path.points.length > 0) {
