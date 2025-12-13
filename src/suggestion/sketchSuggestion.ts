@@ -150,12 +150,7 @@ export class SketchSuggestionManager extends SuggestionManager {
         ...this.targetPath.curves.slice(endCurveIndex + 1),
       ];
 
-      // パスを更新（deep copyせずにcurvesだけ差し替える形）
-      const updatedPath: Path = {
-        ...this.targetPath,
-        curves: newCurves,
-        points: [], // pointsは再計算が必要だが、今回はcurvesで表現されるため空でも動作する想定か、もしくは全体更新が必要
-      };
+      const updatedPath: Path = { ...this.targetPath, curves: newCurves };
 
       this.onSelect?.(updatedPath, this.targetPath);
     } else {

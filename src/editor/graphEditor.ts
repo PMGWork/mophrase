@@ -5,7 +5,7 @@ import type { DomRefs } from '../dom';
 import { GraphSuggestionManager } from '../suggestion/graphSuggestion';
 import type { Path } from '../types';
 import { drawBezierCurve, drawControls } from '../utils/draw';
-import { isInRect, isLeftMouseButton } from '../utils/p5Helpers';
+import { isLeftMouseButton } from '../utils/p5Helpers';
 
 // グラフエディタ
 export class GraphEditor {
@@ -20,6 +20,9 @@ export class GraphEditor {
   // 設定
   private config: Config;
   private colors: Colors;
+
+  // 現在のキャンバスサイズ
+  private canvasSize = 0;
 
   // 描画領域の設定
   private static readonly MARGIN = 30;
@@ -114,6 +117,7 @@ export class GraphEditor {
   private setup(p: p5): void {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
+    this.canvasSize = size;
     p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
     p.textFont('Geist');
   }
@@ -121,7 +125,9 @@ export class GraphEditor {
   // p5.js リサイズ
   private windowResized(p: p5): void {
     const { width, height } = this.dom.getGraphCanvasSize();
-    p.resizeCanvas(width, height);
+    const size = Math.min(width, height);
+    this.canvasSize = size;
+    p.resizeCanvas(size, size);
   }
 
   // p5.js 描画
@@ -200,21 +206,6 @@ export class GraphEditor {
 
     // ハンドルのドラッグ
     if (this.handleManager.startDrag(p.mouseX, p.mouseY)) return;
-
-    // キャンバス内クリックなら何もしない
-    const graphW = p.width - this.margin.left - this.margin.right;
-    const graphH = p.height - this.margin.top - this.margin.bottom;
-    if (
-      isInRect(
-        p.mouseX,
-        p.mouseY,
-        this.margin.left,
-        this.margin.top,
-        graphW,
-        graphH,
-      )
-    )
-      return;
   }
 
   // p5.js マウスドラッグ
@@ -233,8 +224,11 @@ export class GraphEditor {
 
   // ピクセル座標から正規化座標への変換
   private pixelToNormalized(x: number, y: number): { x: number; y: number } {
-    const { width, height } = this.dom.getGraphCanvasSize();
-    const size = Math.min(width, height);
+    let size = this.canvasSize;
+    if (!size) {
+      const { width, height } = this.dom.getGraphCanvasSize();
+      size = Math.min(width, height);
+    }
 
     const mouseX = x - this.margin.left;
     const mouseY = y - this.margin.top;
@@ -252,8 +246,11 @@ export class GraphEditor {
     normX: number,
     normY: number,
   ): { x: number; y: number } {
-    const { width, height } = this.dom.getGraphCanvasSize();
-    const size = Math.min(width, height);
+    let size = this.canvasSize;
+    if (!size) {
+      const { width, height } = this.dom.getGraphCanvasSize();
+      size = Math.min(width, height);
+    }
 
     const graphW = size - this.margin.left - this.margin.right;
     const graphH = size - this.margin.top - this.margin.bottom;

@@ -72,7 +72,9 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       { id: 'gpt-5-mini', name: 'GPT-5 mini' },
     ],
     generate: async (prompt, schema, model) => {
-      const reasoningEffort = ['gpt-5.2', 'gpt-5.1'].includes(model) ? 'none' : 'minimal';
+      const reasoningEffort = ['gpt-5.2', 'gpt-5.1'].includes(model)
+        ? 'none'
+        : 'minimal';
 
       const response = await getOpenAI().responses.parse({
         model,

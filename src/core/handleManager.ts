@@ -105,7 +105,7 @@ export class HandleManager {
 
   // 選択されたハンドルを取得
   getSelectedHandles(): HandleSelection[] {
-    return this.selectedHandles;
+    return [...this.selectedHandles];
   }
 
   // ハンドルが選択されているか

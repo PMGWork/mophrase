@@ -6,12 +6,7 @@ import { HandleManager } from '../core/handleManager';
 import { MotionManager } from '../core/motionManager';
 import type { DomRefs } from '../dom';
 import { SketchSuggestionManager } from '../suggestion/sketchSuggestion';
-import type {
-  MarqueeRect,
-  Path,
-  SelectionRange,
-  SketchMode,
-} from '../types';
+import type { MarqueeRect, Path, SelectionRange, SketchMode } from '../types';
 import { drawBezierCurve, drawControls, drawPoints } from '../utils/draw';
 import { bezierCurve } from '../utils/math';
 import { isInRect, isLeftMouseButton } from '../utils/p5Helpers';
@@ -66,9 +61,7 @@ export class SketchEditor {
         if (targetPath) {
           const index = this.paths.indexOf(targetPath);
           if (index >= 0) {
-            this.paths[index].points = updated.points;
-            this.paths[index].curves = updated.curves;
-            this.paths[index].fitError = updated.fitError;
+            Object.assign(this.paths[index], updated);
 
             // パスが更新されたので選択状態として通知
             this.onPathSelected(this.paths[index]);
@@ -133,7 +126,11 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.motionManager = new MotionManager(p, this.colors.marker, this.config.markerSize);
+    this.motionManager = new MotionManager(
+      p,
+      this.colors.marker,
+      this.config.markerSize,
+    );
   }
 
   // p5.js リサイズ
@@ -486,7 +483,9 @@ export class SketchEditor {
       }
     } else {
       // 通常描画
-      const curveColor = isSelectedPath ? this.colors.handle : this.colors.curve;
+      const curveColor = isSelectedPath
+        ? this.colors.handle
+        : this.colors.curve;
       drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
     }
 
