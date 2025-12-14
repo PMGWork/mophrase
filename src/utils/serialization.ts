@@ -11,7 +11,7 @@ import { roundNormalizedValue } from './math';
 
 // #region シリアライズ
 // p5.Vector -> アンカーポイント（正規化）
-export function createSerializedAnchor(
+function serializeAnchor(
   vec: p5.Vector,
   bbox: SerializedBoundingBox,
 ): SerializedAnchorPoint {
@@ -24,7 +24,7 @@ export function createSerializedAnchor(
 }
 
 // p5.Vector -> 極座標（角度と距離）
-export function toSerializedHandle(
+function serializeHandle(
   handle: p5.Vector | undefined,
   anchor: p5.Vector,
   diag: number,
@@ -66,7 +66,7 @@ export function serializeAnchorsAndSegments(
     const key = getAnchorKey(vec);
     let index = anchorIndexMap.get(key);
     if (index === undefined) {
-      const anchor = createSerializedAnchor(vec, bbox);
+      const anchor = serializeAnchor(vec, bbox);
       anchors.push(anchor);
       index = anchors.length - 1;
       anchorIndexMap.set(key, index);
@@ -81,8 +81,8 @@ export function serializeAnchorsAndSegments(
     const start = getOrCreateAnchor(p0);
     const end = getOrCreateAnchor(p3);
 
-    start.anchor.out = toSerializedHandle(p1, p0, diag);
-    end.anchor.in = toSerializedHandle(p2, p3, diag);
+    start.anchor.out = serializeHandle(p1, p0, diag);
+    end.anchor.in = serializeHandle(p2, p3, diag);
 
     segments.push({ startIndex: start.index, endIndex: end.index });
   });
@@ -93,7 +93,7 @@ export function serializeAnchorsAndSegments(
 // p5.js 描画パス -> シリアライズされたパス
 export function serializePaths(paths: Path[]): SerializedPath[] {
   return paths.map((path) => {
-    const bbox = calculateBoundingBox(path.curves);
+    const bbox = computeBbox(path.curves);
     const { anchors, segments } = serializeAnchorsAndSegments(
       path.curves,
       bbox,
@@ -121,7 +121,7 @@ export function deserializePaths(
         ? serializedPath
         : {
             ...serializedPath,
-            bbox: calculateBoundingBox(paths[index].curves),
+            bbox: computeBbox(paths[index].curves),
           },
       p,
     ),
@@ -165,9 +165,9 @@ export function deserializeCurves(
       return [
         start,
         handleOut
-          ? polarHandleToVector(handleOut, start, diag, p)
+          ? deserializeHandle(handleOut, start, diag, p)
           : start.copy(),
-        handleIn ? polarHandleToVector(handleIn, end, diag, p) : end.copy(),
+        handleIn ? deserializeHandle(handleIn, end, diag, p) : end.copy(),
         end,
       ];
     })
@@ -175,7 +175,7 @@ export function deserializeCurves(
 }
 
 // 極座標のハンドル -> p5.Vector
-function polarHandleToVector(
+function deserializeHandle(
   handle: SerializedHandlePoint,
   anchor: p5.Vector,
   diag: number,
@@ -190,7 +190,7 @@ function polarHandleToVector(
 
 // #region ユーティリティ
 // バウンディングボックスを計算
-function calculateBoundingBox(curves: p5.Vector[][]): SerializedBoundingBox {
+function computeBbox(curves: p5.Vector[][]): SerializedBoundingBox {
   if (!curves.length) {
     return { x: 0, y: 0, width: 1, height: 1 };
   }

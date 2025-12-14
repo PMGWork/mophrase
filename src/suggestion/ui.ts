@@ -1,4 +1,5 @@
 import type { Path, SelectionRange, Suggestion, SuggestionState } from '../types';
+import { getPathEndPoint } from '../utils/path';
 
 type SuggestionUIConfig = {
   containerId?: string;
@@ -163,7 +164,7 @@ export function positionUI({
   if (!container) return;
 
   if (!targetPath) return;
-  const anchor = getSelectionEndPoint(targetPath, selectionRange);
+  const anchor = getPathEndPoint(targetPath, selectionRange);
   if (!anchor) return;
 
   const parent = container.parentElement;
@@ -175,22 +176,4 @@ export function positionUI({
 
   container.style.left = `${left}px`;
   container.style.top = `${top}px`;
-}
-
-// 選択範囲または全体の終点を取得
-function getSelectionEndPoint(
-  path: Path,
-  selectionRange?: SelectionRange,
-): { x: number; y: number } | null {
-  if (path.curves.length > 0) {
-    // 選択範囲がある場合はその終点、なければパス全体の終点
-    const endCurveIndex = selectionRange?.endCurveIndex ?? path.curves.length - 1;
-    const endPoint = path.curves[endCurveIndex]?.[3];
-    if (endPoint) return { x: endPoint.x, y: endPoint.y };
-  }
-  if (path.points.length > 0) {
-    const fallback = path.points.at(-1);
-    if (fallback) return { x: fallback.x, y: fallback.y };
-  }
-  return null;
 }

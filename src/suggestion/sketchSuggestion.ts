@@ -1,5 +1,6 @@
 import type { Config } from '../config';
 import type { Path, SelectionRange, Suggestion } from '../types';
+import { replacePathRange, slicePath } from '../utils/path';
 import { deserializePaths, serializePaths } from '../utils/serialization';
 import { fetchSuggestions, SuggestionManager } from './base';
 import { positionUI, SuggestionUI } from './ui';
@@ -59,17 +60,8 @@ export class SketchSuggestionManager extends SuggestionManager {
     this.targetPath = path;
     this.selectionRange = selectionRange;
 
-    // 選択範囲がある場合は、その部分だけを切り出してシリアライズする
-    let curvesToSerialize = path.curves;
-    if (selectionRange) {
-      curvesToSerialize = path.curves.slice(
-        selectionRange.startCurveIndex,
-        selectionRange.endCurveIndex + 1,
-      );
-    }
-
     // 部分パスを作成（シリアライズ用）
-    const partialPath: Path = { ...path, curves: curvesToSerialize };
+    const partialPath = slicePath(path, selectionRange);
     const serializedPaths = serializePaths([partialPath]);
     const serializedPath = serializedPaths[0];
 
@@ -126,13 +118,7 @@ export class SketchSuggestionManager extends SuggestionManager {
     }
 
     // 部分パスとして復元
-    const curvesToSerialize = this.selectionRange
-      ? this.targetPath.curves.slice(
-          this.selectionRange.startCurveIndex,
-          this.selectionRange.endCurveIndex + 1,
-        )
-      : this.targetPath.curves;
-    const partialPath: Path = { ...this.targetPath, curves: curvesToSerialize };
+    const partialPath = slicePath(this.targetPath, this.selectionRange);
 
     const restored = deserializePaths(
       [suggestion.path],
@@ -145,25 +131,13 @@ export class SketchSuggestionManager extends SuggestionManager {
       return;
     }
 
-    if (this.selectionRange) {
-      // 選択範囲がある場合、元のパスの一部を置換する
-      const { startCurveIndex, endCurveIndex } = this.selectionRange;
-      const restoredCurves = restored[0].curves;
-
-      // 新しいcurves配列を作成
-      const newCurves = [
-        ...this.targetPath.curves.slice(0, startCurveIndex),
-        ...restoredCurves,
-        ...this.targetPath.curves.slice(endCurveIndex + 1),
-      ];
-
-      const updatedPath: Path = { ...this.targetPath, curves: newCurves };
-
-      this.onSelect?.(updatedPath, this.targetPath);
-    } else {
-      // 全体置換
-      this.onSelect?.(restored[0], this.targetPath);
-    }
+    // 元のパスを更新（部分置換または全体置換）
+    const updatedPath = replacePathRange(
+      this.targetPath,
+      restored[0],
+      this.selectionRange,
+    );
+    this.onSelect?.(updatedPath, this.targetPath);
 
     this.clearSuggestions();
     this.setState('input');
