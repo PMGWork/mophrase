@@ -1,16 +1,13 @@
-import type { Config } from '../config';
 import type { DomRefs } from '../dom';
 import type { Path } from '../types';
 
 // プロパティエディタ
 export class PropertyEditor {
   private dom: DomRefs;
-  private config: Config;
   private activePath: Path | null = null;
 
-  constructor(dom: DomRefs, config: Config) {
+  constructor(dom: DomRefs) {
     this.dom = dom;
-    this.config = config;
 
     // Durationの更新イベント
     this.dom.durationInput.addEventListener('change', () =>
