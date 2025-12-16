@@ -15,7 +15,7 @@ export interface Config {
   llmModel: string; // LLMモデル名
   sketchPrompt: string; // スケッチ指示プロンプト
   graphPrompt: string; // グラフ指示プロンプト
-  markerSize: number; // モーションマーカーのサイズ
+  objectSize: number; // オブジェクトのサイズ
 }
 
 export interface Colors {
@@ -23,7 +23,7 @@ export interface Colors {
   curve: string; // ベジェ曲線の色
   sketch: string; // スケッチ線の色
   border: string; // 境界線の色
-  marker: string; // マーカーの色
+  object: string; // オブジェクトの色
   background: string; // 背景色
   marquee: string; // マーキーの色
   selection: string; // 選択のハイライト色
@@ -42,7 +42,7 @@ export const DEFAULT_CONFIG: Config = {
   llmModel: 'gpt-5.2',
   sketchPrompt: sketchPrompt,
   graphPrompt: graphPrompt,
-  markerSize: 20,
+  objectSize: 20,
 };
 
 export const DEFAULT_COLORS: Colors = {
@@ -50,7 +50,7 @@ export const DEFAULT_COLORS: Colors = {
   curve: '#f9fafb', // Gray-50
   sketch: '#374151', // Gray-700
   border: '#1f2937', // Gray-800
-  marker: '#e11d48', // Rose-600
+  object: '#e11d48', // Rose-600
   background: '#030712', // Gray-950
   marquee: '#60a5fa', // Blue-400
   selection: '#eab308', // Yellow-500

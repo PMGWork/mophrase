@@ -1,12 +1,21 @@
 // DOM要素のマップ
 type ElementMap = {
-  sketchCheckbox: HTMLInputElement;
-  thresholdSlider: HTMLInputElement;
-  thresholdLabel: HTMLElement;
-  graphThresholdSlider: HTMLInputElement;
-  graphThresholdLabel: HTMLElement;
+  // 設定モーダル
+  settingsButton: HTMLButtonElement;
+  settingsModal: HTMLDivElement;
+  settingsPanel: HTMLDivElement;
+  closeSettingsButton: HTMLButtonElement;
+  settingsLlmModelSelect: HTMLSelectElement;
+  settingsVisibleRawSketch: HTMLInputElement;
+  settingsSketchTolerance: HTMLInputElement;
+  settingsSketchToleranceLabel: HTMLElement;
+  settingsGraphTolerance: HTMLInputElement;
+  settingsGraphToleranceLabel: HTMLElement;
+  settingsObjectSize: HTMLInputElement;
+  settingsObjectSizeLabel: HTMLElement;
+
+  // グラフエディタ
   durationInput: HTMLInputElement;
-  llmModelSelect: HTMLSelectElement;
   canvasContainer: HTMLDivElement;
   sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
@@ -19,20 +28,28 @@ type ElementMap = {
   graphPromptForm: HTMLFormElement;
   graphPromptInput: HTMLInputElement;
   graphSuggestionList: HTMLDivElement;
-  propertyEditorContainer: HTMLDivElement;
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
 };
 
 // DOM参照の束ね役
 export class DomRefs {
-  public readonly sketchCheckbox!: HTMLInputElement;
-  public readonly thresholdSlider!: HTMLInputElement;
-  public readonly thresholdLabel!: HTMLElement;
-  public readonly graphThresholdSlider!: HTMLInputElement;
-  public readonly graphThresholdLabel!: HTMLElement;
+  // 設定モーダル
+  public readonly settingsButton!: HTMLButtonElement;
+  public readonly settingsModal!: HTMLDivElement;
+  public readonly settingsPanel!: HTMLDivElement;
+  public readonly closeSettingsButton!: HTMLButtonElement;
+  public readonly settingsLlmModelSelect!: HTMLSelectElement;
+  public readonly settingsVisibleRawSketch!: HTMLInputElement;
+  public readonly settingsSketchTolerance!: HTMLInputElement;
+  public readonly settingsSketchToleranceLabel!: HTMLElement;
+  public readonly settingsGraphTolerance!: HTMLInputElement;
+  public readonly settingsGraphToleranceLabel!: HTMLElement;
+  public readonly settingsObjectSize!: HTMLInputElement;
+  public readonly settingsObjectSizeLabel!: HTMLElement;
+
+  // その他
   public readonly durationInput!: HTMLInputElement;
-  public readonly llmModelSelect!: HTMLSelectElement;
   public readonly canvasContainer!: HTMLDivElement;
   public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
@@ -45,20 +62,27 @@ export class DomRefs {
   public readonly graphPromptForm!: HTMLFormElement;
   public readonly graphPromptInput!: HTMLInputElement;
   public readonly graphSuggestionList!: HTMLDivElement;
-  public readonly propertyEditorContainer!: HTMLDivElement;
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;
 
   // コンストラクタ
   constructor() {
     const elements = this.collectElements<ElementMap>({
-      sketchCheckbox: 'toggleSketchCheckbox',
-      thresholdSlider: 'thresholdSlider',
-      thresholdLabel: 'thresholdValue',
-      graphThresholdSlider: 'graphThresholdSlider',
-      graphThresholdLabel: 'graphThresholdLabel',
+      // 設定モーダル
+      settingsButton: 'settingsButton',
+      settingsModal: 'settingsModal',
+      settingsPanel: 'settingsPanel',
+      closeSettingsButton: 'closeSettingsButton',
+      settingsLlmModelSelect: 'settingsLlmModelSelect',
+      settingsVisibleRawSketch: 'settingsVisibleRawSketch',
+      settingsSketchTolerance: 'settingsSketchTolerance',
+      settingsSketchToleranceLabel: 'settingsSketchToleranceLabel',
+      settingsGraphTolerance: 'settingsGraphTolerance',
+      settingsGraphToleranceLabel: 'settingsGraphToleranceLabel',
+      settingsObjectSize: 'settingsObjectSize',
+      settingsObjectSizeLabel: 'settingsObjectSizeLabel',
+      // その他
       durationInput: 'durationInput',
-      llmModelSelect: 'llmModelSelect',
       canvasContainer: 'canvasContainer',
       sketchPromptForm: 'sketchPromptForm',
       sketchPromptInput: 'sketchPromptInput',
@@ -71,7 +95,6 @@ export class DomRefs {
       graphPromptForm: 'graphPromptForm',
       graphPromptInput: 'graphPromptInput',
       graphSuggestionList: 'graphSuggestionList',
-      propertyEditorContainer: 'propertyEditorContainer',
       selectToolButton: 'selectToolButton',
       penToolButton: 'penToolButton',
     });
@@ -112,3 +135,4 @@ export class DomRefs {
     };
   }
 }
+

@@ -11,8 +11,8 @@ const BISECTION_ITERATIONS = 10;
 // モーション管理クラス
 export class MotionManager {
   private p: p5;
-  private markerColor: string;
-  private markerSize: number;
+  private objectColor: string;
+  private objectSize: number;
   private isPlaying: boolean = false;
   private currentPath: Path | null = null;
   private time: number = 0;
@@ -20,10 +20,10 @@ export class MotionManager {
   private curveLengths: number[] = [];
   private totalLength: number = 0;
 
-  constructor(p: p5, markerColor: string, markerSize: number) {
+  constructor(p: p5, objectColor: string, objectSize: number) {
     this.p = p;
-    this.markerColor = markerColor;
-    this.markerSize = markerSize;
+    this.objectColor = objectColor;
+    this.objectSize = objectSize;
   }
 
   // #region メイン関数
@@ -69,17 +69,17 @@ export class MotionManager {
     const progress = this.evaluateTiming(this.currentPath.timeCurve, this.time);
     const position = this.evaluatePosition(this.currentPath.curves, progress);
 
-    this.drawMarker(position);
+    this.drawObject(position);
   }
 
   // #region プライベート関数
 
-  // マーカーを描画
-  private drawMarker(position: Vector): void {
+  // オブジェクトを描画
+  private drawObject(position: Vector): void {
     this.p.push();
-    this.p.fill(this.markerColor);
+    this.p.fill(this.objectColor);
     this.p.noStroke();
-    this.p.circle(position.x, position.y, this.markerSize);
+    this.p.circle(position.x, position.y, this.objectSize);
     this.p.pop();
   }
 

@@ -87,6 +87,27 @@ export class HandleManager {
     this.selectedHandles = [];
   }
 
+  // 指定パスの全アンカーポイントを選択
+  selectAllAnchors(pathIndex: number): void {
+    this.clearSelection();
+    const paths = this.getPaths();
+    const path = paths[pathIndex];
+    if (!path) return;
+
+    for (let curveIndex = 0; curveIndex < path.curves.length; curveIndex++) {
+      this.selectedHandles.push({
+        pathIndex,
+        curveIndex,
+        pointIndex: CURVE_POINT.START_ANCHOR_POINT,
+      });
+      this.selectedHandles.push({
+        pathIndex,
+        curveIndex,
+        pointIndex: CURVE_POINT.END_ANCHOR_POINT,
+      });
+    }
+  }
+
   // 矩形内のアンカーポイントを選択
   selectInRect(
     rect: MarqueeRect,

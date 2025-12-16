@@ -6,7 +6,7 @@ import { HandleManager } from '../core/handleManager';
 import { MotionManager } from '../core/motionManager';
 import type { DomRefs } from '../dom';
 import { SketchSuggestionManager } from '../suggestion/sketchSuggestion';
-import type { EditorTool, MarqueeRect, Path, SelectionRange } from '../types';
+import type { EditorTool, MarqueeRect, Path } from '../types';
 import { drawBezierCurve, drawControls, drawPoints } from '../utils/draw';
 import { bezierCurve } from '../utils/math';
 import { isInRect, isLeftMouseButton } from '../utils/p5Helpers';
@@ -155,8 +155,8 @@ export class SketchEditor {
 
     this.motionManager = new MotionManager(
       p,
-      this.colors.marker,
-      this.config.markerSize,
+      this.colors.object,
+      this.config.objectSize,
     );
   }
 
@@ -181,10 +181,8 @@ export class SketchEditor {
     p.background(this.colors.background);
 
     // 確定済みパスの描画
-    const selectionRange = this.handleManager.getSelectionRange();
-
     for (let pathIndex = 0; pathIndex < this.paths.length; pathIndex++) {
-      this.drawPath(p, pathIndex, selectionRange);
+      this.drawPath(p, pathIndex);
     }
 
     // マーキー矩形の描画
@@ -275,10 +273,13 @@ export class SketchEditor {
         // 別のパスを選択
         this.activePath = clickedPath;
         this.onPathSelected(this.activePath);
-        this.handleManager.clearSelection();
-        this.suggestionManager.close();
 
-        // 選択したパスで提案UIを開く
+        // 全アンカーポイントを選択状態にする
+        const pathIndex = this.paths.indexOf(clickedPath);
+        this.handleManager.selectAllAnchors(pathIndex);
+
+        // 提案UIを閉じて、選択したパスで提案UIを開く
+        this.suggestionManager.close();
         this.suggestionManager.open(this.activePath);
       }
       return;
@@ -415,6 +416,7 @@ export class SketchEditor {
     // 確定済みパスに追加
     this.paths.push(this.draftPath);
     this.activePath = this.draftPath;
+
     this.suggestionManager.close();
     this.suggestionManager.open(this.activePath);
 
@@ -529,16 +531,11 @@ export class SketchEditor {
   }
 
   // 1つのパスを描画
-  private drawPath(
-    p: p5,
-    pathIndex: number,
-    selectionRange: SelectionRange | null,
-  ): void {
+  private drawPath(p: p5, pathIndex: number): void {
     const path = this.paths[pathIndex];
     if (!path) return;
 
     const isSelectedPath = this.activePath === path;
-    const isSelectedRangePath = selectionRange?.pathIndex === pathIndex;
 
     // スケッチ点列の描画
     if (this.config.showSketch) {
@@ -552,42 +549,11 @@ export class SketchEditor {
       );
     }
 
-    // ベジェ曲線の描画
-    if (isSelectedRangePath && selectionRange) {
-      // 範囲選択時は分割描画
-      const { startCurveIndex, endCurveIndex } = selectionRange;
-
-      if (startCurveIndex > 0) {
-        drawBezierCurve(
-          p,
-          path.curves.slice(0, startCurveIndex),
-          this.config.lineWeight,
-          this.colors.curve,
-        );
-      }
-
-      drawBezierCurve(
-        p,
-        path.curves.slice(startCurveIndex, endCurveIndex + 1),
-        this.config.lineWeight,
-        this.colors.selection,
-      );
-
-      if (endCurveIndex < path.curves.length - 1) {
-        drawBezierCurve(
-          p,
-          path.curves.slice(endCurveIndex + 1),
-          this.config.lineWeight,
-          this.colors.curve,
-        );
-      }
-    } else {
-      // 通常描画
-      const curveColor = isSelectedPath
-        ? this.colors.handle
-        : this.colors.curve;
-      drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
-    }
+    // ベジェ曲線の描画（曲線はハイライトしない）
+    const curveColor = isSelectedPath
+      ? this.colors.handle
+      : this.colors.curve;
+    drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
 
     // 制御点の描画（選択されたパスのみ）
     if (isSelectedPath) {
