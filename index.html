@@ -22,6 +22,24 @@
         <h1 class="text-2xl font-medium">MoPhrase</h1>
 
         <div class="flex flex-wrap items-center gap-2">
+          <!-- ツールバー -->
+          <button
+            id="selectToolButton"
+            title="Selection Tool (V)"
+            class="corner-md flex h-9 w-9 cursor-pointer items-center justify-center bg-gray-800 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-50"
+          >
+            <i data-lucide="mouse-pointer" class="h-4 w-4"></i>
+          </button>
+          <button
+            id="penToolButton"
+            title="Pen Tool (G)"
+            class="corner-md flex h-9 w-9 cursor-pointer items-center justify-center bg-gray-50 text-gray-950 transition-colors hover:bg-gray-200"
+          >
+            <i data-lucide="pen-tool" class="h-4 w-4"></i>
+          </button>
+
+          <div class="mx-2 h-6 w-px bg-gray-800"></div>
+
           <!-- LLMモデル選択 -->
           <div class="relative">
             <select
@@ -102,39 +120,15 @@
         <!-- スケッチキャンバス -->
         <main
           id="canvasContainer"
-          class="corner-2xl relative min-w-0 flex-1 overflow-hidden border border-gray-800"
+          class="corner-xl relative min-w-0 flex-1 overflow-hidden border border-gray-800"
         >
-          <!-- スケッチ提案ポップアップ -->
-          <div
-            id="sketchSuggestionContainer"
-            class="corner-lg absolute z-10 min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
-            style="display: none"
-          >
-            <form id="sketchPromptForm" class="flex items-center">
-              <input
-                id="sketchPromptInput"
-                type="text"
-                placeholder="Enter instructions..."
-                autocomplete="off"
-                class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
-              />
-              <button type="submit" class="cursor-pointer p-3">
-                <i data-lucide="send" class="h-4 w-4"></i>
-              </button>
-            </form>
-            <div
-              id="sketchSuggestionList"
-              class="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
-            >
-              <!-- ここに提案が挿入される -->
-            </div>
-          </div>
+          <!-- p5.jsキャンバスがここに挿入される -->
         </main>
 
         <!-- グラフエディタ -->
         <aside
           id="graphEditorContainer"
-          class="corner-2xl flex w-[400px] flex-col overflow-hidden border border-gray-800 bg-gray-950 transition-all duration-300"
+          class="corner-xl flex w-[400px] flex-col overflow-hidden border border-gray-800 bg-gray-950 transition-all duration-300"
         >
           <!-- ヘッダー -->
           <div
@@ -220,6 +214,32 @@
             </div>
           </div>
         </aside>
+      </div>
+    </div>
+
+    <!-- スケッチ提案ポップアップ（position: fixedでbody直下に配置） -->
+    <div
+      id="sketchSuggestionContainer"
+      class="corner-lg fixed z-50 min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+      style="display: none"
+    >
+      <form id="sketchPromptForm" class="flex items-center">
+        <input
+          id="sketchPromptInput"
+          type="text"
+          placeholder="Enter instructions..."
+          autocomplete="off"
+          class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
+        />
+        <button type="submit" class="cursor-pointer p-3">
+          <i data-lucide="send" class="h-4 w-4"></i>
+        </button>
+      </form>
+      <div
+        id="sketchSuggestionList"
+        class="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
+      >
+        <!-- ここに提案が挿入される -->
       </div>
     </div>
 

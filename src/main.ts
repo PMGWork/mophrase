@@ -41,9 +41,13 @@ const main = (): void => {
     // ボタンのイベントを登録
     bindButton(dom.clearButton, () => sketchEditor.clearAll());
     bindButton(dom.playButton, () => sketchEditor.playMotion());
-    bindButton(dom.closeGraphEditorButton, () => graphEditor.toggle());
+    bindButton(dom.closeGraphEditorButton, () => {
+      graphEditor.toggle();
+      updateGraphButtonUI();
+    });
     bindButton(dom.editMotionButton, () => {
       graphEditor.toggle();
+      updateGraphButtonUI();
       const target = sketchEditor.getLatestPath();
       if (target) {
         graphEditor.setPath(target);
@@ -78,6 +82,21 @@ const main = (): void => {
   // ボタンイベント
   function bindButton(el: HTMLButtonElement, handler: () => void): void {
     el.addEventListener('click', handler);
+  }
+
+  // Graph ボタンのUI更新
+  function updateGraphButtonUI(): void {
+    const isVisible = !dom.graphEditorContainer.classList.contains('hidden');
+    const activeClass = ['bg-gray-50', 'text-gray-950', 'hover:bg-gray-200'];
+    const inactiveClass = ['bg-gray-800', 'text-gray-50', 'hover:bg-gray-700'];
+
+    if (isVisible) {
+      dom.editMotionButton.classList.remove(...inactiveClass);
+      dom.editMotionButton.classList.add(...activeClass);
+    } else {
+      dom.editMotionButton.classList.remove(...activeClass);
+      dom.editMotionButton.classList.add(...inactiveClass);
+    }
   }
 
   // チェックボックスイベント

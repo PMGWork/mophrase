@@ -167,12 +167,14 @@ export function positionUI({
   const anchor = getPathEndPoint(targetPath, selectionRange);
   if (!anchor) return;
 
-  const parent = container.parentElement;
-  const rect = parent?.getBoundingClientRect();
+  // canvasContainerの位置を取得して加算
+  const canvasContainer = document.getElementById('canvasContainer');
+  const rect = canvasContainer?.getBoundingClientRect();
   const offsetX = rect?.left ?? 0;
+  const offsetY = rect?.top ?? 0;
 
   const left = offsetX + anchor.x + POPUP_OFFSET;
-  const top = anchor.y - POPUP_OFFSET;
+  const top = offsetY + anchor.y - POPUP_OFFSET;
 
   container.style.left = `${left}px`;
   container.style.top = `${top}px`;

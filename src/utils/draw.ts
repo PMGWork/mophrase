@@ -57,10 +57,10 @@ export function drawBezierCurve(
     p.beginShape();
     for (let t = 0; t <= 1; t += 0.01) {
       const pt = bezierCurve(
-        curve[CURVE_POINT.START_ANCHOR],
-        curve[CURVE_POINT.START_CONTROL],
-        curve[CURVE_POINT.END_CONTROL],
-        curve[CURVE_POINT.END_ANCHOR],
+        curve[CURVE_POINT.START_ANCHOR_POINT],
+        curve[CURVE_POINT.START_CONTROL_POINT],
+        curve[CURVE_POINT.END_CONTROL_POINT],
+        curve[CURVE_POINT.END_ANCHOR_POINT],
         t,
       );
       p.vertex(pt.x, pt.y);
@@ -85,28 +85,30 @@ export function drawControls(
 
   for (let i = 0; i < curves.length; i++) {
     const curve = curves[i];
-    const p0 = transform(curve[CURVE_POINT.START_ANCHOR].copy());
-    const p1 = transform(curve[CURVE_POINT.START_CONTROL].copy());
-    const p2 = transform(curve[CURVE_POINT.END_CONTROL].copy());
-    const p3 = transform(curve[CURVE_POINT.END_ANCHOR].copy());
+    const p0 = transform(curve[CURVE_POINT.START_ANCHOR_POINT].copy());
+    const p1 = transform(curve[CURVE_POINT.START_CONTROL_POINT].copy());
+    const p2 = transform(curve[CURVE_POINT.END_CONTROL_POINT].copy());
+    const p3 = transform(curve[CURVE_POINT.END_ANCHOR_POINT].copy());
 
     // 制御ポリゴン（線）
     p.strokeWeight(1);
     p.noFill();
-    p.stroke(getColor ? getColor(i, CURVE_POINT.START_CONTROL) : color);
+    p.stroke(
+      getColor ? getColor(i, CURVE_POINT.START_CONTROL_POINT) : color,
+    );
     p.line(p0.x, p0.y, p1.x, p1.y);
-    p.stroke(getColor ? getColor(i, CURVE_POINT.END_CONTROL) : color);
+    p.stroke(getColor ? getColor(i, CURVE_POINT.END_CONTROL_POINT) : color);
     p.line(p2.x, p2.y, p3.x, p3.y);
 
     // 制御点（アンカー：四角、ハンドル：丸）
     p.noStroke();
-    p.fill(getColor ? getColor(i, CURVE_POINT.START_ANCHOR) : color);
+    p.fill(getColor ? getColor(i, CURVE_POINT.START_ANCHOR_POINT) : color);
     p.rect(p0.x, p0.y, size, size);
-    p.fill(getColor ? getColor(i, CURVE_POINT.END_ANCHOR) : color);
+    p.fill(getColor ? getColor(i, CURVE_POINT.END_ANCHOR_POINT) : color);
     p.rect(p3.x, p3.y, size, size);
-    p.fill(getColor ? getColor(i, CURVE_POINT.START_CONTROL) : color);
+    p.fill(getColor ? getColor(i, CURVE_POINT.START_CONTROL_POINT) : color);
     p.circle(p1.x, p1.y, size);
-    p.fill(getColor ? getColor(i, CURVE_POINT.END_CONTROL) : color);
+    p.fill(getColor ? getColor(i, CURVE_POINT.END_CONTROL_POINT) : color);
     p.circle(p2.x, p2.y, size);
   }
 

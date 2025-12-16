@@ -20,6 +20,8 @@ type ElementMap = {
   graphPromptInput: HTMLInputElement;
   graphSuggestionList: HTMLDivElement;
   propertyEditorContainer: HTMLDivElement;
+  selectToolButton: HTMLButtonElement;
+  penToolButton: HTMLButtonElement;
 };
 
 // DOM参照の束ね役
@@ -44,6 +46,8 @@ export class DomRefs {
   public readonly graphPromptInput!: HTMLInputElement;
   public readonly graphSuggestionList!: HTMLDivElement;
   public readonly propertyEditorContainer!: HTMLDivElement;
+  public readonly selectToolButton!: HTMLButtonElement;
+  public readonly penToolButton!: HTMLButtonElement;
 
   // コンストラクタ
   constructor() {
@@ -68,6 +72,8 @@ export class DomRefs {
       graphPromptInput: 'graphPromptInput',
       graphSuggestionList: 'graphSuggestionList',
       propertyEditorContainer: 'propertyEditorContainer',
+      selectToolButton: 'selectToolButton',
+      penToolButton: 'penToolButton',
     });
 
     Object.assign(this, elements);

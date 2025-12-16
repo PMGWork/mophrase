@@ -45,10 +45,10 @@ export class GraphEditor {
       () => (this.activePath ? [{ curves: this.activePath.timeCurve }] : []),
 
       // ピクセル座標から正規化座標への変換
-      (x, y) => this.pixelToNormalized(x, y),
+      (x, y) => this.pixelToNorm(x, y),
 
       // 正規化座標からピクセル座標への変換
-      (normX, normY) => this.normalizedToPixel(normX, normY),
+      (normX, normY) => this.normToPixel(normX, normY),
     );
 
     // 提案マネージャー
@@ -205,25 +205,25 @@ export class GraphEditor {
     if (!isLeftClick) return;
 
     // ハンドルのドラッグ
-    if (this.handleManager.startDrag(p.mouseX, p.mouseY)) return;
+    this.handleManager.startDrag(p.mouseX, p.mouseY);
   }
 
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
-    const dragMode = p.keyIsDown(p.ALT) ? 0 : this.config.defaultDragMode;
+    const dragMode = p.keyIsDown(p.ALT) ? 1 : 0;
     this.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
   }
 
   // p5.js マウスリリース
   private mouseReleased(): void {
-    if (this.handleManager.endDrag()) return;
+    this.handleManager.endDrag();
   }
 
   // #region プライベート関数
 
   // ピクセル座標から正規化座標への変換
-  private pixelToNormalized(x: number, y: number): { x: number; y: number } {
+  private pixelToNorm(x: number, y: number): { x: number; y: number } {
     let size = this.canvasSize;
     if (!size) {
       const { width, height } = this.dom.getGraphCanvasSize();
@@ -242,7 +242,7 @@ export class GraphEditor {
   }
 
   // 正規化座標からピクセル座標への変換
-  private normalizedToPixel(
+  private normToPixel(
     normX: number,
     normY: number,
   ): { x: number; y: number } {

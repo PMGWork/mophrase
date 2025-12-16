@@ -87,8 +87,8 @@ export class MotionManager {
   private evaluateTiming(curves: Vector[][], time: number): number {
     for (let i = 0; i < curves.length; i++) {
       const curve = curves[i];
-      const startX = curve[CURVE_POINT.START_ANCHOR].x;
-      const endX = curve[CURVE_POINT.END_ANCHOR].x;
+      const startX = curve[CURVE_POINT.START_ANCHOR_POINT].x;
+      const endX = curve[CURVE_POINT.END_ANCHOR_POINT].x;
 
       if (time >= startX && time <= endX) {
         const u = this.solveBezierX(curve, time);
@@ -96,8 +96,9 @@ export class MotionManager {
       }
     }
 
-    if (time < curves[0][CURVE_POINT.START_ANCHOR].x) return 0;
-    if (time > curves[curves.length - 1][CURVE_POINT.END_ANCHOR].x) return 1;
+    if (time < curves[0][CURVE_POINT.START_ANCHOR_POINT].x) return 0;
+    if (time > curves[curves.length - 1][CURVE_POINT.END_ANCHOR_POINT].x)
+      return 1;
 
     return time;
   }
@@ -123,7 +124,8 @@ export class MotionManager {
 
   // 空間曲線から、進行度 p (0-1) に対応する座標を取得
   private evaluatePosition(curves: Vector[][], p: number): Vector {
-    if (this.totalLength === 0) return curves[0][CURVE_POINT.START_ANCHOR];
+    if (this.totalLength === 0)
+      return curves[0][CURVE_POINT.START_ANCHOR_POINT];
 
     const targetDist = p * this.totalLength;
     let currentDist = 0;
@@ -146,7 +148,7 @@ export class MotionManager {
 
     // 最後の点
     const lastCurve = curves[curves.length - 1];
-    return lastCurve[CURVE_POINT.END_ANCHOR];
+    return lastCurve[CURVE_POINT.END_ANCHOR_POINT];
   }
 
   // タイミング曲線を生成

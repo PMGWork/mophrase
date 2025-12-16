@@ -1,9 +1,9 @@
 // ベジエ曲線のポイントインデックス
 export const CURVE_POINT = {
-  START_ANCHOR: 0,
-  START_CONTROL: 1,
-  END_CONTROL: 2,
-  END_ANCHOR: 3,
+  START_ANCHOR_POINT: 0,
+  START_CONTROL_POINT: 1,
+  END_CONTROL_POINT: 2,
+  END_ANCHOR_POINT: 3,
 };
 
 // ベジエ曲線の計算ステップ

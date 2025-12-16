@@ -24,6 +24,9 @@ export interface SelectionRange {
 // LLMプロバイダの種類
 export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
 
+// 編集ツール
+export type EditorTool = 'select' | 'pen';
+
 // 描画パス情報
 export interface Path {
   points: Vector[];
