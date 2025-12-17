@@ -34,7 +34,7 @@ export class HandleManager {
   // #region ドラッグ操作
 
   // ドラッグを開始
-  startDrag(x: number, y: number): void {
+  startDrag(x: number, y: number, shift: boolean = false): void {
     const handle = this.hitTest(x, y);
 
     // カーソルの位置にハンドルがない場合
@@ -43,8 +43,24 @@ export class HandleManager {
       return;
     }
 
-    // ハンドルを選択
-    if (!this.isSelected(handle)) this.selectedHandles = [handle];
+    // Shift+クリックの場合は選択をトグル
+    if (shift) {
+      if (this.isSelected(handle)) {
+        // 既に選択されている場合は選択解除
+        this.selectedHandles = this.selectedHandles.filter(
+          (h) =>
+            h.pathIndex !== handle.pathIndex ||
+            h.curveIndex !== handle.curveIndex ||
+            h.pointIndex !== handle.pointIndex,
+        );
+      } else {
+        // 選択されていない場合は追加
+        this.selectedHandles.push(handle);
+      }
+    } else {
+      // 通常クリック: 選択されていなければ置き換え
+      if (!this.isSelected(handle)) this.selectedHandles = [handle];
+    }
 
     // ハンドルをドラッグ開始
     this.draggedHandle = handle;
@@ -87,29 +103,8 @@ export class HandleManager {
     this.selectedHandles = [];
   }
 
-  // 指定パスの全アンカーポイントを選択
-  selectAllAnchors(pathIndex: number): void {
-    this.clearSelection();
-    const paths = this.getPaths();
-    const path = paths[pathIndex];
-    if (!path) return;
-
-    for (let curveIndex = 0; curveIndex < path.curves.length; curveIndex++) {
-      this.selectedHandles.push({
-        pathIndex,
-        curveIndex,
-        pointIndex: CURVE_POINT.START_ANCHOR_POINT,
-      });
-      this.selectedHandles.push({
-        pathIndex,
-        curveIndex,
-        pointIndex: CURVE_POINT.END_ANCHOR_POINT,
-      });
-    }
-  }
-
   // 矩形内のアンカーポイントを選択
-  selectInRect(rect: MarqueeRect, targetPathIndex?: number): HandleSelection[] {
+  selectAnchorsInRect(rect: MarqueeRect, targetPathIndex?: number): HandleSelection[] {
     // 選択をクリア
     this.clearSelection();
 

@@ -95,12 +95,14 @@ export class SketchEditor {
     this.currentTool = tool;
     this.updateToolbarUI();
 
-    // ペンツールに切り替わったら選択解除
+    // ペンツールに切り替わったら提案ウィンドウを閉じる
     if (tool === 'pen') {
-      this.activePath = null;
-      this.onPathSelected(null);
-      this.handleManager.clearSelection();
       this.suggestionManager.close();
+    }
+
+    // 選択ツールに切り替わったら、アクティブなパスがあれば提案を表示
+    if (tool === 'select' && this.activePath) {
+      this.suggestionManager.open(this.activePath);
     }
   }
 
@@ -262,7 +264,8 @@ export class SketchEditor {
   private mousePressedSelect(p: p5): void {
     // 1. ハンドルのドラッグ試行 (アクティブなパスがある場合のみ)
     if (this.activePath) {
-      this.handleManager.startDrag(p.mouseX, p.mouseY);
+      const shift = p.keyIsDown(p.SHIFT);
+      this.handleManager.startDrag(p.mouseX, p.mouseY, shift);
       if (this.handleManager.isDragging()) return;
     }
 
@@ -275,9 +278,8 @@ export class SketchEditor {
         this.activePath = clickedPath;
         this.onPathSelected(this.activePath);
 
-        // 全アンカーポイントを選択状態にする
-        const pathIndex = this.paths.indexOf(clickedPath);
-        this.handleManager.selectAllAnchors(pathIndex);
+        // 範囲選択をクリア（パス全体がLLMに送られる）
+        this.handleManager.clearSelection();
 
         // 提案UIを閉じて、選択したパスで提案UIを開く
         this.suggestionManager.close();
@@ -377,7 +379,7 @@ export class SketchEditor {
         : undefined;
 
       // 矩形内のハンドルを選択（パスインデックスでフィルタリング）
-      const selected = this.handleManager.selectInRect(
+      const selected = this.handleManager.selectAnchorsInRect(
         this.marqueeRect,
         targetPathIndex !== -1 ? targetPathIndex : undefined,
       );
