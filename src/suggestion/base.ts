@@ -76,6 +76,11 @@ export abstract class SuggestionManager {
 
   // 提案UIを開く
   open(targetPath?: Path): void {
+    // 提案をリセット
+    this.clearSuggestions();
+    this.prompts = [];
+
+    // 提案UIを開く
     this.targetPath = targetPath;
     this.setState('input');
     this.updateUI();

@@ -5,7 +5,7 @@ import { DomRefs } from './dom';
 import { GraphEditor } from './editor/graphEditor';
 import { PropertyEditor } from './editor/propertyEditor';
 import { SettingsPanel } from './editor/settingsPanel';
-import { SketchEditor } from './editor/sketchEditor';
+import { SketchEditor } from './editor/sketchEditor/editor';
 
 // メイン処理
 const main = (): void => {
@@ -41,13 +41,13 @@ const main = (): void => {
   // UIのセットアップ
   const setupUI = (): void => {
     // ボタンのイベントを登録
-    bindButton(dom.clearButton, () => sketchEditor.clearAll());
-    bindButton(dom.playButton, () => sketchEditor.playMotion());
-    bindButton(dom.closeGraphEditorButton, () => {
+    dom.clearButton.addEventListener('click', () => sketchEditor.clearAll());
+    dom.playButton.addEventListener('click', () => sketchEditor.playMotion());
+    dom.closeGraphEditorButton.addEventListener('click', () => {
       graphEditor.toggle();
       updateGraphButtonUI();
     });
-    bindButton(dom.editMotionButton, () => {
+    dom.editMotionButton.addEventListener('click', () => {
       graphEditor.toggle();
       updateGraphButtonUI();
       const target = sketchEditor.getLatestPath();
@@ -61,24 +61,19 @@ const main = (): void => {
     setupUserPromptInput();
   };
 
-  // ボタンイベント
-  function bindButton(el: HTMLButtonElement, handler: () => void): void {
-    el.addEventListener('click', handler);
-  }
-
   // Graph ボタンのUI更新
   function updateGraphButtonUI(): void {
     const isVisible = !dom.graphEditorContainer.classList.contains('hidden');
-    const activeClass = ['bg-gray-50', 'text-gray-950', 'hover:bg-gray-200'];
-    const inactiveClass = ['bg-gray-800', 'text-gray-50', 'hover:bg-gray-700'];
+    const el = dom.editMotionButton;
 
-    if (isVisible) {
-      dom.editMotionButton.classList.remove(...inactiveClass);
-      dom.editMotionButton.classList.add(...activeClass);
-    } else {
-      dom.editMotionButton.classList.remove(...activeClass);
-      dom.editMotionButton.classList.add(...inactiveClass);
-    }
+    // アクティブ時のクラス
+    el.classList.toggle('bg-gray-50', isVisible);
+    el.classList.toggle('text-gray-950', isVisible);
+    el.classList.toggle('hover:bg-gray-200', isVisible);
+    // 非アクティブ時のクラス
+    el.classList.toggle('bg-gray-800', !isVisible);
+    el.classList.toggle('text-gray-50', !isVisible);
+    el.classList.toggle('hover:bg-gray-700', !isVisible);
   }
 
   // ユーザー指示入力欄のセットアップ

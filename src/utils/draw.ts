@@ -112,3 +112,49 @@ export function drawControls(
 
   p.rectMode(p.CORNER);
 }
+
+// パス全体の描画（スケッチ点列 + ベジェ曲線 + 制御点）
+export function drawSketchPath(
+  p: p5,
+  path: { points: { x: number; y: number }[]; curves: Vector[][] },
+  config: { showSketch: boolean; lineWeight: number; pointSize: number },
+  colors: { curve: string; background: string; handle: string; selection: string },
+  isSelected: boolean,
+  isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
+): void {
+  // スケッチ点列の描画
+  if (config.showSketch) {
+    drawPoints(
+      p,
+      path.points as Vector[],
+      config.lineWeight,
+      config.pointSize - config.lineWeight,
+      colors.curve,
+      colors.background,
+    );
+  }
+
+  // ベジェ曲線の描画
+  const curveColor = isSelected ? colors.handle : colors.curve;
+  drawBezierCurve(p, path.curves, config.lineWeight, curveColor);
+
+  // 制御点の描画（選択されたパスのみ）
+  if (isSelected) {
+    const getColor = isHandleSelected
+      ? (curveIndex: number, pointIndex: number) =>
+          isHandleSelected(curveIndex, pointIndex)
+            ? colors.selection
+            : colors.handle
+      : undefined;
+
+    drawControls(
+      p,
+      path.curves,
+      config.pointSize,
+      colors.handle,
+      undefined,
+      getColor,
+    );
+  }
+}
+

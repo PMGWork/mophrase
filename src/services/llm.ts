@@ -170,7 +170,7 @@ export async function generateStructured<T>(
 }
 
 // 全プロバイダのモデル一覧を取得
-export function getProviderModelOptions(): ProviderModelOption[] {
+export function getModels(): ProviderModelOption[] {
   return (Object.entries(PROVIDERS) as [LLMProvider, ProviderConfig][]).flatMap(
     ([provider, config]) =>
       config.models.map((model) => ({

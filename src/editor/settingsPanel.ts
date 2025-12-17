@@ -1,6 +1,6 @@
 import type { Config } from '../config';
 import type { DomRefs } from '../dom';
-import { getProviderModelOptions } from '../services/llm';
+import { getModels } from '../services/llm';
 import type { LLMProvider } from '../types';
 
 // 設定パネル
@@ -48,41 +48,31 @@ export class SettingsPanel {
       if (e.target === this.dom.settingsModal) this.close();
     });
 
-    // Escキーで閉じる
-    document.addEventListener('keydown', (e) => {
-      if (
-        e.key === 'Escape' &&
-        this.dom.settingsModal.style.display !== 'none'
-      ) {
-        this.close();
-      }
-    });
-
     // LLMモデル選択
     this.dom.settingsLlmModelSelect.addEventListener('change', () => {
       this.handleLlmModelChange();
     });
 
-    // Visible Raw Sketch
+    // チェックボックス
     this.dom.settingsVisibleRawSketch.addEventListener('change', () => {
       this.config.showSketch = this.dom.settingsVisibleRawSketch.checked;
     });
 
-    // Tolerance (Sketch)
+    // スライダー: Sketch Tolerance
     this.dom.settingsSketchTolerance.addEventListener('input', () => {
       const value = Number(this.dom.settingsSketchTolerance.value);
       this.config.sketchFitTolerance = value;
       this.dom.settingsSketchToleranceLabel.textContent = `${value}px`;
     });
 
-    // Tolerance (Graph)
+    // スライダー: Graph Tolerance
     this.dom.settingsGraphTolerance.addEventListener('input', () => {
       const value = Number(this.dom.settingsGraphTolerance.value);
       this.config.graphFitTolerance = value;
       this.dom.settingsGraphToleranceLabel.textContent = `${value}%`;
     });
 
-    // Object Size
+    // スライダー: Object Size
     this.dom.settingsObjectSize.addEventListener('input', () => {
       const value = Number(this.dom.settingsObjectSize.value);
       this.config.objectSize = value;
@@ -92,9 +82,10 @@ export class SettingsPanel {
 
   // LLMモデル選択肢の設定
   private populateModelOptions(): void {
-    const options = getProviderModelOptions();
+    const options = getModels();
     this.dom.settingsLlmModelSelect.innerHTML = '';
 
+    // 選択肢を追加
     for (const optionInfo of options) {
       const option = document.createElement('option');
       option.value = JSON.stringify({

@@ -21,9 +21,6 @@ export class GraphEditor {
   private config: Config;
   private colors: Colors;
 
-  // 現在のキャンバスサイズ
-  private canvasSize = 0;
-
   // 描画領域の設定
   private static readonly MARGIN = 30;
   private readonly margin = {
@@ -117,7 +114,6 @@ export class GraphEditor {
   private setup(p: p5): void {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
-    this.canvasSize = size;
     p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
     p.textFont('Geist');
   }
@@ -126,7 +122,6 @@ export class GraphEditor {
   private windowResized(p: p5): void {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
-    this.canvasSize = size;
     p.resizeCanvas(size, size);
   }
 
@@ -224,11 +219,8 @@ export class GraphEditor {
 
   // ピクセル座標から正規化座標への変換
   private pixelToNorm(x: number, y: number): { x: number; y: number } {
-    let size = this.canvasSize;
-    if (!size) {
-      const { width, height } = this.dom.getGraphCanvasSize();
-      size = Math.min(width, height);
-    }
+    const { width, height } = this.dom.getGraphCanvasSize();
+    const size = Math.min(width, height);
 
     const mouseX = x - this.margin.left;
     const mouseY = y - this.margin.top;
@@ -243,11 +235,8 @@ export class GraphEditor {
 
   // 正規化座標からピクセル座標への変換
   private normToPixel(normX: number, normY: number): { x: number; y: number } {
-    let size = this.canvasSize;
-    if (!size) {
-      const { width, height } = this.dom.getGraphCanvasSize();
-      size = Math.min(width, height);
-    }
+    const { width, height } = this.dom.getGraphCanvasSize();
+    const size = Math.min(width, height);
 
     const graphW = size - this.margin.left - this.margin.right;
     const graphH = size - this.margin.top - this.margin.bottom;
