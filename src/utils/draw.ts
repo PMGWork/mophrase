@@ -1,6 +1,7 @@
 import type p5 from 'p5';
+import type { Colors, Config } from '../config';
 import { CURVE_POINT } from '../constants';
-import type { Vector } from '../types';
+import type { Path, Vector } from '../types';
 import { bezierCurve } from './math';
 
 // 入力点の描画
@@ -13,6 +14,8 @@ export function drawPoints(
   background: string,
 ): void {
   if (points.length === 0) return;
+
+  p.push();
 
   // 点列の描画
   p.stroke(foreground);
@@ -36,7 +39,7 @@ export function drawPoints(
     p.rect(pt.x, pt.y, size, size);
   }
 
-  p.rectMode(p.CORNER);
+  p.pop();
 }
 
 // ベジェ曲線の描画
@@ -47,6 +50,8 @@ export function drawBezierCurve(
   color: string,
 ): void {
   if (curves.length === 0) return;
+
+  p.push();
 
   // 曲線の描画
   p.stroke(color);
@@ -67,6 +72,8 @@ export function drawBezierCurve(
     }
     p.endShape();
   }
+
+  p.pop();
 }
 
 // 制御点と制御ポリゴンの描画
@@ -79,6 +86,8 @@ export function drawControls(
   getColor?: (curveIndex: number, pointIndex: number) => string,
 ): void {
   if (curves.length === 0) return;
+
+  p.push();
 
   // 制御点の描画
   p.rectMode(p.CENTER);
@@ -110,15 +119,15 @@ export function drawControls(
     p.circle(p2.x, p2.y, size);
   }
 
-  p.rectMode(p.CORNER);
+  p.pop();
 }
 
 // パス全体の描画（スケッチ点列 + ベジェ曲線 + 制御点）
 export function drawSketchPath(
   p: p5,
-  path: { points: { x: number; y: number }[]; curves: Vector[][] },
-  config: { showSketch: boolean; lineWeight: number; pointSize: number },
-  colors: { curve: string; background: string; handle: string; selection: string },
+  path: Pick<Path, 'points' | 'curves'>,
+  config: Pick<Config, 'showSketch' | 'lineWeight' | 'pointSize'>,
+  colors: Pick<Colors, 'curve' | 'background' | 'handle' | 'selection'>,
   isSelected: boolean,
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
 ): void {
@@ -126,7 +135,7 @@ export function drawSketchPath(
   if (config.showSketch) {
     drawPoints(
       p,
-      path.points as Vector[],
+      path.points,
       config.lineWeight,
       config.pointSize - config.lineWeight,
       colors.curve,
@@ -157,4 +166,3 @@ export function drawSketchPath(
     );
   }
 }
-
