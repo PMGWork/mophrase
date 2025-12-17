@@ -164,9 +164,7 @@ export function deserializeCurves(
 
       return [
         start,
-        handleOut
-          ? deserializeHandle(handleOut, start, diag, p)
-          : start.copy(),
+        handleOut ? deserializeHandle(handleOut, start, diag, p) : start.copy(),
         handleIn ? deserializeHandle(handleIn, end, diag, p) : end.copy(),
         end,
       ];

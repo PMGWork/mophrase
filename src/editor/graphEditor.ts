@@ -242,10 +242,7 @@ export class GraphEditor {
   }
 
   // 正規化座標からピクセル座標への変換
-  private normToPixel(
-    normX: number,
-    normY: number,
-  ): { x: number; y: number } {
+  private normToPixel(normX: number, normY: number): { x: number; y: number } {
     let size = this.canvasSize;
     if (!size) {
       const { width, height } = this.dom.getGraphCanvasSize();

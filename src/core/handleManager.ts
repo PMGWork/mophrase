@@ -109,10 +109,7 @@ export class HandleManager {
   }
 
   // 矩形内のアンカーポイントを選択
-  selectInRect(
-    rect: MarqueeRect,
-    targetPathIndex?: number,
-  ): HandleSelection[] {
+  selectInRect(rect: MarqueeRect, targetPathIndex?: number): HandleSelection[] {
     // 選択をクリア
     this.clearSelection();
 
@@ -164,7 +161,8 @@ export class HandleManager {
     if (this.selectedHandles.length === 0) return null;
 
     const pathIndex = this.selectedHandles[0].pathIndex;
-    if (this.selectedHandles.some((h) => h.pathIndex !== pathIndex)) return null;
+    if (this.selectedHandles.some((h) => h.pathIndex !== pathIndex))
+      return null;
 
     const path = this.getPaths()[pathIndex];
     const curveCount = path?.curves?.length ?? 0;
@@ -279,9 +277,19 @@ export class HandleManager {
       selection.pointIndex === CURVE_POINT.END_ANCHOR_POINT;
 
     if (isAnchorPoint) {
-      this.syncAdjacentCurve(path, selection.curveIndex, selection.pointIndex, { x: finalX, y: finalY }, { x: dx, y: dy });
+      this.syncAdjacentCurve(
+        path,
+        selection.curveIndex,
+        selection.pointIndex,
+        { x: finalX, y: finalY },
+        { x: dx, y: dy },
+      );
     } else if (mode === 0) {
-      this.mirrorOppositeControl(path, selection.curveIndex, selection.pointIndex);
+      this.mirrorOppositeControl(
+        path,
+        selection.curveIndex,
+        selection.pointIndex,
+      );
     }
   }
 
@@ -299,9 +307,15 @@ export class HandleManager {
     const isStart = pointIndex === CURVE_POINT.START_ANCHOR_POINT;
 
     // インデックスの事前計算
-    const selfControlIdx = isStart ? CURVE_POINT.START_CONTROL_POINT : CURVE_POINT.END_CONTROL_POINT;
-    const adjControlIdx = isStart ? CURVE_POINT.END_CONTROL_POINT : CURVE_POINT.START_CONTROL_POINT;
-    const adjAnchorIdx = isStart ? CURVE_POINT.END_ANCHOR_POINT : CURVE_POINT.START_ANCHOR_POINT;
+    const selfControlIdx = isStart
+      ? CURVE_POINT.START_CONTROL_POINT
+      : CURVE_POINT.END_CONTROL_POINT;
+    const adjControlIdx = isStart
+      ? CURVE_POINT.END_CONTROL_POINT
+      : CURVE_POINT.START_CONTROL_POINT;
+    const adjAnchorIdx = isStart
+      ? CURVE_POINT.END_ANCHOR_POINT
+      : CURVE_POINT.START_ANCHOR_POINT;
     const adjCurveIdx = curveIndex + (isStart ? -1 : 1);
 
     // 自身の制御点を移動
@@ -325,8 +339,12 @@ export class HandleManager {
     const isStartHandle = pointIndex === CURVE_POINT.START_CONTROL_POINT;
 
     // インデックスの事前計算
-    const anchorIdx = isStartHandle ? CURVE_POINT.START_ANCHOR_POINT : CURVE_POINT.END_ANCHOR_POINT;
-    const oppControlIdx = isStartHandle ? CURVE_POINT.END_CONTROL_POINT : CURVE_POINT.START_CONTROL_POINT;
+    const anchorIdx = isStartHandle
+      ? CURVE_POINT.START_ANCHOR_POINT
+      : CURVE_POINT.END_ANCHOR_POINT;
+    const oppControlIdx = isStartHandle
+      ? CURVE_POINT.END_CONTROL_POINT
+      : CURVE_POINT.START_CONTROL_POINT;
     const adjCurveIdx = curveIndex + (isStartHandle ? -1 : 1);
 
     const anchorPoint = curve?.[anchorIdx];
@@ -340,7 +358,10 @@ export class HandleManager {
     if (toCurrent.magSq() > 0) {
       const oppositeLength = oppositeHandle.copy().sub(anchorPoint).mag();
       const targetDir = toCurrent.normalize().mult(-oppositeLength);
-      oppositeHandle.set(anchorPoint.x + targetDir.x, anchorPoint.y + targetDir.y);
+      oppositeHandle.set(
+        anchorPoint.x + targetDir.x,
+        anchorPoint.y + targetDir.y,
+      );
     }
   }
 }

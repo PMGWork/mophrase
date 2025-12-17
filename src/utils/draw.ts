@@ -93,9 +93,7 @@ export function drawControls(
     // 制御ポリゴン（線）
     p.strokeWeight(1);
     p.noFill();
-    p.stroke(
-      getColor ? getColor(i, CURVE_POINT.START_CONTROL_POINT) : color,
-    );
+    p.stroke(getColor ? getColor(i, CURVE_POINT.START_CONTROL_POINT) : color);
     p.line(p0.x, p0.y, p1.x, p1.y);
     p.stroke(getColor ? getColor(i, CURVE_POINT.END_CONTROL_POINT) : color);
     p.line(p2.x, p2.y, p3.x, p3.y);

@@ -306,9 +306,4 @@ export function fitCurve(
     coarseErrTol,
     fitError,
   );
-
-  // 最終的な誤差と分割数を出力
-  console.log(
-    `Final error: ${fitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`,
-  );
 }

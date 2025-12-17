@@ -1,4 +1,9 @@
-import type { Path, SelectionRange, Suggestion, SuggestionState } from '../types';
+import type {
+  Path,
+  SelectionRange,
+  Suggestion,
+  SuggestionState,
+} from '../types';
 import { getPathEndPoint } from '../utils/path';
 
 type SuggestionUIConfig = {

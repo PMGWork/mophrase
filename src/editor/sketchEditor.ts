@@ -107,7 +107,8 @@ export class SketchEditor {
   // ツールバーのUI更新
   private updateToolbarUI(): void {
     const activeClass = 'bg-gray-50 text-gray-950 hover:bg-gray-200';
-    const inactiveClass = 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-50';
+    const inactiveClass =
+      'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-50';
 
     // クラスのリセット用
     const allActiveClasses = activeClass.split(' ');
@@ -290,16 +291,16 @@ export class SketchEditor {
     // アクティブなパスがない場合は何もしない（今回はマルチセレクトなし）
 
     if (this.activePath) {
-       // 既存の選択解除はしない（頂点選択の追加/置き換えのため）
-       // ただし、頂点自体のドラッグではなかったため、空の場所をクリックしたとみなして
-       // 範囲選択を開始する
-       this.handleManager.clearSelection(); // 一旦クリアしてから範囲選択
-       this.marqueeRect = {
-          startX: p.mouseX,
-          startY: p.mouseY,
-          endX: p.mouseX,
-          endY: p.mouseY,
-       };
+      // 既存の選択解除はしない（頂点選択の追加/置き換えのため）
+      // ただし、頂点自体のドラッグではなかったため、空の場所をクリックしたとみなして
+      // 範囲選択を開始する
+      this.handleManager.clearSelection(); // 一旦クリアしてから範囲選択
+      this.marqueeRect = {
+        startX: p.mouseX,
+        startY: p.mouseY,
+        endX: p.mouseX,
+        endY: p.mouseY,
+      };
     } else {
       // 何も選択されていない状態で背景クリック -> 全解除（既に解除済みだが念のため）
       this.handleManager.clearSelection();
@@ -311,9 +312,9 @@ export class SketchEditor {
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
     if (this.currentTool === 'pen') {
-       this.mouseDraggedPen(p);
+      this.mouseDraggedPen(p);
     } else {
-       this.mouseDraggedSelect(p);
+      this.mouseDraggedSelect(p);
     }
   }
 
@@ -386,7 +387,9 @@ export class SketchEditor {
       if (selected.length > 0 && this.activePath) {
         const selectionRange = this.handleManager.getSelectionRange();
         this.suggestionManager.open(this.activePath);
-        this.suggestionManager.updateSelectionRange(selectionRange ?? undefined);
+        this.suggestionManager.updateSelectionRange(
+          selectionRange ?? undefined,
+        );
       } else {
         // 何も選択されなかった場合は選択解除
         this.activePath = null;
@@ -416,9 +419,6 @@ export class SketchEditor {
     // 確定済みパスに追加
     this.paths.push(this.draftPath);
     this.activePath = this.draftPath;
-
-    this.suggestionManager.close();
-    this.suggestionManager.open(this.activePath);
 
     // グラフエディタにも反映
     this.onPathCreated(this.activePath);
@@ -550,9 +550,7 @@ export class SketchEditor {
     }
 
     // ベジェ曲線の描画（曲線はハイライトしない）
-    const curveColor = isSelectedPath
-      ? this.colors.handle
-      : this.colors.curve;
+    const curveColor = isSelectedPath ? this.colors.handle : this.colors.curve;
     drawBezierCurve(p, path.curves, this.config.lineWeight, curveColor);
 
     // 制御点の描画（選択されたパスのみ）

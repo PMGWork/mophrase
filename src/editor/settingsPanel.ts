@@ -50,7 +50,10 @@ export class SettingsPanel {
 
     // Escキーで閉じる
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.dom.settingsModal.style.display !== 'none') {
+      if (
+        e.key === 'Escape' &&
+        this.dom.settingsModal.style.display !== 'none'
+      ) {
         this.close();
       }
     });
@@ -140,11 +143,15 @@ export class SettingsPanel {
     this.dom.settingsVisibleRawSketch.checked = this.config.showSketch;
 
     // Tolerance (Sketch)
-    this.dom.settingsSketchTolerance.value = String(this.config.sketchFitTolerance);
+    this.dom.settingsSketchTolerance.value = String(
+      this.config.sketchFitTolerance,
+    );
     this.dom.settingsSketchToleranceLabel.textContent = `${this.config.sketchFitTolerance}px`;
 
     // Tolerance (Graph)
-    this.dom.settingsGraphTolerance.value = String(this.config.graphFitTolerance);
+    this.dom.settingsGraphTolerance.value = String(
+      this.config.graphFitTolerance,
+    );
     this.dom.settingsGraphToleranceLabel.textContent = `${this.config.graphFitTolerance}%`;
 
     // Object Size

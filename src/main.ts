@@ -21,7 +21,7 @@ const main = (): void => {
 
   // エディタ
   const graphEditor = new GraphEditor(dom, config, colors);
-  const propertyEditor = new PropertyEditor(dom, config);
+  const propertyEditor = new PropertyEditor(dom);
   const sketchEditor = new SketchEditor(
     dom,
     config,
@@ -98,4 +98,3 @@ const main = (): void => {
 };
 
 main();
-
