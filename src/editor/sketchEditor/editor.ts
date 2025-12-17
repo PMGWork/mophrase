@@ -218,7 +218,11 @@ export class SketchEditor {
         isSelectedPath,
         isSelectedPath
           ? (curveIndex, pointIndex) =>
-              this.handleManager.isSelected({ pathIndex, curveIndex, pointIndex })
+              this.handleManager.isSelected({
+                pathIndex,
+                curveIndex,
+                pointIndex,
+              })
           : undefined,
       );
     }

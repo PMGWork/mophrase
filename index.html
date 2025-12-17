@@ -151,12 +151,37 @@
               />
               <span class="w-6 text-right">ms</span>
             </div>
+
+            <!-- モディファイア編集パネル -->
+            <div
+              id="modifierPanel"
+              class="corner-lg w-full overflow-hidden border border-gray-800 bg-gray-900"
+              style="display: none"
+            >
+              <div
+                class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2"
+              >
+                <h3 class="text-sm font-medium text-gray-200">Modifiers</h3>
+                <button
+                  id="closeModifierPanelButton"
+                  class="p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+                >
+                  <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+              </div>
+              <div
+                id="modifierList"
+                class="flex max-h-60 flex-col overflow-y-auto empty:hidden"
+              >
+                <!-- ここにモディファイアが挿入される -->
+              </div>
+            </div>
           </div>
         </aside>
       </div>
     </div>
 
-    <!-- スケッチ提案ポップアップ（position: fixedでbody直下に配置） -->
+    <!-- スケッチ提案ポップアップ -->
     <div
       id="sketchSuggestionContainer"
       class="corner-lg fixed z-50 min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"

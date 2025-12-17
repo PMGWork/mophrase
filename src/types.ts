@@ -27,6 +27,14 @@ export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
 // 編集ツール
 export type EditorTool = 'select' | 'pen';
 
+// パス補正レイヤー
+export interface PathModifier {
+  id: string;
+  name: string;
+  offsets: ({ dx: number; dy: number } | null)[][];
+  strength: number;
+}
+
 // 描画パス情報
 export interface Path {
   points: Vector[];
@@ -34,6 +42,7 @@ export interface Path {
   curves: Vector[][];
   timeCurve: Vector[][];
   fitError: { current: FitErrorResult };
+  modifiers?: PathModifier[];
 }
 
 // シリアライズされたハンドル情報（正規化済み）

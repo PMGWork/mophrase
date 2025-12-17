@@ -30,6 +30,11 @@ type ElementMap = {
   graphSuggestionList: HTMLDivElement;
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
+
+  // モディファイアパネル
+  modifierPanel: HTMLDivElement;
+  modifierList: HTMLDivElement;
+  closeModifierPanelButton: HTMLButtonElement;
 };
 
 // DOM参照の束ね役
@@ -65,6 +70,11 @@ export class DomRefs {
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;
 
+  // モディファイアパネル
+  public readonly modifierPanel!: HTMLDivElement;
+  public readonly modifierList!: HTMLDivElement;
+  public readonly closeModifierPanelButton!: HTMLButtonElement;
+
   // コンストラクタ
   constructor() {
     const elements = this.collectElements<ElementMap>({
@@ -81,6 +91,7 @@ export class DomRefs {
       settingsGraphToleranceLabel: 'settingsGraphToleranceLabel',
       settingsObjectSize: 'settingsObjectSize',
       settingsObjectSizeLabel: 'settingsObjectSizeLabel',
+
       // その他
       durationInput: 'durationInput',
       canvasContainer: 'canvasContainer',
@@ -97,6 +108,11 @@ export class DomRefs {
       graphSuggestionList: 'graphSuggestionList',
       selectToolButton: 'selectToolButton',
       penToolButton: 'penToolButton',
+
+      // モディファイアパネル
+      modifierPanel: 'modifierPanel',
+      modifierList: 'modifierList',
+      closeModifierPanelButton: 'closeModifierPanelButton',
     });
 
     Object.assign(this, elements);

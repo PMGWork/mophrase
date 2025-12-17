@@ -104,7 +104,10 @@ export class HandleManager {
   }
 
   // 矩形内のアンカーポイントを選択
-  selectAnchorsInRect(rect: MarqueeRect, targetPathIndex?: number): HandleSelection[] {
+  selectAnchorsInRect(
+    rect: MarqueeRect,
+    targetPathIndex?: number,
+  ): HandleSelection[] {
     // 選択をクリア
     this.clearSelection();
 

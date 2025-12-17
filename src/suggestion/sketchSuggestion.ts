@@ -1,7 +1,8 @@
 import type { Config } from '../config';
-import type { Path, SelectionRange, Suggestion } from '../types';
-import { replacePathRange, slicePath } from '../utils/path';
-import { deserializePaths, serializePaths } from '../utils/serialization';
+import type { Path, PathModifier, SelectionRange, Suggestion } from '../types';
+import { createModifierFromLLMResult } from '../utils/modifier';
+import { slicePath } from '../utils/path';
+import { deserializeCurves, serializePaths } from '../utils/serialization';
 import { fetchSuggestions, SuggestionManager } from './base';
 import { positionUI, SuggestionUI } from './ui';
 
@@ -120,27 +121,37 @@ export class SketchSuggestionManager extends SuggestionManager {
     // 部分パスとして復元
     const partialPath = slicePath(this.targetPath, this.selectionRange);
 
-    const restored = deserializePaths(
-      [suggestion.path],
-      [partialPath],
-      this.pInstance,
-    );
-    if (restored.length === 0) {
+    // LLM出力をcurvesにデシリアライズ
+    const llmCurves = deserializeCurves(suggestion.path, this.pInstance);
+    if (llmCurves.length === 0) {
       this.setState('error');
       this.updateUI();
       return;
     }
 
-    // 元のパスを更新（部分置換または全体置換）
-    const updatedPath = replacePathRange(
-      this.targetPath,
-      restored[0],
-      this.selectionRange,
+    // modifierを作成（差分計算）
+    const modifierName =
+      this.prompts[this.prompts.length - 1] || suggestion.title;
+    const modifier = createModifierFromLLMResult(
+      partialPath.curves,
+      llmCurves,
+      modifierName,
     );
-    this.onSelect?.(updatedPath, this.targetPath);
+
+    // パスにmodifierを追加
+    this.addModifierToPath(this.targetPath, modifier);
+    this.onSelect?.(this.targetPath, this.targetPath);
 
     this.clearSuggestions();
     this.setState('input');
     this.updateUI();
+  }
+
+  // パスにmodifierを追加
+  private addModifierToPath(path: Path, modifier: PathModifier): void {
+    if (!path.modifiers) {
+      path.modifiers = [];
+    }
+    path.modifiers.push(modifier);
   }
 }

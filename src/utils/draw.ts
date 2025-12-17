@@ -1,8 +1,9 @@
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import { CURVE_POINT } from '../constants';
-import type { Path, Vector } from '../types';
+import type { Path, PathModifier, Vector } from '../types';
 import { bezierCurve } from './math';
+import { applyModifiers } from './modifier';
 
 // 入力点の描画
 export function drawPoints(
@@ -125,12 +126,15 @@ export function drawControls(
 // パス全体の描画（スケッチ点列 + ベジェ曲線 + 制御点）
 export function drawSketchPath(
   p: p5,
-  path: Pick<Path, 'points' | 'curves'>,
+  path: Pick<Path, 'points' | 'curves'> & { modifiers?: PathModifier[] },
   config: Pick<Config, 'showSketch' | 'lineWeight' | 'pointSize'>,
   colors: Pick<Colors, 'curve' | 'background' | 'handle' | 'selection'>,
   isSelected: boolean,
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
 ): void {
+  // modifiers適用後のcurvesを計算
+  const effectiveCurves = applyModifiers(path.curves, path.modifiers, p);
+
   // スケッチ点列の描画
   if (config.showSketch) {
     drawPoints(
@@ -143,9 +147,9 @@ export function drawSketchPath(
     );
   }
 
-  // ベジェ曲線の描画
+  // ベジェ曲線の描画（modifiers適用後）
   const curveColor = isSelected ? colors.handle : colors.curve;
-  drawBezierCurve(p, path.curves, config.lineWeight, curveColor);
+  drawBezierCurve(p, effectiveCurves, config.lineWeight, curveColor);
 
   // 制御点の描画（選択されたパスのみ）
   if (isSelected) {
@@ -158,7 +162,7 @@ export function drawSketchPath(
 
     drawControls(
       p,
-      path.curves,
+      effectiveCurves,
       config.pointSize,
       colors.handle,
       undefined,
