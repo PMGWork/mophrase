@@ -136,7 +136,10 @@ export class SuggestionUI {
     // マウスX位置から影響度(0~2)を計算
     const getStrength = (e: MouseEvent) => {
       const rect = item.getBoundingClientRect();
-      return Math.max(0, Math.min(2, ((e.clientX - rect.left) / rect.width) * 2));
+      return Math.max(
+        0,
+        Math.min(2, ((e.clientX - rect.left) / rect.width) * 2),
+      );
     };
 
     item.addEventListener('mouseenter', (e) => {

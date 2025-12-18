@@ -164,6 +164,7 @@ export class SketchEditor {
       p.mousePressed = () => this.mousePressed(p);
       p.mouseReleased = () => this.mouseReleased(p);
       p.keyTyped = () => this.keyTyped(p);
+      p.keyPressed = () => this.keyPressed(p);
     };
 
     new p5(sketch);
@@ -197,6 +198,29 @@ export class SketchEditor {
     } else if (p.key === 'g' || p.key === 'p') {
       this.setTool('pen');
     }
+  }
+
+  // p5.js キー押下（特殊キー用）
+  private keyPressed(p: p5): void {
+    // Delete (46) or Backspace (8) で選択中のパスを削除
+    if (p.keyCode === 46 || p.keyCode === 8) {
+      this.deleteActivePath();
+    }
+  }
+
+  // 選択中のパスを削除
+  private deleteActivePath(): void {
+    if (!this.activePath) return;
+
+    const index = this.paths.indexOf(this.activePath);
+    if (index >= 0) {
+      this.paths.splice(index, 1);
+    }
+
+    this.activePath = null;
+    this.suggestionManager.close();
+    this.handleManager.clearSelection();
+    this.onPathSelected(null);
   }
 
   // p5.js 描画
@@ -296,16 +320,6 @@ export class SketchEditor {
       !!target?.closest('form') ||
       !!target?.closest('#sketchSuggestionContainer')
     );
-  }
-
-  // すべてのパスをクリア
-  public clearAll(): void {
-    this.paths = [];
-    this.activePath = null;
-    this.suggestionManager.close();
-    this.motionManager?.stop();
-    this.handleManager.clearSelection();
-    this.onPathSelected(null);
   }
 
   // モーションを再生

@@ -48,13 +48,7 @@
             <i data-lucide="play" class="h-4 w-4"></i>
             <span>Play</span>
           </button>
-          <button
-            id="clearButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-red-900/50 px-4 py-2 text-sm text-red-50 transition-colors hover:bg-red-900"
-          >
-            <i data-lucide="trash-2" class="h-4 w-4"></i>
-            <span>Clear</span>
-          </button>
+
           <button
             id="settingsButton"
             class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-4 py-2 text-sm text-gray-50 transition-colors hover:bg-gray-700"
@@ -77,7 +71,7 @@
       </header>
 
       <!-- メインコンテンツ -->
-      <div class="mx-3 mb-3 flex flex-1 gap-3 overflow-hidden">
+      <div class="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
         <!-- スケッチキャンバス -->
         <main
           id="canvasContainer"
@@ -89,7 +83,7 @@
         <!-- サイドバー -->
         <aside
           id="sidebarContainer"
-          class="flex w-[400px] flex-col gap-3 overflow-hidden transition-all duration-300"
+          class="flex w-80 flex-col gap-2.5 overflow-hidden transition-all duration-300"
         >
           <!-- Property Editor -->
           <div
@@ -98,7 +92,7 @@
           >
             <!-- ヘッダー -->
             <div
-              class="flex items-center border-b border-gray-800 bg-gray-900/50 px-5 py-3"
+              class="flex items-center border-b border-gray-800 bg-gray-900/50 px-4 py-2.5"
             >
               <h2 class="text-sm font-medium text-gray-200">Properties</h2>
             </div>
@@ -111,55 +105,74 @@
               Select a path to edit
             </div>
 
-            <!-- プロパティ入力 -->
+            <!-- コンテンツ（パス選択時） -->
             <div
-              id="propertyInputs"
-              class="flex flex-col gap-4 p-4"
+              id="propertyEditorContent"
+              class="flex flex-col"
               style="display: none"
             >
-              <!-- Start Time -->
-              <div class="flex items-center gap-3">
-                <span class="w-20 text-sm text-gray-400">Start</span>
-                <input
-                  id="startTimeInput"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value="0"
-                  class="corner-md flex-1 appearance-none bg-gray-800 px-3 py-2 text-sm text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
-                />
-                <span class="w-6 text-right text-sm text-gray-400">sec</span>
+              <!-- Time セクション -->
+              <div id="timeSection" class="flex flex-col gap-2 p-3">
+                <!-- ヘッダー -->
+                <span class="text-xs font-medium text-gray-400">Time</span>
+                <!-- 入力 -->
+                <div class="flex gap-2">
+                  <!-- Start -->
+                  <div class="relative flex-1">
+                    <i
+                      data-lucide="timer"
+                      class="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-gray-500"
+                    ></i>
+                    <input
+                      id="startTimeInput"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value="0"
+                      class="corner-md w-full appearance-none bg-gray-800 py-1.5 pr-6 pl-7 text-xs text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                    />
+                    <span
+                      class="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-gray-500"
+                      >s</span
+                    >
+                  </div>
+
+                  <!-- Duration -->
+                  <div class="relative flex-1">
+                    <i
+                      data-lucide="move-horizontal"
+                      class="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-gray-500"
+                    ></i>
+                    <input
+                      id="durationInput"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value="2"
+                      class="corner-md w-full appearance-none bg-gray-800 py-1.5 pr-6 pl-7 text-xs text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                    />
+                    <span
+                      class="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-gray-500"
+                      >s</span
+                    >
+                  </div>
+                </div>
               </div>
 
-              <!-- Duration -->
-              <div class="flex items-center gap-3">
-                <span class="w-20 text-sm text-gray-400">Duration</span>
-                <input
-                  id="durationInput"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value="2"
-                  class="corner-md flex-1 appearance-none bg-gray-800 px-3 py-2 text-sm text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
-                />
-                <span class="w-6 text-right text-sm text-gray-400">sec</span>
-              </div>
-            </div>
-
-            <!-- モディファイア編集パネル -->
-            <div
-              id="modifierPanel"
-              class="border-t border-gray-800"
-              style="display: none"
-            >
-              <div class="flex items-center bg-gray-900/50 px-4 py-2">
-                <h3 class="text-sm font-medium text-gray-200">Modifiers</h3>
-              </div>
+              <!-- Modifier セクション -->
               <div
-                id="modifierList"
-                class="flex max-h-60 flex-col overflow-y-auto empty:hidden"
+                id="modifierSection"
+                class="flex flex-col gap-2 border-y border-gray-800 p-3"
               >
-                <!-- ここにモディファイアが挿入される -->
+                <!-- ヘッダー -->
+                <span class="text-xs font-medium text-gray-400">Modifier</span>
+                <!-- リスト -->
+                <div
+                  id="modifierList"
+                  class="flex flex-col gap-2 overflow-y-auto empty:hidden"
+                >
+                  <!-- ここにモディファイアが挿入される -->
+                </div>
               </div>
             </div>
           </div>
@@ -171,7 +184,7 @@
           >
             <!-- ヘッダー -->
             <div
-              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-5 py-3"
+              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2.5"
             >
               <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
             </div>

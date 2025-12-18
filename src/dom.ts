@@ -17,7 +17,7 @@ type ElementMap = {
   // サイドバー
   sidebarContainer: HTMLDivElement;
   propertyPlaceholder: HTMLDivElement;
-  propertyInputs: HTMLDivElement;
+  propertyEditorContent: HTMLDivElement;
   startTimeInput: HTMLInputElement;
   durationInput: HTMLInputElement;
 
@@ -34,14 +34,13 @@ type ElementMap = {
   canvasContainer: HTMLDivElement;
   sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
-  clearButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
   editMotionButton: HTMLButtonElement;
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
 
   // モディファイアパネル
-  modifierPanel: HTMLDivElement;
+  modifierSection: HTMLDivElement;
   modifierList: HTMLDivElement;
 };
 
@@ -64,7 +63,7 @@ export class DomRefs {
   // サイドバー
   public readonly sidebarContainer!: HTMLDivElement;
   public readonly propertyPlaceholder!: HTMLDivElement;
-  public readonly propertyInputs!: HTMLDivElement;
+  public readonly propertyEditorContent!: HTMLDivElement;
   public readonly startTimeInput!: HTMLInputElement;
   public readonly durationInput!: HTMLInputElement;
 
@@ -81,14 +80,13 @@ export class DomRefs {
   public readonly canvasContainer!: HTMLDivElement;
   public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
-  public readonly clearButton!: HTMLButtonElement;
   public readonly playButton!: HTMLButtonElement;
   public readonly editMotionButton!: HTMLButtonElement;
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;
 
   // モディファイアパネル
-  public readonly modifierPanel!: HTMLDivElement;
+  public readonly modifierSection!: HTMLDivElement;
   public readonly modifierList!: HTMLDivElement;
 
   // コンストラクタ
@@ -111,7 +109,7 @@ export class DomRefs {
       // サイドバー
       sidebarContainer: 'sidebarContainer',
       propertyPlaceholder: 'propertyPlaceholder',
-      propertyInputs: 'propertyInputs',
+      propertyEditorContent: 'propertyEditorContent',
       startTimeInput: 'startTimeInput',
       durationInput: 'durationInput',
 
@@ -128,14 +126,13 @@ export class DomRefs {
       canvasContainer: 'canvasContainer',
       sketchPromptForm: 'sketchPromptForm',
       sketchPromptInput: 'sketchPromptInput',
-      clearButton: 'clearButton',
       playButton: 'playButton',
       editMotionButton: 'editMotionButton',
       selectToolButton: 'selectToolButton',
       penToolButton: 'penToolButton',
 
       // モディファイアパネル
-      modifierPanel: 'modifierPanel',
+      modifierSection: 'modifierSection',
       modifierList: 'modifierList',
     });
 

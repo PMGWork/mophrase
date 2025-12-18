@@ -1,6 +1,7 @@
 import type { DomRefs } from '../dom';
 import type { Path, PathModifier } from '../types';
 import { removeModifier, updateModifierStrength } from '../utils/modifier';
+import { createIcons, icons } from 'lucide';
 
 // プロパティエディタ
 export class PropertyEditor {
@@ -26,27 +27,27 @@ export class PropertyEditor {
     this.activePath = path;
 
     if (!path || !path.times.length) {
-      // プレースホルダーを表示、入力欄を非表示
+      // プレースホルダーを表示、コンテンツを非表示
       this.dom.propertyPlaceholder.style.display = 'flex';
-      this.dom.propertyInputs.style.display = 'none';
-      this.hideModifierPanel();
+      this.dom.propertyEditorContent.style.display = 'none';
       return;
     }
 
-    // プレースホルダーを非表示、入力欄を表示
+    // プレースホルダーを非表示、コンテンツを表示
     this.dom.propertyPlaceholder.style.display = 'none';
-    this.dom.propertyInputs.style.display = 'flex';
+    this.dom.propertyEditorContent.style.display = 'flex';
 
     // StartTimeを表示（秒単位）
-    const startTime = path.startTime ?? 0;
-    this.dom.startTimeInput.value = startTime.toString();
+    const rawStartTime = path.startTime ?? 0;
+    const startTime = Number.isFinite(rawStartTime) ? rawStartTime : 0;
+    this.dom.startTimeInput.value = String(startTime);
 
     // Durationを表示（ms→sec変換）
     const durationMs = path.times[path.times.length - 1] - path.times[0];
-    const durationSec = durationMs / 1000;
+    const durationSec = Math.max(0, durationMs) / 1000;
     this.dom.durationInput.value = durationSec.toFixed(2);
 
-    // モディファイアがあればパネルを表示
+    // モディファイアパネルを更新
     this.updateModifierPanel();
   }
 
@@ -54,7 +55,7 @@ export class PropertyEditor {
   private updateStartTime(): void {
     if (!this.activePath) return;
     const newStartTime = Number(this.dom.startTimeInput.value);
-    if (newStartTime >= 0) {
+    if (Number.isFinite(newStartTime) && newStartTime >= 0) {
       this.activePath.startTime = newStartTime;
     }
   }
@@ -66,53 +67,90 @@ export class PropertyEditor {
     if (!times.length) return;
 
     // sec→ms変換
-    const newDurationMs = Number(this.dom.durationInput.value) * 1000;
+    const newDurationSec = Number(this.dom.durationInput.value);
+    if (!Number.isFinite(newDurationSec) || newDurationSec <= 0) return;
+    const newDurationMs = newDurationSec * 1000;
     const start = times[0];
     const oldDurationMs = times[times.length - 1] - start;
 
-    if (newDurationMs > 0 && oldDurationMs > 0) {
-      const scale = newDurationMs / oldDurationMs;
-      this.activePath.times = times.map((t) => start + (t - start) * scale);
-    }
+    if (!Number.isFinite(oldDurationMs) || oldDurationMs <= 0) return;
+
+    const scale = newDurationMs / oldDurationMs;
+    this.activePath.times = times.map((t) => start + (t - start) * scale);
+  }
+
+  private refreshLucideIcons(): void {
+    createIcons({ icons });
   }
 
   // モディファイアパネルの更新
   private updateModifierPanel(): void {
-    if (!this.activePath?.modifiers?.length) {
-      this.hideModifierPanel();
-      return;
-    }
-
     this.dom.modifierList.innerHTML = '';
 
-    for (const modifier of this.activePath.modifiers) {
-      const item = this.createModifierItem(modifier);
-      this.dom.modifierList.appendChild(item);
+    if (this.activePath?.modifiers?.length) {
+      for (const modifier of this.activePath.modifiers) {
+        const item = this.createModifierItem(modifier);
+        this.dom.modifierList.appendChild(item);
+      }
+      this.refreshLucideIcons();
     }
-
-    this.dom.modifierPanel.style.display = 'block';
   }
 
   // モディファイア項目の作成
   private createModifierItem(modifier: PathModifier): HTMLDivElement {
     const container = document.createElement('div');
-    container.className =
-      'flex flex-col gap-2 border-t border-gray-800 px-4 py-3';
+    container.className = 'flex items-center gap-2';
 
-    // ヘッダー行（名前 + 削除ボタン）
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between';
+
+    // 中央のコントロール（ラベル + スライダー統合）
+    const control = document.createElement('div');
+    control.className =
+      'relative flex-1 flex items-center corner-md bg-gray-800 py-1.5 px-3 overflow-hidden';
+
+    // 背景ゲージ（インジケーター）
+    const indicator = document.createElement('div');
+    const initialWidth = Math.round(Math.max(0, Math.min(2, modifier.strength)) * 100) / 2;
+    indicator.style.cssText = `position: absolute; inset: 0; width: ${initialWidth}%; background: rgba(255,255,255,0.1); pointer-events: none;`;
+    control.appendChild(indicator);
 
     const name = document.createElement('span');
-    name.className = 'text-sm text-gray-50 truncate flex-1';
+    name.className = 'relative text-xs text-gray-50 truncate flex-1';
     name.textContent = modifier.name;
     name.title = modifier.name;
 
+    const valueLabel = document.createElement('span');
+    valueLabel.className = 'relative text-xs text-gray-500 ml-2';
+    valueLabel.textContent = `${Math.round(modifier.strength * 100)}%`;
+
+    control.appendChild(name);
+    control.appendChild(valueLabel);
+
+    // スライダー（コントロール全体をクリックで調整）
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '200';
+    slider.value = String(
+      Math.round(Math.max(0, Math.min(2, modifier.strength)) * 100),
+    );
+    slider.className =
+      'absolute inset-0 w-full h-full opacity-0 cursor-ew-resize';
+
+    slider.addEventListener('input', () => {
+      const strength = Number(slider.value) / 100;
+      updateModifierStrength(this.activePath?.modifiers, modifier.id, strength);
+      valueLabel.textContent = `${slider.value}%`;
+      indicator.style.width = `${Number(slider.value) / 2}%`;
+    });
+
+    control.appendChild(slider);
+
+    // 削除ボタン
     const deleteButton = document.createElement('button');
     deleteButton.className =
-      'p-1 text-gray-500 hover:text-red-400 transition-colors';
+      'flex-shrink-0 p-1 text-gray-500 hover:text-red-400 transition-colors';
     deleteButton.innerHTML =
-      '<i data-lucide="trash-2" class="h-3.5 w-3.5"></i>';
+      '<i data-lucide="minus" class="h-4 w-4"></i>';
     deleteButton.addEventListener('click', () => {
       if (!this.activePath) return;
       this.activePath.modifiers = removeModifier(
@@ -122,45 +160,9 @@ export class PropertyEditor {
       this.updateModifierPanel();
     });
 
-    header.appendChild(name);
-    header.appendChild(deleteButton);
-
-    // スライダー行
-    const sliderRow = document.createElement('div');
-    sliderRow.className = 'flex items-center gap-2';
-
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = '0';
-    slider.max = '100';
-    slider.value = String(Math.round(modifier.strength * 100));
-    slider.className =
-      'corner-md h-1 flex-1 cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50';
-
-    const valueLabel = document.createElement('span');
-    valueLabel.className = 'text-xs text-gray-400 w-10 text-right';
-    valueLabel.textContent = `${slider.value}%`;
-
-    slider.addEventListener('input', () => {
-      const strength = Number(slider.value) / 100;
-      updateModifierStrength(this.activePath?.modifiers, modifier.id, strength);
-      valueLabel.textContent = `${slider.value}%`;
-    });
-
-    sliderRow.appendChild(slider);
-    sliderRow.appendChild(valueLabel);
-
-    container.appendChild(header);
-    container.appendChild(sliderRow);
-
-    // Lucide アイコンを初期化
-    import('lucide').then(({ createIcons }) => createIcons());
+    container.appendChild(control);
+    container.appendChild(deleteButton);
 
     return container;
-  }
-
-  // モディファイアパネルを非表示
-  private hideModifierPanel(): void {
-    this.dom.modifierPanel.style.display = 'none';
   }
 }

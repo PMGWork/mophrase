@@ -21,14 +21,10 @@ export class GraphEditor {
   private config: Config;
   private colors: Colors;
 
-  // 描画領域の設定
-  private static readonly MARGIN = 30;
-  private readonly margin = {
-    top: GraphEditor.MARGIN,
-    right: GraphEditor.MARGIN,
-    bottom: GraphEditor.MARGIN,
-    left: GraphEditor.MARGIN,
-  };
+  // マージンを取得
+  private getMargin(): number {
+    return this.dom.sidebarContainer.clientWidth / 15;
+  }
 
   // コンストラクタ
   constructor(dom: DomRefs, config: Config, colors: Colors) {
@@ -133,11 +129,12 @@ export class GraphEditor {
     const height = p.height;
 
     // グラフ領域の計算
-    const graphW = width - this.margin.left - this.margin.right;
-    const graphH = height - this.margin.top - this.margin.bottom;
+    const margin = this.getMargin();
+    const graphW = width - margin * 2;
+    const graphH = height - margin * 2;
 
     p.push();
-    p.translate(this.margin.left, this.margin.top);
+    p.translate(margin, margin);
 
     // グリッド
     p.noFill();
@@ -221,11 +218,12 @@ export class GraphEditor {
   private pixelToNorm(x: number, y: number): { x: number; y: number } {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
+    const margin = this.getMargin();
 
-    const mouseX = x - this.margin.left;
-    const mouseY = y - this.margin.top;
-    const graphW = size - this.margin.left - this.margin.right;
-    const graphH = size - this.margin.top - this.margin.bottom;
+    const mouseX = x - margin;
+    const mouseY = y - margin;
+    const graphW = size - margin * 2;
+    const graphH = size - margin * 2;
 
     const normX = mouseX / graphW;
     const normY = 1 - mouseY / graphH;
@@ -237,13 +235,14 @@ export class GraphEditor {
   private normToPixel(normX: number, normY: number): { x: number; y: number } {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
+    const margin = this.getMargin();
 
-    const graphW = size - this.margin.left - this.margin.right;
-    const graphH = size - this.margin.top - this.margin.bottom;
+    const graphW = size - margin * 2;
+    const graphH = size - margin * 2;
 
     return {
-      x: normX * graphW + this.margin.left,
-      y: (1 - normY) * graphH + this.margin.top,
+      x: normX * graphW + margin,
+      y: (1 - normY) * graphH + margin,
     };
   }
 

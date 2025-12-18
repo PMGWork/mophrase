@@ -41,7 +41,6 @@ const main = (): void => {
   // UIのセットアップ
   const setupUI = (): void => {
     // ボタンのイベントを登録
-    dom.clearButton.addEventListener('click', () => sketchEditor.clearAll());
     dom.playButton.addEventListener('click', () => sketchEditor.playMotion());
 
     // サイドバー開閉ボタン
