@@ -148,7 +148,7 @@ export function drawSketchPath(
   }
 
   // ベジェ曲線の描画（modifiers適用後）
-  const curveColor = isSelected ? colors.handle : colors.curve;
+  const curveColor = isSelected ? colors.handle : '#4b5563';
   drawBezierCurve(p, effectiveCurves, config.lineWeight, curveColor);
 
   // 制御点の描画（選択されたパスのみ）
