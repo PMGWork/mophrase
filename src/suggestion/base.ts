@@ -22,6 +22,7 @@ export abstract class SuggestionManager {
   protected status: SuggestionState = 'idle';
   protected suggestions: Suggestion[] = [];
   protected hoveredId: string | null = null;
+  protected hoveredStrength: number = 1;
   protected pInstance: p5 | null = null;
   protected prompts: string[] = [];
   protected targetPath: Path | undefined;
@@ -103,7 +104,7 @@ export abstract class SuggestionManager {
     transform?: (v: p5.Vector) => p5.Vector,
   ): void {
     const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
-    if (!suggestion) return;
+    if (!suggestion || !this.targetPath) return;
 
     const ctx = p.drawingContext as CanvasRenderingContext2D;
     const previousDash =
@@ -112,10 +113,32 @@ export abstract class SuggestionManager {
 
     p.push();
 
-    const curves = deserializeCurves(suggestion.path, p);
+    // 元のカーブとLLM提案カーブを取得
+    const originalCurves = this.targetPath.curves;
+    const suggestionCurves = deserializeCurves(suggestion.path, p);
+
+    // 影響度に応じて補間したカーブを作成
+    const interpolatedCurves = originalCurves.map((curve, curveIdx) => {
+      const suggCurve = suggestionCurves[curveIdx];
+      if (!suggCurve) return curve;
+
+      return curve.map((pt, ptIdx) => {
+        const suggPt = suggCurve[ptIdx];
+        if (!suggPt) return pt;
+
+        // 元の点からLLM提案点への差分に影響度を掛けて補間
+        const dx = (suggPt.x - pt.x) * this.hoveredStrength;
+        const dy = (suggPt.y - pt.y) * this.hoveredStrength;
+        return p.createVector(pt.x + dx, pt.y + dy);
+      });
+    });
+
     const mapped = transform
-      ? curves.map((curve) => curve.map((pt) => transform(pt.copy())))
-      : curves;
+      ? interpolatedCurves.map((curve) =>
+          curve.map((pt) => transform(pt.copy())),
+        )
+      : interpolatedCurves;
+
     if (mapped.length > 0) {
       const weight = Math.max(this.config.lineWeight, 1) + 0.5;
       drawBezierCurve(p, mapped, weight, colors.handle);

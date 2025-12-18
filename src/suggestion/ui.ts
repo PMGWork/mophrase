@@ -21,14 +21,14 @@ type SuggestionUIConfig = {
 // スケッチ/グラフ共通の簡易UI
 export class SuggestionUI {
   private config: SuggestionUIConfig;
-  private onHoverChange: (id: string | null) => void;
-  private onSuggestionClick: (id: string) => void;
+  private onHoverChange: (id: string | null, strength: number) => void;
+  private onSuggestionClick: (id: string, strength: number) => void;
 
   // コンストラクタ
   constructor(
     config: SuggestionUIConfig,
-    onHoverChange: (id: string | null) => void,
-    onSuggestionClick: (id: string) => void,
+    onHoverChange: (id: string | null, strength: number) => void,
+    onSuggestionClick: (id: string, strength: number) => void,
   ) {
     this.config = config;
     this.onHoverChange = onHoverChange;
@@ -118,14 +118,44 @@ export class SuggestionUI {
   private createSuggestionItem(suggestion: Suggestion): HTMLButtonElement {
     const item = document.createElement('button');
     item.className = `suggestion-item ${this.config.itemClass}`;
-    item.textContent = suggestion.title;
+    item.style.cssText = 'position: relative; overflow: hidden;';
     item.dataset.suggestionId = suggestion.id;
 
-    item.addEventListener('mouseenter', () =>
-      this.onHoverChange(suggestion.id),
+    // 影響度インジケーター
+    const indicator = document.createElement('div');
+    indicator.style.cssText =
+      'position: absolute; inset: 0; width: 0; background: rgba(255,255,255,0.15); pointer-events: none;';
+    item.appendChild(indicator);
+
+    // テキスト
+    const text = document.createElement('span');
+    text.style.cssText = 'position: relative;';
+    text.textContent = suggestion.title;
+    item.appendChild(text);
+
+    // マウスX位置から影響度(0~2)を計算
+    const getStrength = (e: MouseEvent) => {
+      const rect = item.getBoundingClientRect();
+      return Math.max(0, Math.min(2, ((e.clientX - rect.left) / rect.width) * 2));
+    };
+
+    item.addEventListener('mouseenter', (e) => {
+      const s = getStrength(e);
+      indicator.style.width = `${(s / 2) * 100}%`;
+      this.onHoverChange(suggestion.id, s);
+    });
+    item.addEventListener('mousemove', (e) => {
+      const s = getStrength(e);
+      indicator.style.width = `${(s / 2) * 100}%`;
+      this.onHoverChange(suggestion.id, s);
+    });
+    item.addEventListener('mouseleave', () => {
+      indicator.style.width = '0';
+      this.onHoverChange(null, 1);
+    });
+    item.addEventListener('click', (e) =>
+      this.onSuggestionClick(suggestion.id, getStrength(e)),
     );
-    item.addEventListener('mouseleave', () => this.onHoverChange(null));
-    item.addEventListener('click', () => this.onSuggestionClick(suggestion.id));
 
     return item;
   }

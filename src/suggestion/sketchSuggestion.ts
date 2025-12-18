@@ -29,10 +29,11 @@ export class SketchSuggestionManager extends SuggestionManager {
           'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
         position: positionUI,
       },
-      (id) => {
+      (id, strength) => {
         this.hoveredId = id;
+        this.hoveredStrength = strength;
       },
-      (id) => this.selectById(id),
+      (id, strength) => this.selectById(id, strength),
     );
   }
 
@@ -106,7 +107,7 @@ export class SketchSuggestionManager extends SuggestionManager {
   }
 
   // 選択
-  private selectById(id: string): void {
+  private selectById(id: string, strength: number): void {
     const suggestion = this.suggestions.find(
       (s) => s.id === id && s.type === 'sketch',
     );
@@ -137,6 +138,9 @@ export class SketchSuggestionManager extends SuggestionManager {
       llmCurves,
       modifierName,
     );
+
+    // クリック時の影響度をmodifierに設定
+    modifier.strength = strength;
 
     // パスにmodifierを追加
     this.addModifierToPath(this.targetPath, modifier);

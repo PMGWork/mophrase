@@ -27,8 +27,9 @@ export class GraphSuggestionManager extends SuggestionManager {
         itemClass:
           'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
       },
-      (id) => {
+      (id, strength) => {
         this.hoveredId = id;
+        this.hoveredStrength = strength;
       },
       (id) => this.selectById(id),
     );
