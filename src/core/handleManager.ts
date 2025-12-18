@@ -2,8 +2,8 @@ import { CURVE_POINT } from '../constants';
 import type {
   HandleSelection,
   MarqueeRect,
-  Path,
   SelectionRange,
+  Sketch,
 } from '../types';
 
 type Point = { x: number; y: number };
@@ -16,13 +16,13 @@ export class HandleManager {
   private draggedHandle: HandleSelection | null = null; // ドラッグ中のハンドル
   private selectedHandles: HandleSelection[] = []; // 選択中のハンドル
 
-  private getPaths: () => Pick<Path, 'curves'>[]; // パスの取得関数
+  private getPaths: () => Pick<Sketch, 'curves'>[]; // パスの取得関数
   private pixelToNorm: (x: number, y: number) => Point; // ピクセル座標を正規化座標に変換
   private normToPixel: (x: number, y: number) => Point; // 正規化座標をピクセル座標に変換
 
   // コンストラクタ
   constructor(
-    getPaths: () => Pick<Path, 'curves'>[],
+    getPaths: () => Pick<Sketch, 'curves'>[],
     pixelToNorm: (x: number, y: number) => Point = (x, y) => ({ x, y }),
     normToPixel: (x: number, y: number) => Point = (x, y) => ({ x, y }),
   ) {
@@ -295,7 +295,7 @@ export class HandleManager {
 
   // アンカー移動時に隣接カーブの制御点・アンカーを同期
   private syncAdjacentCurve(
-    path: Pick<Path, 'curves'>,
+    path: Pick<Sketch, 'curves'>,
     curveIndex: number,
     pointIndex: number,
     position: Point,
@@ -329,7 +329,7 @@ export class HandleManager {
 
   // 制御ハンドル移動時に反対側のハンドルを対称に調整
   private mirrorOppositeControl(
-    path: Pick<Path, 'curves'>,
+    path: Pick<Sketch, 'curves'>,
     curveIndex: number,
     pointIndex: number,
   ): void {

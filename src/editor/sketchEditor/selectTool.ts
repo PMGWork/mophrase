@@ -137,9 +137,9 @@ export class SelectTool {
     y: number,
     toleranceSq: number,
   ): boolean {
-    if (path.curves.length === 0) return false;
+    if (path.sketch.curves.length === 0) return false;
 
-    for (const curve of path.curves) {
+    for (const curve of path.sketch.curves) {
       for (let t = 0; t <= 1; t += BEZIER_T_STEP) {
         const pt = bezierCurve(
           curve[CURVE_POINT.START_ANCHOR_POINT],

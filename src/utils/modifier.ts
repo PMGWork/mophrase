@@ -1,10 +1,10 @@
 import type p5 from 'p5';
-import type { PathModifier, Vector } from '../types';
+import type { Modifier, Vector } from '../types';
 
 // モディファイアを適用したカーブを計算
 export function applyModifiers(
   curves: Vector[][],
-  modifiers: PathModifier[] | undefined,
+  modifiers: Modifier[] | undefined,
   p: p5,
 ): Vector[][] {
   if (!modifiers || modifiers.length === 0) return curves;
@@ -38,8 +38,8 @@ export function createModifierFromLLMResult(
   originalCurves: Vector[][],
   modifiedCurves: Vector[][],
   name: string,
-): PathModifier {
-  const offsets: PathModifier['offsets'] = originalCurves.map(
+): Modifier {
+  const offsets: Modifier['offsets'] = originalCurves.map(
     (curve, curveIndex) =>
       curve.map((point, pointIndex) => {
         const modifiedPoint = modifiedCurves[curveIndex]?.[pointIndex];
@@ -59,7 +59,7 @@ export function createModifierFromLLMResult(
 
 // モディファイアの影響度を更新
 export function updateModifierStrength(
-  modifiers: PathModifier[] | undefined,
+  modifiers: Modifier[] | undefined,
   modifierId: string,
   strength: number,
 ): void {
@@ -70,9 +70,9 @@ export function updateModifierStrength(
 
 // モディファイアを削除
 export function removeModifier(
-  modifiers: PathModifier[] | undefined,
+  modifiers: Modifier[] | undefined,
   modifierId: string,
-): PathModifier[] {
+): Modifier[] {
   if (!modifiers) return [];
   return modifiers.filter((m) => m.id !== modifierId);
 }

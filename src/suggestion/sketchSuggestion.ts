@@ -1,5 +1,5 @@
 import type { Config } from '../config';
-import type { Path, PathModifier, SelectionRange, Suggestion } from '../types';
+import type { Vector, Modifier, Path, SelectionRange, Suggestion } from '../types';
 import { createModifierFromLLMResult } from '../utils/modifier';
 import { slicePath } from '../utils/path';
 import { deserializeCurves, serializePaths } from '../utils/serialization';
@@ -35,6 +35,10 @@ export class SketchSuggestionManager extends SuggestionManager {
       },
       (id, strength) => this.selectById(id, strength),
     );
+  }
+
+  protected getTargetCurves(): Vector[][] | undefined {
+    return this.targetPath?.sketch.curves;
   }
 
   // 選択範囲を設定してUIを更新
@@ -134,7 +138,7 @@ export class SketchSuggestionManager extends SuggestionManager {
     const modifierName =
       this.prompts[this.prompts.length - 1] || suggestion.title;
     const modifier = createModifierFromLLMResult(
-      partialPath.curves,
+      partialPath.sketch.curves,
       llmCurves,
       modifierName,
     );
@@ -152,10 +156,10 @@ export class SketchSuggestionManager extends SuggestionManager {
   }
 
   // パスにmodifierを追加
-  private addModifierToPath(path: Path, modifier: PathModifier): void {
-    if (!path.modifiers) {
-      path.modifiers = [];
+  private addModifierToPath(path: Path, modifier: Modifier): void {
+    if (!path.sketch.modifiers) {
+      path.sketch.modifiers = [];
     }
-    path.modifiers.push(modifier);
+    path.sketch.modifiers.push(modifier);
   }
 }

@@ -4,10 +4,6 @@ import type { Path, Vector } from '../types';
 import { bezierCurve, curveLength } from '../utils/math';
 import { fitCurve } from './fitting';
 
-// 定数
-const DEFAULT_DURATION = 2000;
-const BISECTION_ITERATIONS = 10;
-
 // モーション管理クラス
 export class MotionManager {
   private p: p5;
@@ -32,7 +28,7 @@ export class MotionManager {
 
   // モーション再生を開始
   public start(path: Path): void {
-    if (path.timeCurve.length === 0) return;
+    if (path.motion.timing.length === 0) return;
 
     // パスを設定
     this.currentPath = path;
@@ -41,17 +37,14 @@ export class MotionManager {
     this.elapsedTime = 0;
 
     // 開始待機時間を設定（秒→ミリ秒）
-    this.startTime = (path.startTime ?? 0) * 1000;
+    this.startTime = path.motion.startTime * 1000;
 
     // カーブの長さを事前計算してキャッシュ
-    this.curveLengths = path.curves.map((c) => curveLength(c));
+    this.curveLengths = path.sketch.curves.map((c) => curveLength(c));
     this.totalLength = this.curveLengths.reduce((a, b) => a + b, 0);
 
-    // 持続時間を設定
-    this.duration =
-      path.times && path.times.length > 0
-        ? path.times[path.times.length - 1] - path.times[0]
-        : DEFAULT_DURATION;
+    // 持続時間を設定 (秒 -> ミリ秒)
+    this.duration = path.motion.duration * 1000;
   }
 
   // モーション再生を停止
@@ -80,8 +73,14 @@ export class MotionManager {
       this.isPlaying = false;
     }
 
-    const progress = this.evaluateTiming(this.currentPath.timeCurve, this.time);
-    const position = this.evaluatePosition(this.currentPath.curves, progress);
+    const progress = this.evaluateTiming(
+      this.currentPath.motion.timing,
+      this.time,
+    );
+    const position = this.evaluatePosition(
+      this.currentPath.sketch.curves,
+      progress,
+    );
 
     this.drawObject(position);
   }
@@ -124,7 +123,7 @@ export class MotionManager {
     let high = 1;
     let u = 0;
 
-    for (let i = 0; i < BISECTION_ITERATIONS; i++) {
+    for (let i = 0; i < 10; i++) {
       u = (low + high) / 2;
       const point = bezierCurve(curve[0], curve[1], curve[2], curve[3], u);
       if (point.x < targetX) {
@@ -167,14 +166,20 @@ export class MotionManager {
 
   // タイミング曲線を生成
   public fitTiming(path: Path, p: p5, fitTolerance: number = 0.01): void {
-    if (path.points.length < 2 || path.times.length < 2) return;
+    if (
+      path.sketch.points.length < 2 ||
+      path.motion.timestamps.length < 2
+    )
+      return;
 
-    const totalTime = path.times[path.times.length - 1] - path.times[0];
+    const totalTime =
+      path.motion.timestamps[path.motion.timestamps.length - 1] -
+      path.motion.timestamps[0];
     if (totalTime <= 0) return;
 
     const timingPoints = this.createTimingPoints(
-      path.points,
-      path.times,
+      path.sketch.points,
+      path.motion.timestamps,
       p,
       totalTime,
     );
@@ -189,7 +194,7 @@ export class MotionManager {
       fitTolerance * 5,
       fitError,
     );
-    path.timeCurve = timingCurves;
+    path.motion.timing = timingCurves;
   }
 
   // タイミングポイントを生成

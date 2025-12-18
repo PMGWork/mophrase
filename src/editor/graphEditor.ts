@@ -35,7 +35,8 @@ export class GraphEditor {
     // ハンドルマネージャー
     this.handleManager = new HandleManager(
       // アクティブパスのタイムカーブを取得
-      () => (this.activePath ? [{ curves: this.activePath.timeCurve }] : []),
+      () =>
+        this.activePath ? [{ curves: this.activePath.motion.timing }] : [],
 
       // ピクセル座標から正規化座標への変換
       (x, y) => this.pixelToNorm(x, y),
@@ -47,7 +48,7 @@ export class GraphEditor {
     // 提案マネージャー
     this.suggestionManager = new GraphSuggestionManager(config, {
       onSelect: (path) => {
-        if (this.activePath) this.activePath.timeCurve = path.timeCurve;
+        if (this.activePath) this.activePath.motion.timing = path.timing;
       },
     });
 
@@ -70,7 +71,7 @@ export class GraphEditor {
 
   // パスの設定
   public setPath(path: Path | null): void {
-    if (!path || !path.times.length) {
+    if (!path || !path.motion.timing.length) {
       this.activePath = null;
       this.suggestionManager.close();
       this.dom.graphPromptInput.readOnly = true;
@@ -168,7 +169,7 @@ export class GraphEditor {
     p.scale(1, -1);
     drawBezierCurve(
       p,
-      this.activePath.timeCurve,
+      this.activePath.motion.timing,
       2 / Math.min(graphW, graphH),
       this.colors.curve,
     );
@@ -177,7 +178,7 @@ export class GraphEditor {
     // 制御点と制御ポリゴン
     drawControls(
       p,
-      this.activePath.timeCurve,
+      this.activePath.motion.timing,
       this.config.pointSize,
       this.colors.handle,
       (v) => p.createVector(v.x * graphW, (1 - v.y) * graphH),
@@ -249,11 +250,11 @@ export class GraphEditor {
   // 提案の生成
   private async generateSuggestion(): Promise<void> {
     const activePath = this.activePath;
-    if (!activePath || activePath.timeCurve.length === 0) return;
+    if (!activePath || activePath.motion.timing.length === 0) return;
 
     const userPrompt = this.dom.graphPromptInput.value;
     await this.suggestionManager.submit(
-      { timeCurve: activePath.timeCurve },
+      { timing: activePath.motion.timing },
       userPrompt,
     );
   }

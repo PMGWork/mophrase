@@ -1,5 +1,5 @@
 import type { Config } from '../config';
-import type { Path, SerializedPath, Suggestion } from '../types';
+import type { Path, SerializedPath, Suggestion, Vector } from '../types';
 import {
   deserializeCurves,
   serializeAnchorsAndSegments,
@@ -9,12 +9,12 @@ import { SuggestionUI } from './ui';
 
 // 型定義
 type GraphSuggestionOptions = {
-  onSelect?: (path: Pick<Path, 'timeCurve'>, targetPath?: Path) => void;
+  onSelect?: (path: { timing: Vector[][] }, targetPath?: Path) => void;
 };
 
 // グラフ用の提案マネージャー
 export class GraphSuggestionManager extends SuggestionManager {
-  private onSelect?: (path: Pick<Path, 'timeCurve'>, targetPath?: Path) => void;
+  private onSelect?: (path: { timing: Vector[][] }, targetPath?: Path) => void;
 
   // コンストラクタ
   constructor(config: Config, options: GraphSuggestionOptions = {}) {
@@ -35,17 +35,21 @@ export class GraphSuggestionManager extends SuggestionManager {
     );
   }
 
+  protected getTargetCurves(): Vector[][] | undefined {
+    return this.targetPath?.motion.timing;
+  }
+
   // 提案を送信
-  async submit(path: Pick<Path, 'timeCurve'>, prompt?: string): Promise<void> {
+  async submit(path: { timing: Vector[][] }, prompt?: string): Promise<void> {
     await this.generateSuggestion(path, prompt);
   }
 
   // #region プライベート関数
   private async generateSuggestion(
-    path: Pick<Path, 'timeCurve'>,
+    path: { timing: Vector[][] },
     prompt?: string,
   ): Promise<void> {
-    const curves = path.timeCurve;
+    const curves = path.timing;
     if (curves.length === 0) {
       this.setState('error');
       this.updateUI();
@@ -106,7 +110,7 @@ export class GraphSuggestionManager extends SuggestionManager {
     if (!suggestion || !this.pInstance) return;
 
     const curves = deserializeCurves(suggestion.path, this.pInstance);
-    this.onSelect?.({ timeCurve: curves }, this.targetPath);
+    this.onSelect?.({ timing: curves }, this.targetPath);
 
     this.clearSuggestions();
     this.setState('input');

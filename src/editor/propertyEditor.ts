@@ -1,5 +1,5 @@
 import type { DomRefs } from '../dom';
-import type { Path, PathModifier } from '../types';
+import type { Modifier, Path } from '../types';
 import { removeModifier, updateModifierStrength } from '../utils/modifier';
 import { createIcons, icons } from 'lucide';
 
@@ -26,7 +26,7 @@ export class PropertyEditor {
   public setPath(path: Path | null): void {
     this.activePath = path;
 
-    if (!path || !path.times.length) {
+    if (!path || !path.motion.timing.length) {
       // プレースホルダーを表示、コンテンツを非表示
       this.dom.propertyPlaceholder.style.display = 'flex';
       this.dom.propertyEditorContent.style.display = 'none';
@@ -38,14 +38,12 @@ export class PropertyEditor {
     this.dom.propertyEditorContent.style.display = 'flex';
 
     // StartTimeを表示（秒単位）
-    const rawStartTime = path.startTime ?? 0;
+    const rawStartTime = path.motion.startTime ?? 0;
     const startTime = Number.isFinite(rawStartTime) ? rawStartTime : 0;
     this.dom.startTimeInput.value = String(startTime);
 
-    // Durationを表示（ms→sec変換）
-    const durationMs = path.times[path.times.length - 1] - path.times[0];
-    const durationSec = Math.max(0, durationMs) / 1000;
-    this.dom.durationInput.value = durationSec.toFixed(2);
+    // Durationを表示 (秒単位)
+    this.dom.durationInput.value = String(path.motion.duration);
 
     // モディファイアパネルを更新
     this.updateModifierPanel();
@@ -56,27 +54,18 @@ export class PropertyEditor {
     if (!this.activePath) return;
     const newStartTime = Number(this.dom.startTimeInput.value);
     if (Number.isFinite(newStartTime) && newStartTime >= 0) {
-      this.activePath.startTime = newStartTime;
+      this.activePath.motion.startTime = newStartTime;
     }
   }
 
   // Durationの更新
   private updateDuration(): void {
     if (!this.activePath) return;
-    const { times } = this.activePath;
-    if (!times.length) return;
 
-    // sec→ms変換
     const newDurationSec = Number(this.dom.durationInput.value);
     if (!Number.isFinite(newDurationSec) || newDurationSec <= 0) return;
-    const newDurationMs = newDurationSec * 1000;
-    const start = times[0];
-    const oldDurationMs = times[times.length - 1] - start;
 
-    if (!Number.isFinite(oldDurationMs) || oldDurationMs <= 0) return;
-
-    const scale = newDurationMs / oldDurationMs;
-    this.activePath.times = times.map((t) => start + (t - start) * scale);
+    this.activePath.motion.duration = newDurationSec;
   }
 
   private refreshLucideIcons(): void {
@@ -87,8 +76,8 @@ export class PropertyEditor {
   private updateModifierPanel(): void {
     this.dom.modifierList.innerHTML = '';
 
-    if (this.activePath?.modifiers?.length) {
-      for (const modifier of this.activePath.modifiers) {
+    if (this.activePath?.sketch.modifiers?.length) {
+      for (const modifier of this.activePath.sketch.modifiers) {
         const item = this.createModifierItem(modifier);
         this.dom.modifierList.appendChild(item);
       }
@@ -97,10 +86,9 @@ export class PropertyEditor {
   }
 
   // モディファイア項目の作成
-  private createModifierItem(modifier: PathModifier): HTMLDivElement {
+  private createModifierItem(modifier: Modifier): HTMLDivElement {
     const container = document.createElement('div');
     container.className = 'flex items-center gap-2';
-
 
     // 中央のコントロール（ラベル + スライダー統合）
     const control = document.createElement('div');
@@ -109,7 +97,8 @@ export class PropertyEditor {
 
     // 背景ゲージ（インジケーター）
     const indicator = document.createElement('div');
-    const initialWidth = Math.round(Math.max(0, Math.min(2, modifier.strength)) * 100) / 2;
+    const initialWidth =
+      Math.round(Math.max(0, Math.min(2, modifier.strength)) * 100) / 2;
     indicator.style.cssText = `position: absolute; inset: 0; width: ${initialWidth}%; background: rgba(255,255,255,0.1); pointer-events: none;`;
     control.appendChild(indicator);
 
@@ -138,7 +127,11 @@ export class PropertyEditor {
 
     slider.addEventListener('input', () => {
       const strength = Number(slider.value) / 100;
-      updateModifierStrength(this.activePath?.modifiers, modifier.id, strength);
+      updateModifierStrength(
+        this.activePath?.sketch.modifiers,
+        modifier.id,
+        strength,
+      );
       valueLabel.textContent = `${slider.value}%`;
       indicator.style.width = `${Number(slider.value) / 2}%`;
     });
@@ -149,12 +142,11 @@ export class PropertyEditor {
     const deleteButton = document.createElement('button');
     deleteButton.className =
       'flex-shrink-0 p-1 text-gray-500 hover:text-red-400 transition-colors';
-    deleteButton.innerHTML =
-      '<i data-lucide="minus" class="h-4 w-4"></i>';
+    deleteButton.innerHTML = '<i data-lucide="minus" class="h-4 w-4"></i>';
     deleteButton.addEventListener('click', () => {
       if (!this.activePath) return;
-      this.activePath.modifiers = removeModifier(
-        this.activePath.modifiers,
+      this.activePath.sketch.modifiers = removeModifier(
+        this.activePath.sketch.modifiers,
         modifier.id,
       );
       this.updateModifierPanel();

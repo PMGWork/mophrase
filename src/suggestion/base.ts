@@ -4,6 +4,7 @@ import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import { generateStructured } from '../services/llm';
 import type {
+  Vector,
   Path,
   SerializedPath,
   Suggestion,
@@ -32,6 +33,9 @@ export abstract class SuggestionManager {
   constructor(config: Config) {
     this.config = config;
   }
+
+  // ターゲットのカーブを取得
+  protected abstract getTargetCurves(): Vector[][] | undefined;
 
   // 設定を更新
   updateConfig(config: Config): void {
@@ -114,7 +118,11 @@ export abstract class SuggestionManager {
     p.push();
 
     // 元のカーブとLLM提案カーブを取得
-    const originalCurves = this.targetPath.curves;
+    const originalCurves = this.getTargetCurves();
+    if (!originalCurves) {
+      p.pop();
+      return;
+    }
     const suggestionCurves = deserializeCurves(suggestion.path, p);
 
     // 影響度に応じて補間したカーブを作成

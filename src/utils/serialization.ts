@@ -93,9 +93,9 @@ export function serializeAnchorsAndSegments(
 // p5.js 描画パス -> シリアライズされたパス
 export function serializePaths(paths: Path[]): SerializedPath[] {
   return paths.map((path) => {
-    const bbox = computeBbox(path.curves);
+    const bbox = computeBbox(path.sketch.curves);
     const { anchors, segments } = serializeAnchorsAndSegments(
-      path.curves,
+      path.sketch.curves,
       bbox,
     );
     return {
@@ -113,21 +113,35 @@ export function deserializePaths(
   paths: Path[],
   p: p5,
 ): Path[] {
-  return serializedPaths.map((serializedPath, index) => ({
-    points: paths[index].points,
-    times: paths[index].times,
-    curves: deserializeCurves(
-      serializedPath.bbox
-        ? serializedPath
-        : {
-            ...serializedPath,
-            bbox: computeBbox(paths[index].curves),
-          },
-      p,
-    ),
-    timeCurve: paths[index].timeCurve,
-    fitError: paths[index].fitError,
-  }));
+  return serializedPaths.map((serializedPath, index) => {
+    const originalSketch = paths[index].sketch;
+    const originalMotion = paths[index].motion;
+
+    return {
+      id: paths[index].id,
+      sketch: {
+        points: originalSketch.points,
+        curves: deserializeCurves(
+          serializedPath.bbox
+            ? serializedPath
+            : {
+                ...serializedPath,
+                bbox: computeBbox(originalSketch.curves),
+              },
+          p,
+        ),
+        fitError: originalSketch.fitError,
+        modifiers: originalSketch.modifiers,
+      },
+      motion: {
+        timestamps: originalMotion.timestamps,
+        timing: originalMotion.timing,
+        startTime: originalMotion.startTime,
+        duration: originalMotion.duration,
+        modifiers: originalMotion.modifiers,
+      },
+    };
+  });
 }
 
 // シリアライズされたパス -> p5.Vector[][]

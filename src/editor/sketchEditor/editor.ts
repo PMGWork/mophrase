@@ -55,7 +55,9 @@ export class SketchEditor {
     this.selectTool = new SelectTool();
 
     // ハンドルマネージャー
-    this.handleManager = new HandleManager(() => this.paths);
+    this.handleManager = new HandleManager(() =>
+      this.paths.map((p) => p.sketch),
+    );
 
     // 提案マネージャー
     this.suggestionManager = new SketchSuggestionManager(this.config, {
@@ -236,7 +238,7 @@ export class SketchEditor {
 
       drawSketchPath(
         p,
-        path,
+        path.sketch,
         this.config,
         this.colors,
         isSelectedPath,
