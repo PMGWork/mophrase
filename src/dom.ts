@@ -16,7 +16,6 @@ type ElementMap = {
 
   // サイドバー
   sidebarContainer: HTMLDivElement;
-  closeSidebarButton: HTMLButtonElement;
   propertyPlaceholder: HTMLDivElement;
   propertyInputs: HTMLDivElement;
   startTimeInput: HTMLInputElement;
@@ -44,7 +43,6 @@ type ElementMap = {
   // モディファイアパネル
   modifierPanel: HTMLDivElement;
   modifierList: HTMLDivElement;
-  closeModifierPanelButton: HTMLButtonElement;
 };
 
 // DOM参照の束ね役
@@ -65,7 +63,6 @@ export class DomRefs {
 
   // サイドバー
   public readonly sidebarContainer!: HTMLDivElement;
-  public readonly closeSidebarButton!: HTMLButtonElement;
   public readonly propertyPlaceholder!: HTMLDivElement;
   public readonly propertyInputs!: HTMLDivElement;
   public readonly startTimeInput!: HTMLInputElement;
@@ -93,7 +90,6 @@ export class DomRefs {
   // モディファイアパネル
   public readonly modifierPanel!: HTMLDivElement;
   public readonly modifierList!: HTMLDivElement;
-  public readonly closeModifierPanelButton!: HTMLButtonElement;
 
   // コンストラクタ
   constructor() {
@@ -114,7 +110,6 @@ export class DomRefs {
 
       // サイドバー
       sidebarContainer: 'sidebarContainer',
-      closeSidebarButton: 'closeSidebarButton',
       propertyPlaceholder: 'propertyPlaceholder',
       propertyInputs: 'propertyInputs',
       startTimeInput: 'startTimeInput',
@@ -142,7 +137,6 @@ export class DomRefs {
       // モディファイアパネル
       modifierPanel: 'modifierPanel',
       modifierList: 'modifierList',
-      closeModifierPanelButton: 'closeModifierPanelButton',
     });
 
     Object.assign(this, elements);

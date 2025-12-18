@@ -44,11 +44,6 @@ const main = (): void => {
     dom.clearButton.addEventListener('click', () => sketchEditor.clearAll());
     dom.playButton.addEventListener('click', () => sketchEditor.playMotion());
 
-    // サイドバー閉じるボタン
-    dom.closeSidebarButton.addEventListener('click', () => {
-      toggleSidebar();
-    });
-
     // サイドバー開閉ボタン
     dom.editMotionButton.addEventListener('click', () => {
       toggleSidebar();

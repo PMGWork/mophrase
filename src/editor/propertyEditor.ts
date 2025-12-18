@@ -19,11 +19,6 @@ export class PropertyEditor {
     this.dom.durationInput.addEventListener('change', () =>
       this.updateDuration(),
     );
-
-    // モディファイアパネルの閉じるボタン
-    this.dom.closeModifierPanelButton.addEventListener('click', () => {
-      this.hideModifierPanel();
-    });
   }
 
   // パスの設定

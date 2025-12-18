@@ -94,19 +94,13 @@
           <!-- Property Editor -->
           <div
             id="propertyEditorContainer"
-            class="corner-xl flex flex-1 flex-col overflow-hidden border border-gray-800 bg-gray-950"
+            class="corner-xl flex flex-1 flex-col overflow-y-auto border border-gray-800 bg-gray-950"
           >
             <!-- ヘッダー -->
             <div
-              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-5 py-3"
+              class="flex items-center border-b border-gray-800 bg-gray-900/50 px-5 py-3"
             >
               <h2 class="text-sm font-medium text-gray-200">Properties</h2>
-              <button
-                id="closeSidebarButton"
-                class="p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
-              >
-                <i data-lucide="x" class="h-4 w-4"></i>
-              </button>
             </div>
 
             <!-- プレースホルダー（パス未選択時） -->
@@ -158,16 +152,8 @@
               class="border-t border-gray-800"
               style="display: none"
             >
-              <div
-                class="flex items-center justify-between bg-gray-900/50 px-4 py-2"
-              >
+              <div class="flex items-center bg-gray-900/50 px-4 py-2">
                 <h3 class="text-sm font-medium text-gray-200">Modifiers</h3>
-                <button
-                  id="closeModifierPanelButton"
-                  class="p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
-                >
-                  <i data-lucide="x" class="h-4 w-4"></i>
-                </button>
               </div>
               <div
                 id="modifierList"
