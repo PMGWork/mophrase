@@ -72,12 +72,6 @@ export class GraphEditor {
 
   // #region メイン関数
 
-  // 表示/非表示の切り替え
-  public toggle(): void {
-    this.dom.graphEditorContainer.classList.toggle('hidden');
-    window.dispatchEvent(new Event('resize'));
-  }
-
   // パスの設定
   public setPath(path: Path | null): void {
     if (!path || !path.times.length) {
@@ -85,6 +79,8 @@ export class GraphEditor {
       this.suggestionManager.close();
       this.dom.graphPromptInput.readOnly = true;
       this.dom.graphPromptInput.style.cursor = 'not-allowed';
+      this.dom.graphPlaceholder.style.display = 'flex';
+      this.dom.graphEditorContent.style.display = 'none';
       return;
     }
 
@@ -92,6 +88,10 @@ export class GraphEditor {
     this.suggestionManager.open(path);
     this.dom.graphPromptInput.readOnly = false;
     this.dom.graphPromptInput.style.cursor = 'text';
+    this.dom.graphPlaceholder.style.display = 'none';
+    this.dom.graphEditorContent.style.display = 'flex';
+
+    window.dispatchEvent(new Event('resize'));
   }
 
   // #region p5.js

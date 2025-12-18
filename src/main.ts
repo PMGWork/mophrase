@@ -43,13 +43,15 @@ const main = (): void => {
     // ボタンのイベントを登録
     dom.clearButton.addEventListener('click', () => sketchEditor.clearAll());
     dom.playButton.addEventListener('click', () => sketchEditor.playMotion());
-    dom.closeGraphEditorButton.addEventListener('click', () => {
-      graphEditor.toggle();
-      updateGraphButtonUI();
+
+    // サイドバー閉じるボタン
+    dom.closeSidebarButton.addEventListener('click', () => {
+      toggleSidebar();
     });
+
+    // サイドバー開閉ボタン
     dom.editMotionButton.addEventListener('click', () => {
-      graphEditor.toggle();
-      updateGraphButtonUI();
+      toggleSidebar();
       const target = sketchEditor.getLatestPath();
       if (target) {
         graphEditor.setPath(target);
@@ -61,9 +63,16 @@ const main = (): void => {
     setupUserPromptInput();
   };
 
-  // Graph ボタンのUI更新
-  function updateGraphButtonUI(): void {
-    const isVisible = !dom.graphEditorContainer.classList.contains('hidden');
+  // サイドバーの開閉
+  function toggleSidebar(): void {
+    dom.sidebarContainer.classList.toggle('hidden');
+    window.dispatchEvent(new Event('resize'));
+    updateSidebarButtonUI();
+  }
+
+  // サイドバーボタンのUI更新
+  function updateSidebarButtonUI(): void {
+    const isVisible = !dom.sidebarContainer.classList.contains('hidden');
     const el = dom.editMotionButton;
 
     // アクティブ時のクラス
@@ -88,6 +97,9 @@ const main = (): void => {
   }
 
   setupUI();
+
+  // 初期状態のUI更新
+  updateSidebarButtonUI();
 
   createIcons({ icons });
 };

@@ -40,25 +40,7 @@
 
           <div class="mx-2 h-6 w-px bg-gray-800"></div>
 
-          <!-- 設定 -->
-          <button
-            id="settingsButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-4 py-2 text-sm text-gray-50 transition-colors hover:bg-gray-700"
-          >
-            <i data-lucide="settings" class="h-4 w-4"></i>
-            <span>Settings</span>
-          </button>
-
-          <div class="mx-2 h-6 w-px bg-gray-800"></div>
-
           <!-- アクションボタン -->
-          <button
-            id="editMotionButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-4 py-2 text-sm text-gray-50 transition-colors hover:bg-gray-700"
-          >
-            <i data-lucide="activity" class="h-4 w-4"></i>
-            <span>Graph</span>
-          </button>
           <button
             id="playButton"
             class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-blue-900/50 px-4 py-2 text-sm text-blue-50 transition-colors hover:bg-blue-900"
@@ -73,6 +55,24 @@
             <i data-lucide="trash-2" class="h-4 w-4"></i>
             <span>Clear</span>
           </button>
+          <button
+            id="settingsButton"
+            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-4 py-2 text-sm text-gray-50 transition-colors hover:bg-gray-700"
+          >
+            <i data-lucide="settings" class="h-4 w-4"></i>
+            <span>Settings</span>
+          </button>
+
+          <div class="mx-2 h-6 w-px bg-gray-800"></div>
+
+          <!-- サイドバートグル -->
+          <button
+            id="editMotionButton"
+            title="Toggle Sidebar"
+            class="corner-md flex h-9 w-9 cursor-pointer items-center justify-center bg-gray-800 text-gray-50 transition-colors hover:bg-gray-700"
+          >
+            <i data-lucide="panel-right" class="h-4 w-4"></i>
+          </button>
         </div>
       </header>
 
@@ -86,80 +86,80 @@
           <!-- p5.jsキャンバスがここに挿入される -->
         </main>
 
-        <!-- グラフエディタ -->
+        <!-- サイドバー -->
         <aside
-          id="graphEditorContainer"
-          class="corner-xl flex w-[400px] flex-col overflow-hidden border border-gray-800 bg-gray-950 transition-all duration-300"
+          id="sidebarContainer"
+          class="flex w-[400px] flex-col gap-3 overflow-hidden transition-all duration-300"
         >
-          <!-- ヘッダー -->
+          <!-- Property Editor -->
           <div
-            class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-5 py-3"
+            id="propertyEditorContainer"
+            class="corner-xl flex flex-1 flex-col overflow-hidden border border-gray-800 bg-gray-950"
           >
-            <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
-            <button
-              id="closeGraphEditorButton"
-              class="p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
-            >
-              <i data-lucide="x" class="h-4 w-4"></i>
-            </button>
-          </div>
-
-          <!-- キャンバス -->
-          <div
-            id="graphEditorCanvas"
-            class="relative aspect-square w-full border-gray-800"
-          >
-            <!-- ここにモーションエディタのキャンバスが挿入される -->
-          </div>
-
-          <!-- 提案機能 -->
-          <div class="flex flex-wrap gap-4 px-4">
-            <!-- 提案機能 -->
+            <!-- ヘッダー -->
             <div
-              class="graphSuggestionContainer corner-lg w-full min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-5 py-3"
             >
-              <form id="graphPromptForm" class="flex items-center">
-                <input
-                  id="graphPromptInput"
-                  type="text"
-                  placeholder="Enter instructions..."
-                  autocomplete="off"
-                  class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
-                />
-                <button type="submit" class="cursor-pointer p-3">
-                  <i data-lucide="send" class="h-3.5 w-3.5"></i>
-                </button>
-              </form>
-              <div
-                id="graphSuggestionList"
-                class="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
+              <h2 class="text-sm font-medium text-gray-200">Properties</h2>
+              <button
+                id="closeSidebarButton"
+                class="p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
               >
-                <!-- ここに提案が挿入される -->
-              </div>
+                <i data-lucide="x" class="h-4 w-4"></i>
+              </button>
             </div>
 
-            <!-- 再生時間 -->
-            <div class="flex items-center gap-3">
-              <span class="w-20">Duration</span>
-              <input
-                id="durationInput"
-                type="number"
-                min="100"
-                step="100"
-                value="2000"
-                class="corner-md flex-1 appearance-none bg-gray-800 px-3 py-2 text-sm text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
-              />
-              <span class="w-6 text-right">ms</span>
+            <!-- プレースホルダー（パス未選択時） -->
+            <div
+              id="propertyPlaceholder"
+              class="flex flex-1 items-center justify-center text-sm text-gray-500"
+            >
+              Select a path to edit
+            </div>
+
+            <!-- プロパティ入力 -->
+            <div
+              id="propertyInputs"
+              class="flex flex-col gap-4 p-4"
+              style="display: none"
+            >
+              <!-- Start Time -->
+              <div class="flex items-center gap-3">
+                <span class="w-20 text-sm text-gray-400">Start</span>
+                <input
+                  id="startTimeInput"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="0"
+                  class="corner-md flex-1 appearance-none bg-gray-800 px-3 py-2 text-sm text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                />
+                <span class="w-6 text-right text-sm text-gray-400">sec</span>
+              </div>
+
+              <!-- Duration -->
+              <div class="flex items-center gap-3">
+                <span class="w-20 text-sm text-gray-400">Duration</span>
+                <input
+                  id="durationInput"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value="2"
+                  class="corner-md flex-1 appearance-none bg-gray-800 px-3 py-2 text-sm text-gray-50 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                />
+                <span class="w-6 text-right text-sm text-gray-400">sec</span>
+              </div>
             </div>
 
             <!-- モディファイア編集パネル -->
             <div
               id="modifierPanel"
-              class="corner-lg w-full overflow-hidden border border-gray-800 bg-gray-900"
+              class="border-t border-gray-800"
               style="display: none"
             >
               <div
-                class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2"
+                class="flex items-center justify-between bg-gray-900/50 px-4 py-2"
               >
                 <h3 class="text-sm font-medium text-gray-200">Modifiers</h3>
                 <button
@@ -174,6 +174,68 @@
                 class="flex max-h-60 flex-col overflow-y-auto empty:hidden"
               >
                 <!-- ここにモディファイアが挿入される -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Graph Editor -->
+          <div
+            id="graphEditorContainer"
+            class="corner-xl flex flex-2 flex-col overflow-hidden border border-gray-800 bg-gray-950"
+          >
+            <!-- ヘッダー -->
+            <div
+              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-5 py-3"
+            >
+              <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
+            </div>
+
+            <!-- プレースホルダー（パス未選択時） -->
+            <div
+              id="graphPlaceholder"
+              class="flex flex-1 items-center justify-center text-sm text-gray-500"
+            >
+              Select a path to edit
+            </div>
+
+            <!-- コンテンツ（パス選択時） -->
+            <div
+              id="graphEditorContent"
+              class="flex flex-1 flex-col"
+              style="display: none"
+            >
+              <!-- キャンバス -->
+              <div
+                id="graphEditorCanvas"
+                class="relative aspect-square w-full border-gray-800"
+              >
+                <!-- ここにモーションエディタのキャンバスが挿入される -->
+              </div>
+
+              <!-- 提案機能 -->
+              <div class="flex flex-wrap gap-4 p-4">
+                <div
+                  class="graphSuggestionContainer corner-lg w-full min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+                >
+                  <form id="graphPromptForm" class="flex items-center">
+                    <input
+                      id="graphPromptInput"
+                      type="text"
+                      placeholder="Enter instructions..."
+                      autocomplete="off"
+                      class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
+                    />
+                    <button type="submit" class="cursor-pointer p-3">
+                      <i data-lucide="send" class="h-3.5 w-3.5"></i>
+                    </button>
+                  </form>
+                  <div
+                    id="graphSuggestionList"
+                    class="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
+                  >
+                    <!-- ここに提案が挿入される -->
+                  </div>
+                </div>
               </div>
             </div>
           </div>

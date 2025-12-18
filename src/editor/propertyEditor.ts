@@ -10,6 +10,11 @@ export class PropertyEditor {
   constructor(dom: DomRefs) {
     this.dom = dom;
 
+    // StartTimeの更新イベント
+    this.dom.startTimeInput.addEventListener('change', () =>
+      this.updateStartTime(),
+    );
+
     // Durationの更新イベント
     this.dom.durationInput.addEventListener('change', () =>
       this.updateDuration(),
@@ -26,15 +31,37 @@ export class PropertyEditor {
     this.activePath = path;
 
     if (!path || !path.times.length) {
+      // プレースホルダーを表示、入力欄を非表示
+      this.dom.propertyPlaceholder.style.display = 'flex';
+      this.dom.propertyInputs.style.display = 'none';
       this.hideModifierPanel();
       return;
     }
 
-    const duration = path.times[path.times.length - 1] - path.times[0];
-    this.dom.durationInput.value = Math.round(duration).toString();
+    // プレースホルダーを非表示、入力欄を表示
+    this.dom.propertyPlaceholder.style.display = 'none';
+    this.dom.propertyInputs.style.display = 'flex';
+
+    // StartTimeを表示（秒単位）
+    const startTime = path.startTime ?? 0;
+    this.dom.startTimeInput.value = startTime.toString();
+
+    // Durationを表示（ms→sec変換）
+    const durationMs = path.times[path.times.length - 1] - path.times[0];
+    const durationSec = durationMs / 1000;
+    this.dom.durationInput.value = durationSec.toFixed(2);
 
     // モディファイアがあればパネルを表示
     this.updateModifierPanel();
+  }
+
+  // StartTimeの更新
+  private updateStartTime(): void {
+    if (!this.activePath) return;
+    const newStartTime = Number(this.dom.startTimeInput.value);
+    if (newStartTime >= 0) {
+      this.activePath.startTime = newStartTime;
+    }
   }
 
   // Durationの更新
@@ -43,12 +70,13 @@ export class PropertyEditor {
     const { times } = this.activePath;
     if (!times.length) return;
 
-    const newDuration = Number(this.dom.durationInput.value);
+    // sec→ms変換
+    const newDurationMs = Number(this.dom.durationInput.value) * 1000;
     const start = times[0];
-    const oldDuration = times[times.length - 1] - start;
+    const oldDurationMs = times[times.length - 1] - start;
 
-    if (newDuration > 0 && oldDuration > 0) {
-      const scale = newDuration / oldDuration;
+    if (newDurationMs > 0 && oldDurationMs > 0) {
+      const scale = newDurationMs / oldDurationMs;
       this.activePath.times = times.map((t) => start + (t - start) * scale);
     }
   }

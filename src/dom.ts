@@ -14,20 +14,30 @@ type ElementMap = {
   settingsObjectSize: HTMLInputElement;
   settingsObjectSizeLabel: HTMLElement;
 
-  // グラフエディタ
+  // サイドバー
+  sidebarContainer: HTMLDivElement;
+  closeSidebarButton: HTMLButtonElement;
+  propertyPlaceholder: HTMLDivElement;
+  propertyInputs: HTMLDivElement;
+  startTimeInput: HTMLInputElement;
   durationInput: HTMLInputElement;
+
+  // グラフエディタ
+  graphEditorContainer: HTMLDivElement;
+  graphPlaceholder: HTMLDivElement;
+  graphEditorContent: HTMLDivElement;
+  graphEditorCanvas: HTMLDivElement;
+  graphPromptForm: HTMLFormElement;
+  graphPromptInput: HTMLInputElement;
+  graphSuggestionList: HTMLDivElement;
+
+  // スケッチエディタ
   canvasContainer: HTMLDivElement;
   sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
   clearButton: HTMLButtonElement;
   playButton: HTMLButtonElement;
   editMotionButton: HTMLButtonElement;
-  closeGraphEditorButton: HTMLButtonElement;
-  graphEditorContainer: HTMLDivElement;
-  graphEditorCanvas: HTMLDivElement;
-  graphPromptForm: HTMLFormElement;
-  graphPromptInput: HTMLInputElement;
-  graphSuggestionList: HTMLDivElement;
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
 
@@ -53,20 +63,30 @@ export class DomRefs {
   public readonly settingsObjectSize!: HTMLInputElement;
   public readonly settingsObjectSizeLabel!: HTMLElement;
 
-  // その他
+  // サイドバー
+  public readonly sidebarContainer!: HTMLDivElement;
+  public readonly closeSidebarButton!: HTMLButtonElement;
+  public readonly propertyPlaceholder!: HTMLDivElement;
+  public readonly propertyInputs!: HTMLDivElement;
+  public readonly startTimeInput!: HTMLInputElement;
   public readonly durationInput!: HTMLInputElement;
+
+  // グラフエディタ
+  public readonly graphEditorContainer!: HTMLDivElement;
+  public readonly graphPlaceholder!: HTMLDivElement;
+  public readonly graphEditorContent!: HTMLDivElement;
+  public readonly graphEditorCanvas!: HTMLDivElement;
+  public readonly graphPromptForm!: HTMLFormElement;
+  public readonly graphPromptInput!: HTMLInputElement;
+  public readonly graphSuggestionList!: HTMLDivElement;
+
+  // スケッチエディタ
   public readonly canvasContainer!: HTMLDivElement;
   public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
   public readonly clearButton!: HTMLButtonElement;
   public readonly playButton!: HTMLButtonElement;
   public readonly editMotionButton!: HTMLButtonElement;
-  public readonly closeGraphEditorButton!: HTMLButtonElement;
-  public readonly graphEditorContainer!: HTMLDivElement;
-  public readonly graphEditorCanvas!: HTMLDivElement;
-  public readonly graphPromptForm!: HTMLFormElement;
-  public readonly graphPromptInput!: HTMLInputElement;
-  public readonly graphSuggestionList!: HTMLDivElement;
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;
 
@@ -92,20 +112,30 @@ export class DomRefs {
       settingsObjectSize: 'settingsObjectSize',
       settingsObjectSizeLabel: 'settingsObjectSizeLabel',
 
-      // その他
+      // サイドバー
+      sidebarContainer: 'sidebarContainer',
+      closeSidebarButton: 'closeSidebarButton',
+      propertyPlaceholder: 'propertyPlaceholder',
+      propertyInputs: 'propertyInputs',
+      startTimeInput: 'startTimeInput',
       durationInput: 'durationInput',
+
+      // グラフエディタ
+      graphEditorContainer: 'graphEditorContainer',
+      graphPlaceholder: 'graphPlaceholder',
+      graphEditorContent: 'graphEditorContent',
+      graphEditorCanvas: 'graphEditorCanvas',
+      graphPromptForm: 'graphPromptForm',
+      graphPromptInput: 'graphPromptInput',
+      graphSuggestionList: 'graphSuggestionList',
+
+      // スケッチエディタ
       canvasContainer: 'canvasContainer',
       sketchPromptForm: 'sketchPromptForm',
       sketchPromptInput: 'sketchPromptInput',
       clearButton: 'clearButton',
       playButton: 'playButton',
       editMotionButton: 'editMotionButton',
-      closeGraphEditorButton: 'closeGraphEditorButton',
-      graphEditorContainer: 'graphEditorContainer',
-      graphEditorCanvas: 'graphEditorCanvas',
-      graphPromptForm: 'graphPromptForm',
-      graphPromptInput: 'graphPromptInput',
-      graphSuggestionList: 'graphSuggestionList',
       selectToolButton: 'selectToolButton',
       penToolButton: 'penToolButton',
 

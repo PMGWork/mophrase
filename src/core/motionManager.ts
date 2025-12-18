@@ -16,6 +16,8 @@ export class MotionManager {
   private isPlaying: boolean = false;
   private currentPath: Path | null = null;
   private time: number = 0;
+  private elapsedTime: number = 0;
+  private startTime: number = 0;
   private duration: number = 0;
   private curveLengths: number[] = [];
   private totalLength: number = 0;
@@ -36,6 +38,10 @@ export class MotionManager {
     this.currentPath = path;
     this.isPlaying = true;
     this.time = 0;
+    this.elapsedTime = 0;
+
+    // 開始待機時間を設定（秒→ミリ秒）
+    this.startTime = (path.startTime ?? 0) * 1000;
 
     // カーブの長さを事前計算してキャッシュ
     this.curveLengths = path.curves.map((c) => curveLength(c));
@@ -52,6 +58,7 @@ export class MotionManager {
   public stop(): void {
     this.isPlaying = false;
     this.time = 0;
+    this.elapsedTime = 0;
     this.currentPath = null;
   }
 
@@ -59,6 +66,13 @@ export class MotionManager {
   public draw(): void {
     if (!this.isPlaying || !this.currentPath) return;
 
+    // 経過時間を更新
+    this.elapsedTime += this.p.deltaTime;
+
+    // 開始時間まで待機
+    if (this.elapsedTime < this.startTime) return;
+
+    // アニメーション進行度を計算
     this.time += this.p.deltaTime / this.duration;
 
     if (this.time >= 1.0) {

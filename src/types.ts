@@ -43,6 +43,7 @@ export interface Path {
   timeCurve: Vector[][];
   fitError: { current: FitErrorResult };
   modifiers?: PathModifier[];
+  startTime?: number;
 }
 
 // シリアライズされたハンドル情報（正規化済み）
