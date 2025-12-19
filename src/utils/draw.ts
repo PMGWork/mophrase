@@ -58,10 +58,27 @@ export function drawBezierCurve(
   p.stroke(color);
   p.strokeWeight(weight);
   p.noFill();
+  p.strokeCap(p.ROUND);
+  p.strokeJoin(p.ROUND);
 
-  for (const curve of curves) {
-    p.beginShape();
-    for (let t = 0; t <= 1; t += 0.01) {
+  const step = 0.01;
+  let prevEnd: Vector | null = null;
+
+  for (let i = 0; i < curves.length; i++) {
+    const curve = curves[i];
+    const start = curve[CURVE_POINT.START_ANCHOR_POINT];
+    const end = curve[CURVE_POINT.END_ANCHOR_POINT];
+    const connected =
+      prevEnd !== null &&
+      prevEnd.x === start.x &&
+      prevEnd.y === start.y;
+
+    if (prevEnd === null || !connected) {
+      if (prevEnd !== null) p.endShape();
+      p.beginShape();
+    }
+
+    for (let t = connected ? step : 0; t <= 1; t += step) {
       const pt = bezierCurve(
         curve[CURVE_POINT.START_ANCHOR_POINT],
         curve[CURVE_POINT.START_CONTROL_POINT],
@@ -71,9 +88,10 @@ export function drawBezierCurve(
       );
       p.vertex(pt.x, pt.y);
     }
-    p.endShape();
+    prevEnd = end;
   }
 
+  if (prevEnd !== null) p.endShape();
   p.pop();
 }
 

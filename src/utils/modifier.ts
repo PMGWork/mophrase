@@ -1,5 +1,5 @@
 import type p5 from 'p5';
-import type { Modifier, Vector } from '../types';
+import type { Modifier, SelectionRange, Vector } from '../types';
 
 // モディファイアを適用したカーブを計算
 export function applyModifiers(
@@ -38,16 +38,59 @@ export function createModifierFromLLMResult(
   originalCurves: Vector[][],
   modifiedCurves: Vector[][],
   name: string,
+  selectionRange?: SelectionRange,
 ): Modifier {
+  const startCurveIndex = selectionRange?.startCurveIndex ?? 0;
+  const endCurveIndex =
+    selectionRange?.endCurveIndex ?? originalCurves.length - 1;
+
   const offsets: Modifier['offsets'] = originalCurves.map(
-    (curve, curveIndex) =>
-      curve.map((point, pointIndex) => {
-        const modifiedPoint = modifiedCurves[curveIndex]?.[pointIndex];
+    (curve, curveIndex) => {
+      if (curveIndex < startCurveIndex || curveIndex > endCurveIndex) {
+        return curve.map(() => null);
+      }
+
+      const localIndex = curveIndex - startCurveIndex;
+      return curve.map((point, pointIndex) => {
+        const modifiedPoint = modifiedCurves[localIndex]?.[pointIndex];
         if (!modifiedPoint) return null;
 
         return { dx: modifiedPoint.x - point.x, dy: modifiedPoint.y - point.y };
-      }),
+      });
+    },
   );
+
+  if (selectionRange) {
+    const localEndIndex = endCurveIndex - startCurveIndex;
+
+    const startOriginal = originalCurves[startCurveIndex]?.[0];
+    const startModified = modifiedCurves[0]?.[0];
+    if (startOriginal && startModified && startCurveIndex > 0) {
+      const dx = startModified.x - startOriginal.x;
+      const dy = startModified.y - startOriginal.y;
+      const prevCurve = offsets[startCurveIndex - 1];
+      if (prevCurve) {
+        prevCurve[2] = { dx, dy };
+        prevCurve[3] = { dx, dy };
+      }
+    }
+
+    const endOriginal = originalCurves[endCurveIndex]?.[3];
+    const endModified = modifiedCurves[localEndIndex]?.[3];
+    if (
+      endOriginal &&
+      endModified &&
+      endCurveIndex < originalCurves.length - 1
+    ) {
+      const dx = endModified.x - endOriginal.x;
+      const dy = endModified.y - endOriginal.y;
+      const nextCurve = offsets[endCurveIndex + 1];
+      if (nextCurve) {
+        nextCurve[0] = { dx, dy };
+        nextCurve[1] = { dx, dy };
+      }
+    }
+  }
 
   return {
     id: crypto.randomUUID(),

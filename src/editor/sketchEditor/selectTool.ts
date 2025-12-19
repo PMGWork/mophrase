@@ -56,7 +56,11 @@ export class SelectTool {
   mouseDragged(p: p5, ctx: ToolContext): void {
     const dragMode = p.keyIsDown(p.ALT) ? 1 : 0;
     ctx.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
-    if (ctx.handleManager.isDragging()) return;
+    if (ctx.handleManager.isDragging()) {
+      const selectionRange = ctx.handleManager.getSelectionRange();
+      ctx.suggestionManager.updateSelectionRange(selectionRange ?? undefined);
+      return;
+    }
 
     // 範囲選択
     if (this.marqueeRect) {
@@ -69,7 +73,11 @@ export class SelectTool {
   mouseReleased(_p: p5, ctx: ToolContext): void {
     const wasDragging = ctx.handleManager.isDragging();
     ctx.handleManager.endDrag();
-    if (wasDragging) return;
+    if (wasDragging) {
+      const selectionRange = ctx.handleManager.getSelectionRange();
+      ctx.suggestionManager.updateSelectionRange(selectionRange ?? undefined);
+      return;
+    }
 
     // 範囲選択の完了
     if (this.marqueeRect) {

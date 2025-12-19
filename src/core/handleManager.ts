@@ -166,22 +166,43 @@ export class HandleManager {
     const curveCount = path?.curves?.length ?? 0;
     if (curveCount === 0) return null;
 
-    // アンカー選択時は隣接セグメントも影響を受けるため、範囲に含める
+    const anchorIndices = new Set<number>();
+    for (const h of this.selectedHandles) {
+      if (!this.isAnchorPoint(h.pointIndex)) continue;
+      const anchorIndex =
+        h.curveIndex +
+        (h.pointIndex === CURVE_POINT.END_ANCHOR_POINT ? 1 : 0);
+      anchorIndices.add(anchorIndex);
+    }
+
+    if (anchorIndices.size >= 2) {
+      const anchorList = Array.from(anchorIndices);
+      const minAnchor = Math.min(...anchorList);
+      const maxAnchor = Math.max(...anchorList);
+      const startCurveIndex = Math.max(0, Math.min(curveCount - 1, minAnchor));
+      const endCurveIndex = Math.max(
+        0,
+        Math.min(curveCount - 1, maxAnchor - 1),
+      );
+      if (startCurveIndex > endCurveIndex) return null;
+      return { pathIndex, startCurveIndex, endCurveIndex };
+    }
+
+    if (anchorIndices.size === 1) {
+      const anchorIndex = anchorIndices.values().next().value as number;
+      const startCurveIndex = Math.max(0, anchorIndex - 1);
+      const endCurveIndex = Math.min(curveCount - 1, anchorIndex);
+      if (startCurveIndex > endCurveIndex) return null;
+      return { pathIndex, startCurveIndex, endCurveIndex };
+    }
+
     let minIdx = Infinity;
     let maxIdx = -Infinity;
-
     for (const h of this.selectedHandles) {
       minIdx = Math.min(minIdx, h.curveIndex);
       maxIdx = Math.max(maxIdx, h.curveIndex);
-
-      if (h.pointIndex === CURVE_POINT.START_ANCHOR_POINT) {
-        minIdx = Math.min(minIdx, h.curveIndex - 1);
-      } else if (h.pointIndex === CURVE_POINT.END_ANCHOR_POINT) {
-        maxIdx = Math.max(maxIdx, h.curveIndex + 1);
-      }
     }
 
-    // 範囲をクランプ
     minIdx = Math.max(0, minIdx);
     maxIdx = Math.min(curveCount - 1, maxIdx);
     if (minIdx > maxIdx) return null;
@@ -240,18 +261,121 @@ export class HandleManager {
 
     // 複数選択されている場合、選択されている全てのアンカーポイントを移動
     if (this.selectedHandles.length > 1 && this.isSelected(dragged)) {
-      for (const selection of this.selectedHandles) {
-        this.moveHandle(selection, dx, dy, mode);
-      }
+      this.applyMultiDrag(dx, dy, mode);
       return;
     }
 
     // 単体選択されている場合
-    this.moveHandle(dragged, dx, dy, mode);
+    this.applySingleDrag(dragged, dx, dy, mode);
   }
 
-  // 単一ハンドルの位置を更新
-  private moveHandle(
+  // 複数選択時のドラッグ処理
+  private applyMultiDrag(dx: number, dy: number, mode: number): void {
+    const paths = this.getPaths();
+    const targets = new Map<string, HandleSelection>();
+
+    // 移動対象にハンドルを追加するヘルパー関数
+    const addTarget = (selection: HandleSelection): void => {
+      const curve = paths[selection.pathIndex]?.curves?.[selection.curveIndex];
+      const handle = curve?.[selection.pointIndex];
+      if (!handle) return;
+
+      const key = `${selection.pathIndex}:${selection.curveIndex}:${selection.pointIndex}`;
+      if (!targets.has(key)) targets.set(key, selection);
+    };
+
+    // 選択されているハンドルとその関連ポイントを収集
+    for (const selection of this.selectedHandles) {
+      // 選択されているハンドル自体を追加
+      addTarget(selection);
+
+      // アンカーポイント以外（制御点のみ選択）の場合はスキップ
+      if (!this.isAnchorPoint(selection.pointIndex)) continue;
+
+      // アンカーポイントの場合、関連する制御点と隣接カーブのポイントも移動対象に含める
+      const isStart = selection.pointIndex === CURVE_POINT.START_ANCHOR_POINT;
+
+      // 自身のカーブの制御点インデックス
+      const selfControlIdx = isStart
+        ? CURVE_POINT.START_CONTROL_POINT
+        : CURVE_POINT.END_CONTROL_POINT;
+
+      // 隣接カーブの制御点インデックス
+      const adjControlIdx = isStart
+        ? CURVE_POINT.END_CONTROL_POINT
+        : CURVE_POINT.START_CONTROL_POINT;
+
+      // 隣接カーブのアンカーポイントインデックス
+      const adjAnchorIdx = isStart
+        ? CURVE_POINT.END_ANCHOR_POINT
+        : CURVE_POINT.START_ANCHOR_POINT;
+
+      // 隣接カーブのインデックス（開始点なら前のカーブ、終了点なら次のカーブ）
+      const adjCurveIdx = selection.curveIndex + (isStart ? -1 : 1);
+
+      // 自身のカーブの制御点を追加
+      addTarget({
+        pathIndex: selection.pathIndex,
+        curveIndex: selection.curveIndex,
+        pointIndex: selfControlIdx,
+      });
+
+      // 隣接カーブが存在する場合、その制御点とアンカーポイントも追加
+      const path = paths[selection.pathIndex];
+      if (!path) continue;
+      if (adjCurveIdx < 0 || adjCurveIdx >= path.curves.length) continue;
+
+      // 隣接カーブの制御点を追加
+      addTarget({
+        pathIndex: selection.pathIndex,
+        curveIndex: adjCurveIdx,
+        pointIndex: adjControlIdx,
+      });
+
+      // 隣接カーブのアンカーポイントを追加
+      addTarget({
+        pathIndex: selection.pathIndex,
+        curveIndex: adjCurveIdx,
+        pointIndex: adjAnchorIdx,
+      });
+    }
+
+    // 収集したすべてのハンドルを移動
+    for (const selection of targets.values()) {
+      const curve = paths[selection.pathIndex]?.curves?.[selection.curveIndex];
+      const handle = curve?.[selection.pointIndex];
+      if (!handle) continue;
+      handle.add(dx, dy);
+    }
+
+    // mode === 0（通常モード）の場合、制御点の反対側をミラーリング
+    if (mode === 0) {
+      for (const selection of this.selectedHandles) {
+        // アンカーポイントはスキップ（制御点のみ処理）
+        if (this.isAnchorPoint(selection.pointIndex)) continue;
+        const path = this.getPaths()[selection.pathIndex];
+        if (!path) continue;
+
+        // 選択された制御点の反対側の制御点を対称に移動
+        this.mirrorOppositeControl(
+          path,
+          selection.curveIndex,
+          selection.pointIndex,
+        );
+      }
+    }
+  }
+
+  // アンカーかどうか
+  private isAnchorPoint(pointIndex: number): boolean {
+    return (
+      pointIndex === CURVE_POINT.START_ANCHOR_POINT ||
+      pointIndex === CURVE_POINT.END_ANCHOR_POINT
+    );
+  }
+
+  // 単一選択のドラッグ処理
+  private applySingleDrag(
     selection: HandleSelection,
     dx: number,
     dy: number,
@@ -270,11 +394,7 @@ export class HandleManager {
     handle.set(finalX, finalY);
 
     // アンカーポイントの場合は隣接カーブも連動
-    const isAnchorPoint =
-      selection.pointIndex === CURVE_POINT.START_ANCHOR_POINT ||
-      selection.pointIndex === CURVE_POINT.END_ANCHOR_POINT;
-
-    if (isAnchorPoint) {
+    if (this.isAnchorPoint(selection.pointIndex)) {
       this.syncAdjacentCurve(
         path,
         selection.curveIndex,

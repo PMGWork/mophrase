@@ -1,5 +1,7 @@
-import type { Config } from '../config';
+import type p5 from 'p5';
+import type { Colors, Config } from '../config';
 import type { Vector, Modifier, Path, SelectionRange, Suggestion } from '../types';
+import { drawBezierCurve } from '../utils/draw';
 import { createModifierFromLLMResult } from '../utils/modifier';
 import { slicePath } from '../utils/path';
 import { deserializeCurves, serializePaths } from '../utils/serialization';
@@ -38,7 +40,9 @@ export class SketchSuggestionManager extends SuggestionManager {
   }
 
   protected getTargetCurves(): Vector[][] | undefined {
-    return this.targetPath?.sketch.curves;
+    if (!this.targetPath) return undefined;
+    if (!this.selectionRange) return this.targetPath.sketch.curves;
+    return slicePath(this.targetPath, this.selectionRange).sketch.curves;
   }
 
   // 選択範囲を設定してUIを更新
@@ -55,6 +59,114 @@ export class SketchSuggestionManager extends SuggestionManager {
     selectionRange?: SelectionRange,
   ): Promise<void> {
     await this.generateSuggestion(path, prompt, selectionRange);
+  }
+
+  // 提案をプレビュー
+  preview(
+    p: p5,
+    colors: Colors,
+    options: { transform?: (v: p5.Vector) => p5.Vector } = {},
+  ): void {
+    if (!this.selectionRange) {
+      super.preview(p, colors, options);
+      return;
+    }
+
+    this.pInstance = p;
+    if (this.status === 'generating') return;
+    if (!this.hoveredId) return;
+
+    const suggestion = this.suggestions.find(
+      (s) => s.id === this.hoveredId && s.type === 'sketch',
+    );
+    if (!suggestion || !this.targetPath) return;
+
+    const ctx = p.drawingContext as CanvasRenderingContext2D;
+    const previousDash =
+      typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
+    if (typeof ctx.setLineDash === 'function') ctx.setLineDash([6, 4]);
+
+    p.push();
+
+    const originalCurves = this.targetPath.sketch.curves;
+    const suggestionCurves = deserializeCurves(suggestion.path, p);
+    if (originalCurves.length === 0 || suggestionCurves.length === 0) {
+      p.pop();
+      if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
+      return;
+    }
+
+    const rangeStart = Math.max(
+      0,
+      Math.min(originalCurves.length - 1, this.selectionRange.startCurveIndex),
+    );
+    const rangeEnd = Math.max(
+      0,
+      Math.min(originalCurves.length - 1, this.selectionRange.endCurveIndex),
+    );
+    if (rangeStart > rangeEnd) {
+      p.pop();
+      if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
+      return;
+    }
+
+    const previewCurves = originalCurves.map((curve, curveIndex) =>
+      curve.map((pt, ptIndex) => {
+        if (curveIndex < rangeStart || curveIndex > rangeEnd) return pt;
+        const localIndex = curveIndex - rangeStart;
+        const suggPt = suggestionCurves[localIndex]?.[ptIndex];
+        if (!suggPt) return pt;
+        const dx = (suggPt.x - pt.x) * this.hoveredStrength;
+        const dy = (suggPt.y - pt.y) * this.hoveredStrength;
+        if (dx === 0 && dy === 0) return pt;
+        return p.createVector(pt.x + dx, pt.y + dy);
+      }),
+    );
+
+    const startOriginal = originalCurves[rangeStart]?.[0];
+    const startSuggested = suggestionCurves[0]?.[0];
+    if (startOriginal && startSuggested && rangeStart > 0) {
+      const dx = (startSuggested.x - startOriginal.x) * this.hoveredStrength;
+      const dy = (startSuggested.y - startOriginal.y) * this.hoveredStrength;
+      const prevCurve = previewCurves[rangeStart - 1];
+      if (prevCurve) {
+        prevCurve[2] = p.createVector(prevCurve[2].x + dx, prevCurve[2].y + dy);
+        prevCurve[3] = p.createVector(prevCurve[3].x + dx, prevCurve[3].y + dy);
+      }
+    }
+
+    const localEndIndex = Math.min(
+      suggestionCurves.length - 1,
+      rangeEnd - rangeStart,
+    );
+    const endOriginal = originalCurves[rangeEnd]?.[3];
+    const endSuggested = suggestionCurves[localEndIndex]?.[3];
+    if (endOriginal && endSuggested && rangeEnd < originalCurves.length - 1) {
+      const dx = (endSuggested.x - endOriginal.x) * this.hoveredStrength;
+      const dy = (endSuggested.y - endOriginal.y) * this.hoveredStrength;
+      const nextCurve = previewCurves[rangeEnd + 1];
+      if (nextCurve) {
+        nextCurve[0] = p.createVector(nextCurve[0].x + dx, nextCurve[0].y + dy);
+        nextCurve[1] = p.createVector(nextCurve[1].x + dx, nextCurve[1].y + dy);
+      }
+    }
+
+    const previewStart = Math.max(0, rangeStart - 1);
+    const previewEnd = Math.min(previewCurves.length - 1, rangeEnd + 1);
+    const previewSlice = previewCurves.slice(previewStart, previewEnd + 1);
+
+    const { transform } = options;
+    const mapped = transform
+      ? previewSlice.map((curve) => curve.map((pt) => transform(pt.copy())))
+      : previewSlice;
+
+    if (mapped.length > 0) {
+      const weight = Math.max(this.config.lineWeight, 1) + 0.5;
+      drawBezierCurve(p, mapped, weight, colors.handle);
+    }
+
+    p.pop();
+    if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
   }
 
   // #region プライベート関数
@@ -138,9 +250,10 @@ export class SketchSuggestionManager extends SuggestionManager {
     const modifierName =
       this.prompts[this.prompts.length - 1] || suggestion.title;
     const modifier = createModifierFromLLMResult(
-      partialPath.sketch.curves,
+      this.targetPath.sketch.curves,
       llmCurves,
       modifierName,
+      this.selectionRange,
     );
 
     // クリック時の影響度をmodifierに設定
