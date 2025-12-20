@@ -1,5 +1,6 @@
 import p5 from 'p5';
 import type { Colors, Config } from '../config';
+import { HANDLE_RADIUS } from '../constants';
 import type { DomRefs } from '../dom';
 import type { Path } from '../types';
 import { drawBezierCurve, drawControls } from '../utils/draw';
@@ -12,9 +13,6 @@ type GraphHandleSelection = {
   segmentIndex: number;
   type: 'GRAPH_OUT' | 'GRAPH_IN';
 };
-
-// ハンドルの半径
-const HANDLE_RADIUS = 12;
 
 // グラフエディタ
 export class GraphEditor {

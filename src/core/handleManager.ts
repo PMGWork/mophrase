@@ -1,3 +1,4 @@
+import { HANDLE_RADIUS } from '../constants';
 import type {
   HandleSelection,
   MarqueeRect,
@@ -11,9 +12,6 @@ import { applyModifiers } from '../utils/modifier';
 
 type Point = { x: number; y: number };
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
-
-// 定数
-const HANDLE_RADIUS = 12;
 
 // ハンドルの制御クラス
 export class HandleManager {

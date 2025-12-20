@@ -1,5 +1,6 @@
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
+import { OBJECT_COLORS, OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import type { DomRefs } from '../../dom';
@@ -10,10 +11,6 @@ import { isLeftMouseButton } from '../../utils/p5Helpers';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
 import type { ToolContext } from './types';
-
-// 固定定数
-const OBJECT_SIZE = 50;
-const OBJECT_COLORS = ['#f43f5e', '#f59e0b', '#4ade80'];
 
 // スケッチエディタ
 export class SketchEditor {

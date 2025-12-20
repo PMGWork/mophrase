@@ -1,5 +1,5 @@
 import type p5 from 'p5';
-import { BEZIER_T_STEP } from '../../constants';
+import { BEZIER_T_STEP, OBJECT_SIZE } from '../../constants';
 import type { MarqueeRect, Path } from '../../types';
 import { bezierCurve } from '../../utils/math';
 import { buildSketchCurves } from '../../utils/keyframes';
@@ -130,8 +130,24 @@ export class SelectTool {
     const tolerance = Math.max(ctx.config.pointSize * 2, 10);
     const toleranceSq = tolerance * tolerance;
 
+    // オブジェクト半径（クリック判定に余裕を持たせる）
+    const objectRadius = OBJECT_SIZE / 2;
+    const objectRadiusSq = objectRadius * objectRadius;
+
     for (let i = ctx.paths.length - 1; i >= 0; i--) {
       const path = ctx.paths[i];
+
+      // オブジェクト（開始位置）のクリック判定
+      if (path.keyframes.length > 0) {
+        const startPos = path.keyframes[0].position;
+        const dx = startPos.x - x;
+        const dy = startPos.y - y;
+        if (dx * dx + dy * dy <= objectRadiusSq) {
+          return path;
+        }
+      }
+
+      // パス曲線のクリック判定
       if (this.isHitOnPath(path, x, y, toleranceSq)) {
         return path;
       }
