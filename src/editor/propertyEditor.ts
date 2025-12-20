@@ -3,13 +3,19 @@ import type { Modifier, Path } from '../types';
 import { removeModifier, updateModifierStrength } from '../utils/modifier';
 import { createIcons, icons } from 'lucide';
 
+type PropertyEditorOptions = {
+  onModifierChange?: () => void;
+};
+
 // プロパティエディタ
 export class PropertyEditor {
   private dom: DomRefs;
   private activePath: Path | null = null;
+  private onModifierChange?: () => void;
 
-  constructor(dom: DomRefs) {
+  constructor(dom: DomRefs, options: PropertyEditorOptions = {}) {
     this.dom = dom;
+    this.onModifierChange = options.onModifierChange;
 
     // StartTimeの更新イベント
     this.dom.startTimeInput.addEventListener('change', () =>
@@ -26,7 +32,7 @@ export class PropertyEditor {
   public setPath(path: Path | null): void {
     this.activePath = path;
 
-    if (!path || !path.motion.timing.length) {
+    if (!path || path.keyframes.length < 2) {
       // プレースホルダーを表示、コンテンツを非表示
       this.dom.propertyPlaceholder.style.display = 'flex';
       this.dom.propertyEditorContent.style.display = 'none';
@@ -38,12 +44,12 @@ export class PropertyEditor {
     this.dom.propertyEditorContent.style.display = 'flex';
 
     // StartTimeを表示（秒単位）
-    const rawStartTime = path.motion.startTime ?? 0;
+    const rawStartTime = path.startTime ?? 0;
     const startTime = Number.isFinite(rawStartTime) ? rawStartTime : 0;
     this.dom.startTimeInput.value = String(startTime);
 
     // Durationを表示 (秒単位)
-    this.dom.durationInput.value = String(path.motion.duration);
+    this.dom.durationInput.value = String(path.duration);
 
     // モディファイアパネルを更新
     this.updateModifierPanel();
@@ -54,7 +60,7 @@ export class PropertyEditor {
     if (!this.activePath) return;
     const newStartTime = Number(this.dom.startTimeInput.value);
     if (Number.isFinite(newStartTime) && newStartTime >= 0) {
-      this.activePath.motion.startTime = newStartTime;
+      this.activePath.startTime = newStartTime;
     }
   }
 
@@ -65,7 +71,7 @@ export class PropertyEditor {
     const newDurationSec = Number(this.dom.durationInput.value);
     if (!Number.isFinite(newDurationSec) || newDurationSec <= 0) return;
 
-    this.activePath.motion.duration = newDurationSec;
+    this.activePath.duration = newDurationSec;
   }
 
   private refreshLucideIcons(): void {
@@ -76,8 +82,8 @@ export class PropertyEditor {
   private updateModifierPanel(): void {
     this.dom.modifierList.innerHTML = '';
 
-    if (this.activePath?.sketch.modifiers?.length) {
-      for (const modifier of this.activePath.sketch.modifiers) {
+    if (this.activePath?.modifiers?.length) {
+      for (const modifier of this.activePath.modifiers) {
         const item = this.createModifierItem(modifier);
         this.dom.modifierList.appendChild(item);
       }
@@ -128,12 +134,13 @@ export class PropertyEditor {
     slider.addEventListener('input', () => {
       const strength = Number(slider.value) / 100;
       updateModifierStrength(
-        this.activePath?.sketch.modifiers,
+        this.activePath?.modifiers,
         modifier.id,
         strength,
       );
       valueLabel.textContent = `${slider.value}%`;
       indicator.style.width = `${Number(slider.value) / 2}%`;
+      this.onModifierChange?.();
     });
 
     control.appendChild(slider);
@@ -145,8 +152,8 @@ export class PropertyEditor {
     deleteButton.innerHTML = '<i data-lucide="minus" class="h-4 w-4"></i>';
     deleteButton.addEventListener('click', () => {
       if (!this.activePath) return;
-      this.activePath.sketch.modifiers = removeModifier(
-        this.activePath.sketch.modifiers,
+      this.activePath.modifiers = removeModifier(
+        this.activePath.modifiers,
         modifier.id,
       );
       this.updateModifierPanel();

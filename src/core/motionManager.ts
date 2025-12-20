@@ -1,8 +1,12 @@
 import type p5 from 'p5';
-import { CURVE_POINT } from '../constants';
 import type { Path, Vector } from '../types';
-import { bezierCurve, curveLength } from '../utils/math';
-import { fitCurve } from './fitting';
+import { bezierCurve } from '../utils/math';
+import {
+  buildGraphCurves,
+  buildSketchCurves,
+  computeKeyframeProgress,
+} from '../utils/keyframes';
+import { applyModifiers, applyGraphModifiers } from '../utils/modifier';
 
 // モーション管理クラス
 export class MotionManager {
@@ -11,12 +15,14 @@ export class MotionManager {
   private objectSize: number;
   private isPlaying: boolean = false;
   private currentPath: Path | null = null;
+  private staticPath: Path | null = null;
   private time: number = 0;
   private elapsedTime: number = 0;
   private startTime: number = 0;
   private duration: number = 0;
-  private curveLengths: number[] = [];
-  private totalLength: number = 0;
+  private spatialCurves: Vector[][] = [];
+  private graphCurves: Vector[][] = [];
+  private keyframeProgress: number[] = [];
 
   constructor(p: p5, objectColor: string, objectSize: number) {
     this.p = p;
@@ -26,9 +32,14 @@ export class MotionManager {
 
   // #region メイン関数
 
+  // オブジェクトの色を設定
+  public setColor(color: string): void {
+    this.objectColor = color;
+  }
+
   // モーション再生を開始
   public start(path: Path): void {
-    if (path.motion.timing.length === 0) return;
+    if (path.keyframes.length < 2) return;
 
     // パスを設定
     this.currentPath = path;
@@ -37,14 +48,22 @@ export class MotionManager {
     this.elapsedTime = 0;
 
     // 開始待機時間を設定（秒→ミリ秒）
-    this.startTime = path.motion.startTime * 1000;
+    this.startTime = path.startTime * 1000;
 
-    // カーブの長さを事前計算してキャッシュ
-    this.curveLengths = path.sketch.curves.map((c) => curveLength(c));
-    this.totalLength = this.curveLengths.reduce((a, b) => a + b, 0);
+    // 空間カーブと進行度を計算（modifier適用）
+    const originalCurves = buildSketchCurves(path.keyframes);
+    this.spatialCurves = applyModifiers(originalCurves, path.modifiers, this.p);
+    this.keyframeProgress = computeKeyframeProgress(
+      path.keyframes,
+      this.spatialCurves,
+    );
+
+    // 時間カーブを生成（modifier適用）
+    const baseGraphCurves = buildGraphCurves(path.keyframes, this.keyframeProgress);
+    this.graphCurves = applyGraphModifiers(baseGraphCurves, path.modifiers, this.p);
 
     // 持続時間を設定 (秒 -> ミリ秒)
-    this.duration = path.motion.duration * 1000;
+    this.duration = Math.max(1, path.duration * 1000);
   }
 
   // モーション再生を停止
@@ -55,34 +74,45 @@ export class MotionManager {
     this.currentPath = null;
   }
 
+  // 表示対象のパスを設定
+  public setPath(path: Path | null): void {
+    this.staticPath = path;
+  }
+
   // モーションを更新
   public draw(): void {
-    if (!this.isPlaying || !this.currentPath) return;
+    // 再生中の場合
+    if (this.isPlaying && this.currentPath) {
+      // 経過時間を更新
+      this.elapsedTime += this.p.deltaTime;
 
-    // 経過時間を更新
-    this.elapsedTime += this.p.deltaTime;
+      // 開始時間まで待機
+      if (this.elapsedTime < this.startTime) {
+        // 待機中は開始位置に表示
+        this.drawObject(this.currentPath.keyframes[0].position);
+        return;
+      }
 
-    // 開始時間まで待機
-    if (this.elapsedTime < this.startTime) return;
+      // アニメーション進行度を計算
+      this.time += this.p.deltaTime / this.duration;
 
-    // アニメーション進行度を計算
-    this.time += this.p.deltaTime / this.duration;
+      if (this.time >= 1.0) {
+        this.time = 1.0;
+        this.isPlaying = false;
+      }
 
-    if (this.time >= 1.0) {
-      this.time = 1.0;
-      this.isPlaying = false;
+      const position = this.evaluatePosition(this.time);
+      this.drawObject(position);
+      return;
     }
 
-    const progress = this.evaluateTiming(
-      this.currentPath.motion.timing,
-      this.time,
-    );
-    const position = this.evaluatePosition(
-      this.currentPath.sketch.curves,
-      progress,
-    );
-
-    this.drawObject(position);
+    // 再生していない場合は、設定されたパスの開始位置を表示
+    if (this.staticPath && this.staticPath.keyframes.length > 0) {
+      const originalCurves = buildSketchCurves(this.staticPath.keyframes);
+      const effectiveCurves = applyModifiers(originalCurves, this.staticPath.modifiers, this.p);
+      const startPosition = effectiveCurves[0]?.[0] ?? this.staticPath.keyframes[0].position;
+      this.drawObject(startPosition);
+    }
   }
 
   // #region プライベート関数
@@ -94,26 +124,6 @@ export class MotionManager {
     this.p.noStroke();
     this.p.circle(position.x, position.y, this.objectSize);
     this.p.pop();
-  }
-
-  // タイミング曲線から進行度を求める
-  private evaluateTiming(curves: Vector[][], time: number): number {
-    for (let i = 0; i < curves.length; i++) {
-      const curve = curves[i];
-      const startX = curve[CURVE_POINT.START_ANCHOR_POINT].x;
-      const endX = curve[CURVE_POINT.END_ANCHOR_POINT].x;
-
-      if (time >= startX && time <= endX) {
-        const u = this.solveBezierX(curve, time);
-        return bezierCurve(curve[0], curve[1], curve[2], curve[3], u).y;
-      }
-    }
-
-    if (time < curves[0][CURVE_POINT.START_ANCHOR_POINT].x) return 0;
-    if (time > curves[curves.length - 1][CURVE_POINT.END_ANCHOR_POINT].x)
-      return 1;
-
-    return time;
   }
 
   // X(u) = targetX となる u を求める
@@ -135,98 +145,67 @@ export class MotionManager {
     return u;
   }
 
-  // 空間曲線から、進行度 p (0-1) に対応する座標を取得
-  private evaluatePosition(curves: Vector[][], p: number): Vector {
-    if (this.totalLength === 0)
-      return curves[0][CURVE_POINT.START_ANCHOR_POINT];
+  // 時間に対応する位置を取得
+  private evaluatePosition(time: number): Vector {
+    if (!this.currentPath || this.currentPath.keyframes.length === 0) {
+      return this.p.createVector(0, 0);
+    }
 
-    const targetDist = p * this.totalLength;
-    let currentDist = 0;
+    const keyframes = this.currentPath.keyframes;
+    if (keyframes.length === 1) return keyframes[0].position;
 
-    for (let i = 0; i < curves.length; i++) {
-      const len = this.curveLengths[i];
-      if (currentDist + len >= targetDist) {
-        const localDist = targetDist - currentDist;
-        const u = localDist / len;
-        return bezierCurve(
-          curves[i][0],
-          curves[i][1],
-          curves[i][2],
-          curves[i][3],
-          u,
-        );
+    if (time <= keyframes[0].time) return keyframes[0].position;
+    if (time >= keyframes[keyframes.length - 1].time)
+      return keyframes[keyframes.length - 1].position;
+
+    const segmentIndex = this.findSegmentIndex(time, keyframes);
+    const graphCurve = this.graphCurves[segmentIndex];
+    const spatialCurve = this.spatialCurves[segmentIndex];
+    if (!graphCurve || !spatialCurve) return keyframes[segmentIndex].position;
+
+    const u = this.solveBezierX(graphCurve, time);
+    const progress = bezierCurve(
+      graphCurve[0],
+      graphCurve[1],
+      graphCurve[2],
+      graphCurve[3],
+      u,
+    ).y;
+
+    const v0 = this.keyframeProgress[segmentIndex] ?? 0;
+    const v1 = this.keyframeProgress[segmentIndex + 1] ?? v0;
+    const denom = v1 - v0;
+    const localU =
+      Math.abs(denom) > 1e-6 ? (progress - v0) / denom : 0;
+    const clamped = Math.max(0, Math.min(1, localU));
+
+    return bezierCurve(
+      spatialCurve[0],
+      spatialCurve[1],
+      spatialCurve[2],
+      spatialCurve[3],
+      clamped,
+    );
+  }
+
+  // timeが含まれるセグメントを二分探索で取得
+  private findSegmentIndex(time: number, keyframes: Path['keyframes']): number {
+    let low = 0;
+    let high = Math.max(0, keyframes.length - 2);
+
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const t0 = keyframes[mid].time;
+      const t1 = keyframes[mid + 1].time;
+      if (time < t0) {
+        high = mid - 1;
+      } else if (time > t1) {
+        low = mid + 1;
+      } else {
+        return mid;
       }
-      currentDist += len;
     }
 
-    // 最後の点
-    const lastCurve = curves[curves.length - 1];
-    return lastCurve[CURVE_POINT.END_ANCHOR_POINT];
-  }
-
-  // タイミング曲線を生成
-  public fitTiming(path: Path, p: p5, fitTolerance: number = 0.01): void {
-    if (
-      path.sketch.points.length < 2 ||
-      path.motion.timestamps.length < 2
-    )
-      return;
-
-    const totalTime =
-      path.motion.timestamps[path.motion.timestamps.length - 1] -
-      path.motion.timestamps[0];
-    if (totalTime <= 0) return;
-
-    const timingPoints = this.createTimingPoints(
-      path.sketch.points,
-      path.motion.timestamps,
-      p,
-      totalTime,
-    );
-
-    // タイミング曲線をフィッティング
-    const timingCurves: Vector[][] = [];
-    const fitError = { current: { maxError: Number.MAX_VALUE, index: -1 } };
-    fitCurve(
-      timingPoints,
-      timingCurves,
-      fitTolerance,
-      fitTolerance * 5,
-      fitError,
-    );
-    path.motion.timing = timingCurves;
-  }
-
-  // タイミングポイントを生成
-  private createTimingPoints(
-    points: Vector[],
-    times: number[],
-    p: p5,
-    totalTime: number,
-  ): Vector[] {
-    const { distances, totalDistance } =
-      this.calculateCumulativeDistances(points);
-
-    return points.map((_, i) => {
-      const time = (times[i] - times[0]) / totalTime;
-      const d = totalDistance > 0 ? distances[i] / totalDistance : 0;
-      return p.createVector(time, d);
-    });
-  }
-
-  // 累積距離を計算
-  private calculateCumulativeDistances(points: Vector[]): {
-    distances: number[];
-    totalDistance: number;
-  } {
-    const distances = [0];
-    let totalDistance = 0;
-
-    for (let i = 1; i < points.length; i++) {
-      totalDistance += points[i].dist(points[i - 1]);
-      distances.push(totalDistance);
-    }
-
-    return { distances, totalDistance };
+    return Math.max(0, Math.min(keyframes.length - 2, low));
   }
 }

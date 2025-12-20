@@ -1,7 +1,9 @@
 import type p5 from 'p5';
-import { BEZIER_T_STEP, CURVE_POINT } from '../../constants';
+import { BEZIER_T_STEP } from '../../constants';
 import type { MarqueeRect, Path } from '../../types';
 import { bezierCurve } from '../../utils/math';
+import { buildSketchCurves } from '../../utils/keyframes';
+import { applyModifiers } from '../../utils/modifier';
 import type { ToolContext } from './types';
 
 // 選択ツール
@@ -145,17 +147,15 @@ export class SelectTool {
     y: number,
     toleranceSq: number,
   ): boolean {
-    if (path.sketch.curves.length === 0) return false;
+    const curves = buildSketchCurves(path.keyframes);
+    if (curves.length === 0) return false;
 
-    for (const curve of path.sketch.curves) {
+    // modifier適用後の曲線で判定
+    const effectiveCurves = applyModifiers(curves, path.modifiers);
+
+    for (const curve of effectiveCurves) {
       for (let t = 0; t <= 1; t += BEZIER_T_STEP) {
-        const pt = bezierCurve(
-          curve[CURVE_POINT.START_ANCHOR_POINT],
-          curve[CURVE_POINT.START_CONTROL_POINT],
-          curve[CURVE_POINT.END_CONTROL_POINT],
-          curve[CURVE_POINT.END_ANCHOR_POINT],
-          t,
-        );
+        const pt = bezierCurve(curve[0], curve[1], curve[2], curve[3], t);
         const dx = pt.x - x;
         const dy = pt.y - y;
         if (dx * dx + dy * dy <= toleranceSq) {

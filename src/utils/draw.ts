@@ -1,9 +1,9 @@
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
-import { CURVE_POINT } from '../constants';
-import type { Sketch, Vector } from '../types';
+import type { Path, Vector } from '../types';
 import { bezierCurve } from './math';
 import { applyModifiers } from './modifier';
+import { buildSketchCurves } from './keyframes';
 
 // 入力点の描画
 export function drawPoints(
@@ -66,8 +66,8 @@ export function drawBezierCurve(
 
   for (let i = 0; i < curves.length; i++) {
     const curve = curves[i];
-    const start = curve[CURVE_POINT.START_ANCHOR_POINT];
-    const end = curve[CURVE_POINT.END_ANCHOR_POINT];
+    const start = curve[0];
+    const end = curve[3];
     const connected =
       prevEnd !== null &&
       prevEnd.x === start.x &&
@@ -79,13 +79,7 @@ export function drawBezierCurve(
     }
 
     for (let t = connected ? step : 0; t <= 1; t += step) {
-      const pt = bezierCurve(
-        curve[CURVE_POINT.START_ANCHOR_POINT],
-        curve[CURVE_POINT.START_CONTROL_POINT],
-        curve[CURVE_POINT.END_CONTROL_POINT],
-        curve[CURVE_POINT.END_ANCHOR_POINT],
-        t,
-      );
+      const pt = bezierCurve(curve[0], curve[1], curve[2], curve[3], t);
       p.vertex(pt.x, pt.y);
     }
     prevEnd = end;
@@ -113,28 +107,28 @@ export function drawControls(
 
   for (let i = 0; i < curves.length; i++) {
     const curve = curves[i];
-    const p0 = transform(curve[CURVE_POINT.START_ANCHOR_POINT].copy());
-    const p1 = transform(curve[CURVE_POINT.START_CONTROL_POINT].copy());
-    const p2 = transform(curve[CURVE_POINT.END_CONTROL_POINT].copy());
-    const p3 = transform(curve[CURVE_POINT.END_ANCHOR_POINT].copy());
+    const p0 = transform(curve[0].copy());
+    const p1 = transform(curve[1].copy());
+    const p2 = transform(curve[2].copy());
+    const p3 = transform(curve[3].copy());
 
     // 制御ポリゴン（線）
     p.strokeWeight(1);
     p.noFill();
-    p.stroke(getColor ? getColor(i, CURVE_POINT.START_CONTROL_POINT) : color);
+    p.stroke(getColor ? getColor(i, 1) : color);
     p.line(p0.x, p0.y, p1.x, p1.y);
-    p.stroke(getColor ? getColor(i, CURVE_POINT.END_CONTROL_POINT) : color);
+    p.stroke(getColor ? getColor(i, 2) : color);
     p.line(p2.x, p2.y, p3.x, p3.y);
 
     // 制御点（アンカー：四角、ハンドル：丸）
     p.noStroke();
-    p.fill(getColor ? getColor(i, CURVE_POINT.START_ANCHOR_POINT) : color);
+    p.fill(getColor ? getColor(i, 0) : color);
     p.rect(p0.x, p0.y, size, size);
-    p.fill(getColor ? getColor(i, CURVE_POINT.END_ANCHOR_POINT) : color);
+    p.fill(getColor ? getColor(i, 3) : color);
     p.rect(p3.x, p3.y, size, size);
-    p.fill(getColor ? getColor(i, CURVE_POINT.START_CONTROL_POINT) : color);
+    p.fill(getColor ? getColor(i, 1) : color);
     p.circle(p1.x, p1.y, size);
-    p.fill(getColor ? getColor(i, CURVE_POINT.END_CONTROL_POINT) : color);
+    p.fill(getColor ? getColor(i, 2) : color);
     p.circle(p2.x, p2.y, size);
   }
 
@@ -144,26 +138,14 @@ export function drawControls(
 // パス全体の描画（スケッチ点列 + ベジェ曲線 + 制御点）
 export function drawSketchPath(
   p: p5,
-  sketch: Pick<Sketch, 'points' | 'curves' | 'modifiers'>,
-  config: Pick<Config, 'showSketch' | 'lineWeight' | 'pointSize'>,
+  path: Pick<Path, 'keyframes' | 'modifiers'>,
+  config: Pick<Config, 'lineWeight' | 'pointSize'>,
   colors: Pick<Colors, 'curve' | 'background' | 'handle' | 'selection'>,
   isSelected: boolean,
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
 ): void {
-  // modifiers適用後のcurvesを計算
-  const effectiveCurves = applyModifiers(sketch.curves, sketch.modifiers, p);
-
-  // スケッチ点列の描画
-  if (config.showSketch) {
-    drawPoints(
-      p,
-      sketch.points,
-      config.lineWeight,
-      config.pointSize - config.lineWeight,
-      colors.curve,
-      colors.background,
-    );
-  }
+  const curves = buildSketchCurves(path.keyframes);
+  const effectiveCurves = applyModifiers(curves, path.modifiers, p);
 
   // ベジェ曲線の描画（modifiers適用後）
   const curveColor = isSelected ? colors.handle : '#4b5563';

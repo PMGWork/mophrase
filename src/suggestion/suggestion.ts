@@ -1,0 +1,325 @@
+import type p5 from 'p5';
+
+import type { Colors, Config } from '../config';
+import type {
+  Modifier,
+  Path,
+  SelectionRange,
+  Suggestion,
+  SuggestionState,
+} from '../types';
+import {
+  buildSketchCurves,
+  buildGraphCurves,
+  computeKeyframeProgress,
+} from '../utils/keyframes';
+import { createModifierFromLLMResult } from '../utils/modifier';
+import { slicePath } from '../utils/path';
+import {
+  deserializeCurves,
+  deserializeGraphCurves,
+  serializePaths,
+} from '../utils/serialization';
+import { fetchSuggestions } from './suggestionService';
+import {
+  drawSketchPreview,
+  getPreviewGraphCurves as buildPreviewGraphCurves,
+} from './suggestionPreview';
+import { positionUI, SuggestionUI } from './ui';
+
+// 型定義
+type SuggestionManagerOptions = {
+  onSelect?: (path: Path, targetPath?: Path) => void;
+};
+
+// 提案マネージャー
+export class SuggestionManager {
+  private config: Config;
+  private status: SuggestionState = 'idle';
+  private suggestions: Suggestion[] = [];
+  private hoveredId: string | null = null;
+  private hoveredStrength: number = 1;
+  private pInstance: p5 | null = null;
+  private prompts: string[] = [];
+  private targetPath: Path | undefined;
+  private ui: SuggestionUI;
+  private onSelect?: (path: Path, targetPath?: Path) => void;
+  private selectionRange?: SelectionRange;
+
+  // コンストラクタ
+  constructor(config: Config, options: SuggestionManagerOptions = {}) {
+    this.config = config;
+    this.onSelect = options.onSelect;
+    this.ui = new SuggestionUI(
+      {
+        containerId: 'sketchSuggestionContainer',
+        listId: 'sketchSuggestionList',
+        inputId: 'sketchPromptInput',
+        itemClass:
+          'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
+        position: positionUI,
+      },
+      (id, strength) => {
+        this.hoveredId = id;
+        this.hoveredStrength = strength;
+      },
+      (id, strength) => this.selectById(id, strength),
+    );
+  }
+
+  // #region パブリックメソッド
+
+  // 設定を更新
+  updateConfig(config: Config): void {
+    this.config = config;
+  }
+
+  // 提案UIを開く
+  open(targetPath?: Path): void {
+    this.clearSuggestions();
+    this.prompts = [];
+    this.targetPath = targetPath;
+    this.setState('input');
+    this.updateUI();
+    this.ui.show();
+  }
+
+  // 提案UIを閉じる
+  close(): void {
+    this.clearSuggestions();
+    this.prompts = [];
+    this.targetPath = undefined;
+    this.setState('idle');
+    this.ui.hide();
+  }
+
+  // 選択範囲を設定してUIを更新
+  updateSelectionRange(selectionRange?: SelectionRange): void {
+    this.selectionRange = selectionRange;
+    this.ui.setSelectionRange(selectionRange);
+    this.updateUI();
+  }
+
+  // 提案を送信
+  async submit(
+    path: Path,
+    prompt?: string,
+    selectionRange?: SelectionRange,
+  ): Promise<void> {
+    await this.generateSuggestion(path, prompt, selectionRange);
+  }
+
+  // 提案をプレビュー
+  preview(
+    p: p5,
+    colors: Colors,
+    options: { transform?: (v: p5.Vector) => p5.Vector } = {},
+  ): void {
+    this.pInstance = p;
+    if (this.status === 'generating') return;
+    if (!this.hoveredId) return;
+
+    const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
+    if (!suggestion || !this.targetPath) return;
+
+    drawSketchPreview({
+      p,
+      colors,
+      config: this.config,
+      suggestion,
+      targetPath: this.targetPath,
+      selectionRange: this.selectionRange,
+      strength: this.hoveredStrength,
+      transform: options.transform,
+    });
+  }
+
+  // プレビュー用の時間カーブを取得
+  public getPreviewGraphCurves(
+    p: p5,
+  ): { curves: p5.Vector[][]; strength: number } | null {
+    if (!this.hoveredId || !this.targetPath || !this.pInstance) return null;
+
+    const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
+    if (!suggestion) return null;
+    return buildPreviewGraphCurves({
+      p,
+      suggestion,
+      targetPath: this.targetPath,
+      selectionRange: this.selectionRange,
+      strength: this.hoveredStrength,
+    });
+  }
+
+  // #region プライベートメソッド
+
+  // 提案を設定
+  private setSuggestions(suggestions: Suggestion[]): void {
+    this.suggestions = suggestions;
+  }
+
+  // 提案をクリア
+  private clearSuggestions(): void {
+    this.suggestions = [];
+    this.hoveredId = null;
+  }
+
+  // 状態を更新
+  private setState(state: SuggestionState): void {
+    this.status = state;
+  }
+
+  // UIの更新
+  private updateUI(): void {
+    this.ui.update(
+      this.status,
+      this.suggestions,
+      this.targetPath,
+      this.prompts.length,
+    );
+  }
+
+  // 提案を生成
+  private async generateSuggestion(
+    path: Path,
+    prompt?: string,
+    selectionRange?: SelectionRange,
+  ): Promise<void> {
+    this.targetPath = path;
+    this.selectionRange = selectionRange;
+
+    // 部分パスを作成（シリアライズ用）
+    const partialPath = slicePath(path, selectionRange);
+    const serializedPaths = serializePaths([partialPath]);
+    const serializedPath = serializedPaths[0];
+
+    // プロンプトの保存
+    const trimmedPrompt = prompt?.trim() ?? '';
+    if (trimmedPrompt) this.prompts.push(trimmedPrompt);
+
+    // 提案のクリア
+    this.clearSuggestions();
+    this.setState('generating');
+    this.updateUI();
+
+    // 提案の生成
+    try {
+      const items = await fetchSuggestions(
+        serializedPaths,
+        this.config.keyframePrompt,
+        this.config,
+        this.prompts,
+      );
+
+      const suggestions: Suggestion[] = items.map((item) => ({
+        id: crypto.randomUUID(),
+        title: item.title,
+        path: {
+          keyframes: item.keyframes,
+          bbox: serializedPath.bbox,
+        },
+      }));
+
+      this.setSuggestions(suggestions);
+      this.setState('idle');
+    } catch (error) {
+      console.error(error);
+      this.setState('error');
+    }
+
+    this.updateUI();
+  }
+
+  // 選択
+  private selectById(id: string, strength: number): void {
+    const suggestion = this.suggestions.find((s) => s.id === id);
+    if (!suggestion) return;
+
+    if (!this.targetPath || !this.pInstance) {
+      this.setState('error');
+      this.updateUI();
+      return;
+    }
+
+    // ターゲットのカーブを取得
+    const originalCurves = buildSketchCurves(this.targetPath.keyframes);
+
+    // LLM出力をcurvesにデシリアライズ
+    const llmCurves = deserializeCurves(suggestion.path, this.pInstance);
+    if (llmCurves.length === 0) {
+      this.setState('error');
+      this.updateUI();
+      return;
+    }
+
+    // 時間カーブを取得
+    // 全体の進行度を計算
+    const allProgress = computeKeyframeProgress(
+      this.targetPath.keyframes,
+      originalCurves,
+    );
+
+    let referenceKeyframes = this.targetPath.keyframes;
+    let referenceProgress = allProgress;
+
+    if (this.selectionRange) {
+      const sliced = slicePath(this.targetPath, this.selectionRange);
+      referenceKeyframes = sliced.keyframes;
+
+      // progress も同様にスライス
+      const start = Math.max(0, this.selectionRange.startCurveIndex);
+      const end = Math.min(
+        this.targetPath.keyframes.length - 2,
+        this.selectionRange.endCurveIndex,
+      );
+      if (start <= end) {
+        referenceProgress = allProgress.slice(start, end + 2);
+      }
+    }
+
+    const originalGraphCurves = buildGraphCurves(
+      this.targetPath.keyframes,
+      allProgress,
+    );
+    const llmGraphCurves = deserializeGraphCurves(
+      suggestion.path.keyframes,
+      referenceKeyframes,
+      referenceProgress,
+      this.pInstance,
+    );
+
+    // modifierを作成（空間と時間の差分計算）
+    const modifierName =
+      this.prompts[this.prompts.length - 1] || suggestion.title;
+    const modifier = createModifierFromLLMResult(
+      originalCurves,
+      llmCurves,
+      modifierName,
+      this.selectionRange,
+      originalGraphCurves,
+      llmGraphCurves,
+    );
+
+    console.log('Applied Modifier:', modifier);
+
+    // クリック時の影響度をmodifierに設定
+    modifier.strength = strength;
+
+    // パスにmodifierを追加
+    this.addModifierToPath(this.targetPath, modifier);
+
+    this.onSelect?.(this.targetPath, this.targetPath);
+
+    this.clearSuggestions();
+    this.setState('input');
+    this.updateUI();
+  }
+
+  // パスにmodifierを追加
+  private addModifierToPath(path: Path, modifier: Modifier): void {
+    if (!path.modifiers) {
+      path.modifiers = [];
+    }
+    path.modifiers.push(modifier);
+  }
+}

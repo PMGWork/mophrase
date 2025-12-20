@@ -5,7 +5,7 @@ import type { Modifier, SelectionRange, Vector } from '../types';
 export function applyModifiers(
   curves: Vector[][],
   modifiers: Modifier[] | undefined,
-  p: p5,
+  p?: p5,
 ): Vector[][] {
   if (!modifiers || modifiers.length === 0) return curves;
 
@@ -28,7 +28,11 @@ export function applyModifiers(
       if (totalDx === 0 && totalDy === 0) return point;
 
       // 新しいベクトルを作成して返す
-      return p.createVector(point.x + totalDx, point.y + totalDy);
+      if (p) return p.createVector(point.x + totalDx, point.y + totalDy);
+      if (typeof point.copy === 'function') {
+        return point.copy().add(totalDx, totalDy);
+      }
+      return { x: point.x + totalDx, y: point.y + totalDy } as Vector;
     }),
   );
 }
@@ -39,11 +43,14 @@ export function createModifierFromLLMResult(
   modifiedCurves: Vector[][],
   name: string,
   selectionRange?: SelectionRange,
+  originalGraphCurves?: Vector[][],
+  modifiedGraphCurves?: Vector[][],
 ): Modifier {
   const startCurveIndex = selectionRange?.startCurveIndex ?? 0;
   const endCurveIndex =
     selectionRange?.endCurveIndex ?? originalCurves.length - 1;
 
+  // 空間オフセットを計算
   const offsets: Modifier['offsets'] = originalCurves.map(
     (curve, curveIndex) => {
       if (curveIndex < startCurveIndex || curveIndex > endCurveIndex) {
@@ -92,10 +99,29 @@ export function createModifierFromLLMResult(
     }
   }
 
+  // 時間オフセットを計算
+  let graphOffsets: Modifier['graphOffsets'] = undefined;
+  if (originalGraphCurves && modifiedGraphCurves) {
+    graphOffsets = originalGraphCurves.map((curve, curveIndex) => {
+      if (curveIndex < startCurveIndex || curveIndex > endCurveIndex) {
+        return curve.map(() => null);
+      }
+
+      const localIndex = curveIndex - startCurveIndex;
+      return curve.map((point, pointIndex) => {
+        const modifiedPoint = modifiedGraphCurves[localIndex]?.[pointIndex];
+        if (!modifiedPoint) return null;
+
+        return { dx: modifiedPoint.x - point.x, dy: modifiedPoint.y - point.y };
+      });
+    });
+  }
+
   return {
     id: crypto.randomUUID(),
     name,
     offsets,
+    graphOffsets,
     strength: 1.0,
   };
 }
@@ -118,4 +144,36 @@ export function removeModifier(
 ): Modifier[] {
   if (!modifiers) return [];
   return modifiers.filter((m) => m.id !== modifierId);
+}
+
+// 時間カーブに Modifier を適用
+export function applyGraphModifiers(
+  curves: Vector[][],
+  modifiers: Modifier[] | undefined,
+  p?: p5,
+): Vector[][] {
+  if (!modifiers || modifiers.length === 0) return curves;
+
+  return curves.map((curve, curveIndex) =>
+    curve.map((point, pointIndex) => {
+      let totalDx = 0;
+      let totalDy = 0;
+
+      for (const modifier of modifiers) {
+        const offset = modifier.graphOffsets?.[curveIndex]?.[pointIndex];
+        if (offset) {
+          totalDx += offset.dx * modifier.strength;
+          totalDy += offset.dy * modifier.strength;
+        }
+      }
+
+      if (totalDx === 0 && totalDy === 0) return point;
+
+      if (p) return p.createVector(point.x + totalDx, point.y + totalDy);
+      if (typeof point.copy === 'function') {
+        return point.copy().add(totalDx, totalDy);
+      }
+      return { x: point.x + totalDx, y: point.y + totalDy } as Vector;
+    }),
+  );
 }

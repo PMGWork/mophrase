@@ -4,7 +4,8 @@ import type {
   Suggestion,
   SuggestionState,
 } from '../types';
-import { getPathEndPoint } from '../utils/path';
+import { buildSketchCurves } from '../utils/keyframes';
+import { applyModifiers } from '../utils/modifier';
 
 type SuggestionUIConfig = {
   containerId?: string;
@@ -202,7 +203,23 @@ export function positionUI({
   if (!container) return;
 
   if (!targetPath) return;
-  const anchor = getPathEndPoint(targetPath, selectionRange);
+
+  // curvesを構築してmodifierを適用
+  const originalCurves = buildSketchCurves(targetPath.keyframes);
+  if (originalCurves.length === 0) return;
+
+  const effectiveCurves = applyModifiers(originalCurves, targetPath.modifiers);
+
+  // 終点のインデックスを計算
+  const endCurveIndex = selectionRange
+    ? Math.min(effectiveCurves.length - 1, selectionRange.endCurveIndex)
+    : effectiveCurves.length - 1;
+
+  const endCurve = effectiveCurves[endCurveIndex];
+  if (!endCurve || endCurve.length < 4) return;
+
+  // 終点（ベジェ曲線のp3）を取得
+  const anchor = endCurve[3];
   if (!anchor) return;
 
   // canvasContainerの位置を取得して加算

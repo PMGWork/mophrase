@@ -21,7 +21,6 @@ const main = (): void => {
 
   // エディタ
   const graphEditor = new GraphEditor(dom, config, colors);
-  const propertyEditor = new PropertyEditor(dom);
   const sketchEditor = new SketchEditor(
     dom,
     config,
@@ -35,6 +34,14 @@ const main = (): void => {
       graphEditor.setPath(path);
       propertyEditor.setPath(path);
     },
+  );
+  const propertyEditor = new PropertyEditor(dom, {
+    onModifierChange: () => sketchEditor.updateSuggestionUI(),
+  });
+
+  // GraphEditor と SketchSuggestionManager を連携
+  graphEditor.setPreviewProvider((p) =>
+    sketchEditor.getSuggestionManager().getPreviewGraphCurves(p),
   );
 
   // #region セットアップ

@@ -1,12 +1,16 @@
-import { CURVE_POINT } from '../constants';
 import type {
   HandleSelection,
   MarqueeRect,
   SelectionRange,
-  Sketch,
+  HandleType,
+  Path,
+  Vector,
 } from '../types';
+import { buildSketchCurves } from '../utils/keyframes';
+import { applyModifiers } from '../utils/modifier';
 
 type Point = { x: number; y: number };
+type CurveHandleInfo = { curveIndex: number; pointIndex: number };
 
 // 定数
 const HANDLE_RADIUS = 12;
@@ -16,13 +20,13 @@ export class HandleManager {
   private draggedHandle: HandleSelection | null = null; // ドラッグ中のハンドル
   private selectedHandles: HandleSelection[] = []; // 選択中のハンドル
 
-  private getPaths: () => Pick<Sketch, 'curves'>[]; // パスの取得関数
+  private getPaths: () => Pick<Path, 'keyframes' | 'modifiers'>[]; // パスの取得関数
   private pixelToNorm: (x: number, y: number) => Point; // ピクセル座標を正規化座標に変換
   private normToPixel: (x: number, y: number) => Point; // 正規化座標をピクセル座標に変換
 
   // コンストラクタ
   constructor(
-    getPaths: () => Pick<Sketch, 'curves'>[],
+    getPaths: () => Pick<Path, 'keyframes' | 'modifiers'>[],
     pixelToNorm: (x: number, y: number) => Point = (x, y) => ({ x, y }),
     normToPixel: (x: number, y: number) => Point = (x, y) => ({ x, y }),
   ) {
@@ -50,8 +54,8 @@ export class HandleManager {
         this.selectedHandles = this.selectedHandles.filter(
           (h) =>
             h.pathIndex !== handle.pathIndex ||
-            h.curveIndex !== handle.curveIndex ||
-            h.pointIndex !== handle.pointIndex,
+            h.keyframeIndex !== handle.keyframeIndex ||
+            h.handleType !== handle.handleType,
         );
       } else {
         // 選択されていない場合は追加
@@ -93,8 +97,8 @@ export class HandleManager {
     return this.selectedHandles.some(
       (h) =>
         h.pathIndex === target.pathIndex &&
-        h.curveIndex === target.curveIndex &&
-        h.pointIndex === target.pointIndex,
+        h.keyframeIndex === target.keyframeIndex &&
+        h.handleType === target.handleType,
     );
   }
 
@@ -126,27 +130,31 @@ export class HandleManager {
         continue;
 
       const path = paths[pathIndex];
-      for (let curveIndex = 0; curveIndex < path.curves.length; curveIndex++) {
-        const curve = path.curves[curveIndex];
-        const anchorIndices = [
-          CURVE_POINT.START_ANCHOR_POINT,
-          CURVE_POINT.END_ANCHOR_POINT,
-        ];
-
-        for (const pointIndex of anchorIndices) {
-          const point = curve[pointIndex];
-          if (!point) continue;
-
-          // ピクセル座標に変換し、矩形内に含まれているかを確認して選択リストへ追加
-          const pos = this.normToPixel(point.x, point.y);
-          if (
-            pos.x >= minX &&
-            pos.x <= maxX &&
-            pos.y >= minY &&
-            pos.y <= maxY
-          ) {
-            this.selectedHandles.push({ pathIndex, curveIndex, pointIndex });
-          }
+      const { effective } = this.getCurves(path);
+      for (
+        let keyframeIndex = 0;
+        keyframeIndex < path.keyframes.length;
+        keyframeIndex++
+      ) {
+        const selection: HandleSelection = {
+          pathIndex,
+          keyframeIndex,
+          handleType: 'ANCHOR',
+        };
+        const anchor = this.getHandlePoint(path, selection, effective);
+        if (!anchor) continue;
+        const pos = this.normToPixel(anchor.x, anchor.y);
+        if (
+          pos.x >= minX &&
+          pos.x <= maxX &&
+          pos.y >= minY &&
+          pos.y <= maxY
+        ) {
+          this.selectedHandles.push({
+            pathIndex,
+            keyframeIndex,
+            handleType: 'ANCHOR',
+          });
         }
       }
     }
@@ -154,61 +162,77 @@ export class HandleManager {
     return this.selectedHandles;
   }
 
-  // 選択範囲を取得（連続するカーブの範囲）
+  // 選択されているハンドルから、連続するベジエカーブのインデックス範囲を計算する
   getSelectionRange(): SelectionRange | null {
+    // ハンドルが何も選択されていない場合は null を返す
     if (this.selectedHandles.length === 0) return null;
 
+    // 選択されているハンドルが複数のパスにまたがっている場合は null を返す
     const pathIndex = this.selectedHandles[0].pathIndex;
     if (this.selectedHandles.some((h) => h.pathIndex !== pathIndex))
       return null;
 
+    // 対象パスのセグメント数を取得
     const path = this.getPaths()[pathIndex];
-    const curveCount = path?.curves?.length ?? 0;
-    if (curveCount === 0) return null;
+    const segmentCount = Math.max(0, (path?.keyframes?.length ?? 0) - 1);
+    if (segmentCount === 0) return null;
 
+    // 選択されているアンカーポイントのインデックスを収集
     const anchorIndices = new Set<number>();
     for (const h of this.selectedHandles) {
-      if (!this.isAnchorPoint(h.pointIndex)) continue;
-      const anchorIndex =
-        h.curveIndex +
-        (h.pointIndex === CURVE_POINT.END_ANCHOR_POINT ? 1 : 0);
-      anchorIndices.add(anchorIndex);
+      if (h.handleType !== 'ANCHOR') continue;
+      anchorIndices.add(h.keyframeIndex);
     }
 
+    // アンカーポイントが2つ以上選択されている場合
+    // → 最小アンカーから最大アンカーまでの範囲に含まれるカーブを返す
     if (anchorIndices.size >= 2) {
       const anchorList = Array.from(anchorIndices);
       const minAnchor = Math.min(...anchorList);
       const maxAnchor = Math.max(...anchorList);
-      const startCurveIndex = Math.max(0, Math.min(curveCount - 1, minAnchor));
+
+      const startCurveIndex = Math.max(
+        0,
+        Math.min(segmentCount - 1, minAnchor),
+      );
+
       const endCurveIndex = Math.max(
         0,
-        Math.min(curveCount - 1, maxAnchor - 1),
+        Math.min(segmentCount - 1, maxAnchor - 1),
       );
       if (startCurveIndex > endCurveIndex) return null;
       return { pathIndex, startCurveIndex, endCurveIndex };
     }
 
+    // アンカーポイントが1つだけ選択されている場合
+    // → そのアンカーに隣接する前後のカーブを範囲として返す
     if (anchorIndices.size === 1) {
       const anchorIndex = anchorIndices.values().next().value as number;
       const startCurveIndex = Math.max(0, anchorIndex - 1);
-      const endCurveIndex = Math.min(curveCount - 1, anchorIndex);
+      const endCurveIndex = Math.min(segmentCount - 1, anchorIndex);
       if (startCurveIndex > endCurveIndex) return null;
       return { pathIndex, startCurveIndex, endCurveIndex };
     }
 
+    // アンカーが選択されておらず、制御点のみが選択されている場合
+    // → 各制御点が属するセグメントのインデックスを取得し、最小～最大の範囲を返す
     let minIdx = Infinity;
     let maxIdx = -Infinity;
     for (const h of this.selectedHandles) {
-      minIdx = Math.min(minIdx, h.curveIndex);
-      maxIdx = Math.max(maxIdx, h.curveIndex);
+      const segmentIndex = this.getSegmentIndex(h);
+      if (segmentIndex === null) continue;
+      minIdx = Math.min(minIdx, segmentIndex);
+      maxIdx = Math.max(maxIdx, segmentIndex);
     }
 
+    // 範囲をセグメント数に収める
     minIdx = Math.max(0, minIdx);
-    maxIdx = Math.min(curveCount - 1, maxIdx);
+    maxIdx = Math.min(segmentCount - 1, maxIdx);
     if (minIdx > maxIdx) return null;
 
     return { pathIndex, startCurveIndex: minIdx, endCurveIndex: maxIdx };
   }
+
 
   // #region プライベート - ハンドル検索
 
@@ -217,22 +241,27 @@ export class HandleManager {
     const paths = this.getPaths();
     for (let pathIndex = paths.length - 1; pathIndex >= 0; pathIndex--) {
       const path = paths[pathIndex];
+      const { effective } = this.getCurves(path);
       for (
-        let curveIndex = path.curves.length - 1;
-        curveIndex >= 0;
-        curveIndex--
+        let keyframeIndex = path.keyframes.length - 1;
+        keyframeIndex >= 0;
+        keyframeIndex--
       ) {
-        const curve = path.curves[curveIndex];
-        for (let pointIndex = 0; pointIndex < curve.length; pointIndex++) {
-          const point = curve[pointIndex];
+        const candidates: HandleType[] = ['ANCHOR', 'SKETCH_OUT', 'SKETCH_IN'];
+        for (const handleType of candidates) {
+          const selection: HandleSelection = {
+            pathIndex,
+            keyframeIndex,
+            handleType,
+          };
+          const point = this.getHandlePoint(path, selection, effective);
           if (!point) continue;
 
-          // ピクセル座標に変換して距離をチェック
           const { x: px, y: py } = this.normToPixel(point.x, point.y);
           const dx = px - x;
           const dy = py - y;
           if (dx * dx + dy * dy <= HANDLE_RADIUS * HANDLE_RADIUS) {
-            return { pathIndex, curveIndex, pointIndex };
+            return selection;
           }
         }
       }
@@ -251,8 +280,8 @@ export class HandleManager {
   ): void {
     const path = this.getPaths()[dragged.pathIndex];
     if (!path) return;
-    const curve = path.curves[dragged.curveIndex];
-    const draggedPoint = curve?.[dragged.pointIndex];
+    const { original, effective } = this.getCurves(path);
+    const draggedPoint = this.getHandlePoint(path, dragged, effective);
     if (!draggedPoint) return;
 
     // 新しい位置との差分
@@ -266,220 +295,215 @@ export class HandleManager {
     }
 
     // 単体選択されている場合
-    this.applySingleDrag(dragged, dx, dy, mode);
+    this.applySingleDrag(dragged, targetX, targetY, mode, path, original, effective);
   }
 
   // 複数選択時のドラッグ処理
   private applyMultiDrag(dx: number, dy: number, mode: number): void {
     const paths = this.getPaths();
-    const targets = new Map<string, HandleSelection>();
-
-    // 移動対象にハンドルを追加するヘルパー関数
-    const addTarget = (selection: HandleSelection): void => {
-      const curve = paths[selection.pathIndex]?.curves?.[selection.curveIndex];
-      const handle = curve?.[selection.pointIndex];
-      if (!handle) return;
-
-      const key = `${selection.pathIndex}:${selection.curveIndex}:${selection.pointIndex}`;
-      if (!targets.has(key)) targets.set(key, selection);
-    };
-
-    // 選択されているハンドルとその関連ポイントを収集
+    const anchorKeys = new Set<string>();
     for (const selection of this.selectedHandles) {
-      // 選択されているハンドル自体を追加
-      addTarget(selection);
-
-      // アンカーポイント以外（制御点のみ選択）の場合はスキップ
-      if (!this.isAnchorPoint(selection.pointIndex)) continue;
-
-      // アンカーポイントの場合、関連する制御点と隣接カーブのポイントも移動対象に含める
-      const isStart = selection.pointIndex === CURVE_POINT.START_ANCHOR_POINT;
-
-      // 自身のカーブの制御点インデックス
-      const selfControlIdx = isStart
-        ? CURVE_POINT.START_CONTROL_POINT
-        : CURVE_POINT.END_CONTROL_POINT;
-
-      // 隣接カーブの制御点インデックス
-      const adjControlIdx = isStart
-        ? CURVE_POINT.END_CONTROL_POINT
-        : CURVE_POINT.START_CONTROL_POINT;
-
-      // 隣接カーブのアンカーポイントインデックス
-      const adjAnchorIdx = isStart
-        ? CURVE_POINT.END_ANCHOR_POINT
-        : CURVE_POINT.START_ANCHOR_POINT;
-
-      // 隣接カーブのインデックス（開始点なら前のカーブ、終了点なら次のカーブ）
-      const adjCurveIdx = selection.curveIndex + (isStart ? -1 : 1);
-
-      // 自身のカーブの制御点を追加
-      addTarget({
-        pathIndex: selection.pathIndex,
-        curveIndex: selection.curveIndex,
-        pointIndex: selfControlIdx,
-      });
-
-      // 隣接カーブが存在する場合、その制御点とアンカーポイントも追加
-      const path = paths[selection.pathIndex];
-      if (!path) continue;
-      if (adjCurveIdx < 0 || adjCurveIdx >= path.curves.length) continue;
-
-      // 隣接カーブの制御点を追加
-      addTarget({
-        pathIndex: selection.pathIndex,
-        curveIndex: adjCurveIdx,
-        pointIndex: adjControlIdx,
-      });
-
-      // 隣接カーブのアンカーポイントを追加
-      addTarget({
-        pathIndex: selection.pathIndex,
-        curveIndex: adjCurveIdx,
-        pointIndex: adjAnchorIdx,
-      });
+      if (selection.handleType === 'ANCHOR') {
+        anchorKeys.add(`${selection.pathIndex}:${selection.keyframeIndex}`);
+      }
     }
 
-    // 収集したすべてのハンドルを移動
-    for (const selection of targets.values()) {
-      const curve = paths[selection.pathIndex]?.curves?.[selection.curveIndex];
-      const handle = curve?.[selection.pointIndex];
-      if (!handle) continue;
-      handle.add(dx, dy);
+    for (const selection of this.selectedHandles) {
+      const anchorKey = `${selection.pathIndex}:${selection.keyframeIndex}`;
+      if (
+        selection.handleType !== 'ANCHOR' &&
+        anchorKeys.has(anchorKey)
+      ) {
+        continue;
+      }
+
+      const targetPath = paths[selection.pathIndex];
+      if (!targetPath) continue;
+      const { original, effective } = this.getCurves(targetPath);
+      const point = this.getHandlePoint(targetPath, selection, effective);
+      if (!point) continue;
+      this.applyHandleTarget(
+        targetPath,
+        selection,
+        point.x + dx,
+        point.y + dy,
+        original,
+        effective,
+      );
     }
 
     // mode === 0（通常モード）の場合、制御点の反対側をミラーリング
     if (mode === 0) {
       for (const selection of this.selectedHandles) {
-        // アンカーポイントはスキップ（制御点のみ処理）
-        if (this.isAnchorPoint(selection.pointIndex)) continue;
+        if (selection.handleType === 'ANCHOR') continue;
         const path = this.getPaths()[selection.pathIndex];
-        if (!path) continue;
-
-        // 選択された制御点の反対側の制御点を対称に移動
-        this.mirrorOppositeControl(
-          path,
-          selection.curveIndex,
-          selection.pointIndex,
-        );
+        const keyframe = path?.keyframes?.[selection.keyframeIndex];
+        if (!keyframe) continue;
+        this.mirrorOppositeControl(keyframe, selection.handleType);
       }
     }
-  }
-
-  // アンカーかどうか
-  private isAnchorPoint(pointIndex: number): boolean {
-    return (
-      pointIndex === CURVE_POINT.START_ANCHOR_POINT ||
-      pointIndex === CURVE_POINT.END_ANCHOR_POINT
-    );
   }
 
   // 単一選択のドラッグ処理
   private applySingleDrag(
     selection: HandleSelection,
-    dx: number,
-    dy: number,
+    targetX: number,
+    targetY: number,
     mode: number,
+    path: Pick<Path, 'keyframes' | 'modifiers'>,
+    originalCurves: Vector[][],
+    effectiveCurves: Vector[][],
   ): void {
-    const path = this.getPaths()[selection.pathIndex];
-    if (!path) return;
+    this.applyHandleTarget(
+      path,
+      selection,
+      targetX,
+      targetY,
+      originalCurves,
+      effectiveCurves,
+    );
 
-    const curve = path.curves[selection.curveIndex];
-    const handle = curve?.[selection.pointIndex];
-    if (!handle) return;
-
-    // 新しい位置を計算して適用
-    const finalX = handle.x + dx;
-    const finalY = handle.y + dy;
-    handle.set(finalX, finalY);
-
-    // アンカーポイントの場合は隣接カーブも連動
-    if (this.isAnchorPoint(selection.pointIndex)) {
-      this.syncAdjacentCurve(
-        path,
-        selection.curveIndex,
-        selection.pointIndex,
-        { x: finalX, y: finalY },
-        { x: dx, y: dy },
-      );
-    } else if (mode === 0) {
-      this.mirrorOppositeControl(
-        path,
-        selection.curveIndex,
-        selection.pointIndex,
-      );
+    if (mode === 0 && selection.handleType !== 'ANCHOR') {
+      const keyframe = path.keyframes[selection.keyframeIndex];
+      if (keyframe) this.mirrorOppositeControl(keyframe, selection.handleType);
     }
   }
 
-  // #region プライベート - 隣接カーブ連動
+  // #region プライベート - 曲線・ハンドル補助
 
-  // アンカー移動時に隣接カーブの制御点・アンカーを同期
-  private syncAdjacentCurve(
-    path: Pick<Sketch, 'curves'>,
-    curveIndex: number,
-    pointIndex: number,
-    position: Point,
-    delta: Point,
-  ): void {
-    const curve = path.curves[curveIndex];
-    const isStart = pointIndex === CURVE_POINT.START_ANCHOR_POINT;
-
-    // インデックスの事前計算
-    const selfControlIdx = isStart
-      ? CURVE_POINT.START_CONTROL_POINT
-      : CURVE_POINT.END_CONTROL_POINT;
-    const adjControlIdx = isStart
-      ? CURVE_POINT.END_CONTROL_POINT
-      : CURVE_POINT.START_CONTROL_POINT;
-    const adjAnchorIdx = isStart
-      ? CURVE_POINT.END_ANCHOR_POINT
-      : CURVE_POINT.START_ANCHOR_POINT;
-    const adjCurveIdx = curveIndex + (isStart ? -1 : 1);
-
-    // 自身の制御点を移動
-    curve?.[selfControlIdx]?.add(delta.x, delta.y);
-
-    // 接続されているカーブのハンドルを移動
-    const adjacentCurve = path.curves[adjCurveIdx];
-    if (!adjacentCurve) return;
-
-    adjacentCurve[adjControlIdx]?.add(delta.x, delta.y);
-    adjacentCurve[adjAnchorIdx]?.set(position.x, position.y);
+  // 元の曲線とModifier適用後の曲線を取得
+  private getCurves(
+    path: Pick<Path, 'keyframes' | 'modifiers'>,
+  ): { original: Vector[][]; effective: Vector[][] } {
+    const original = buildSketchCurves(path.keyframes);
+    const effective = applyModifiers(original, path.modifiers);
+    return { original, effective };
   }
 
-  // 制御ハンドル移動時に反対側のハンドルを対称に調整
+  // ハンドルに対応する曲線と制御点インデックスを取得
+  private getHandlePointInfo(
+    path: Pick<Path, 'keyframes'>,
+    selection: HandleSelection,
+  ): CurveHandleInfo | null {
+    const segmentCount = Math.max(0, path.keyframes.length - 1);
+    if (segmentCount === 0) return null;
+
+    if (selection.handleType === 'ANCHOR') {
+      if (selection.keyframeIndex < 0) return null;
+      if (selection.keyframeIndex < segmentCount) {
+        return { curveIndex: selection.keyframeIndex, pointIndex: 0 };
+      }
+      if (selection.keyframeIndex === segmentCount) {
+        return { curveIndex: segmentCount - 1, pointIndex: 3 };
+      }
+      return null;
+    }
+
+    if (selection.handleType === 'SKETCH_OUT') {
+      if (selection.keyframeIndex < 0) return null;
+      if (selection.keyframeIndex >= segmentCount) return null;
+      return { curveIndex: selection.keyframeIndex, pointIndex: 1 };
+    }
+
+    if (selection.keyframeIndex <= 0) return null;
+    if (selection.keyframeIndex > segmentCount) return null;
+    return { curveIndex: selection.keyframeIndex - 1, pointIndex: 2 };
+  }
+
+  // ハンドルの位置を取得
+  private getHandlePoint(
+    path: Pick<Path, 'keyframes'>,
+    selection: HandleSelection,
+    curves: Vector[][],
+  ): Vector | null {
+    const info = this.getHandlePointInfo(path, selection);
+    if (!info) return null;
+    return curves[info.curveIndex]?.[info.pointIndex] ?? null;
+  }
+
+  // ハンドル移動を元曲線に反映
+  private applyHandleTarget(
+    path: Pick<Path, 'keyframes' | 'modifiers'>,
+    selection: HandleSelection,
+    targetX: number,
+    targetY: number,
+    originalCurves: Vector[][],
+    effectiveCurves: Vector[][],
+  ): void {
+    const info = this.getHandlePointInfo(path, selection);
+    if (!info) return;
+    const originalPoint = originalCurves[info.curveIndex]?.[info.pointIndex];
+    const effectivePoint = effectiveCurves[info.curveIndex]?.[info.pointIndex];
+    if (!originalPoint || !effectivePoint) return;
+
+    const correctedX = targetX - (effectivePoint.x - originalPoint.x);
+    const correctedY = targetY - (effectivePoint.y - originalPoint.y);
+
+    const keyframe = path.keyframes[selection.keyframeIndex];
+    if (!keyframe) return;
+
+    if (selection.handleType === 'ANCHOR') {
+      keyframe.position.set(correctedX, correctedY);
+      return;
+    }
+
+    const updated = keyframe.position
+      .copy()
+      .set(correctedX - keyframe.position.x, correctedY - keyframe.position.y);
+    if (selection.handleType === 'SKETCH_IN') {
+      keyframe.sketchIn = updated;
+    } else {
+      keyframe.sketchOut = updated;
+    }
+  }
+
+  // #region プライベート - ハンドル操作
+
+  // ハンドルベクトルを取得
+  private getHandleVector(keyframe: Path['keyframes'][number], type: HandleType) {
+    if (type === 'SKETCH_IN') return keyframe.sketchIn;
+    if (type === 'SKETCH_OUT') return keyframe.sketchOut;
+    return null;
+  }
+
+  // ハンドルベクトルを設定
+  private setHandleVector(
+    keyframe: Path['keyframes'][number],
+    type: HandleType,
+    vec: Path['keyframes'][number]['sketchIn'],
+  ): void {
+    if (type === 'SKETCH_IN') keyframe.sketchIn = vec ?? undefined;
+    if (type === 'SKETCH_OUT') keyframe.sketchOut = vec ?? undefined;
+  }
+
+  // 対称制御点をミラーリング
   private mirrorOppositeControl(
-    path: Pick<Sketch, 'curves'>,
-    curveIndex: number,
-    pointIndex: number,
+    keyframe: Path['keyframes'][number],
+    type: HandleType,
   ): void {
-    const curve = path.curves[curveIndex];
-    const isStartHandle = pointIndex === CURVE_POINT.START_CONTROL_POINT;
+    if (type === 'ANCHOR') return;
 
-    // インデックスの事前計算
-    const anchorIdx = isStartHandle
-      ? CURVE_POINT.START_ANCHOR_POINT
-      : CURVE_POINT.END_ANCHOR_POINT;
-    const oppControlIdx = isStartHandle
-      ? CURVE_POINT.END_CONTROL_POINT
-      : CURVE_POINT.START_CONTROL_POINT;
-    const adjCurveIdx = curveIndex + (isStartHandle ? -1 : 1);
+    const oppositeType: HandleType =
+      type === 'SKETCH_IN' ? 'SKETCH_OUT' : 'SKETCH_IN';
 
-    const anchorPoint = curve?.[anchorIdx];
-    const currentHandle = curve?.[pointIndex];
-    const oppositeHandle = path.curves[adjCurveIdx]?.[oppControlIdx];
+    const currentHandle = this.getHandleVector(keyframe, type);
+    const oppositeHandle = this.getHandleVector(keyframe, oppositeType);
 
-    if (!anchorPoint || !oppositeHandle || !currentHandle) return;
+    if (!currentHandle || !oppositeHandle) return;
 
-    // アンカーポイントと現在のハンドルのベクトルを計算
-    const toCurrent = currentHandle.copy().sub(anchorPoint);
+    const toCurrent = currentHandle.copy();
+
     if (toCurrent.magSq() > 0) {
-      const oppositeLength = oppositeHandle.copy().sub(anchorPoint).mag();
+      const oppositeLength = oppositeHandle.mag();
       const targetDir = toCurrent.normalize().mult(-oppositeLength);
-      oppositeHandle.set(
-        anchorPoint.x + targetDir.x,
-        anchorPoint.y + targetDir.y,
-      );
+      this.setHandleVector(keyframe, oppositeType, targetDir);
     }
+  }
+
+  // ハンドルのセグメントインデックスを取得
+  private getSegmentIndex(selection: HandleSelection): number | null {
+    if (selection.handleType === 'ANCHOR') return null;
+    if (selection.handleType === 'SKETCH_OUT') return selection.keyframeIndex;
+    return selection.keyframeIndex - 1;
   }
 }

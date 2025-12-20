@@ -1,15 +1,19 @@
 import p5 from 'p5';
-import type { Colors, Config } from '../../config';
+import { type Colors, type Config } from '../../config';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import type { DomRefs } from '../../dom';
-import { SketchSuggestionManager } from '../../suggestion/sketchSuggestion';
-import type { EditorTool, Path } from '../../types';
+import { SuggestionManager } from '../../suggestion/suggestion';
+import type { EditorTool, HandleSelection, Path } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
 import type { ToolContext } from './types';
+
+// 固定定数
+const OBJECT_SIZE = 50;
+const OBJECT_COLORS = ['#f43f5e', '#f59e0b', '#4ade80'];
 
 // スケッチエディタ
 export class SketchEditor {
@@ -26,7 +30,7 @@ export class SketchEditor {
   private dom: DomRefs;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
-  private suggestionManager: SketchSuggestionManager;
+  private suggestionManager: SuggestionManager;
 
   // 設定
   private config: Config;
@@ -55,12 +59,10 @@ export class SketchEditor {
     this.selectTool = new SelectTool();
 
     // ハンドルマネージャー
-    this.handleManager = new HandleManager(() =>
-      this.paths.map((p) => p.sketch),
-    );
+    this.handleManager = new HandleManager(() => this.paths);
 
     // 提案マネージャー
-    this.suggestionManager = new SketchSuggestionManager(this.config, {
+    this.suggestionManager = new SuggestionManager(this.config, {
       onSelect: (updated, targetPath) => {
         if (!updated) return;
 
@@ -166,7 +168,6 @@ export class SketchEditor {
       p.mousePressed = () => this.mousePressed(p);
       p.mouseReleased = () => this.mouseReleased(p);
       p.keyTyped = () => this.keyTyped(p);
-      p.keyPressed = () => this.keyPressed(p);
     };
 
     new p5(sketch);
@@ -180,11 +181,7 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.motionManager = new MotionManager(
-      p,
-      this.colors.object,
-      this.config.objectSize,
-    );
+    this.motionManager = new MotionManager(p, OBJECT_COLORS[0], OBJECT_SIZE);
   }
 
   // p5.js リサイズ
@@ -199,13 +196,7 @@ export class SketchEditor {
       this.setTool('select');
     } else if (p.key === 'g' || p.key === 'p') {
       this.setTool('pen');
-    }
-  }
-
-  // p5.js キー押下（特殊キー用）
-  private keyPressed(p: p5): void {
-    // Delete (46) or Backspace (8) で選択中のパスを削除
-    if (p.keyCode === 46 || p.keyCode === 8) {
+    } else if (p.key === 'x') {
       this.deleteActivePath();
     }
   }
@@ -231,25 +222,61 @@ export class SketchEditor {
 
     const ctx = this.getToolContext();
 
-    // 確定済みパスの描画
+    // 1. 非選択のパスの軌跡を描画
     for (let pathIndex = 0; pathIndex < this.paths.length; pathIndex++) {
       const path = this.paths[pathIndex];
-      const isSelectedPath = this.activePath === path;
+      if (this.activePath === path) continue;
 
       drawSketchPath(
         p,
-        path.sketch,
+        path,
         this.config,
         this.colors,
-        isSelectedPath,
-        isSelectedPath
-          ? (curveIndex, pointIndex) =>
-              this.handleManager.isSelected({
-                pathIndex,
-                curveIndex,
-                pointIndex,
-              })
-          : undefined,
+        false, // isSelected
+      );
+    }
+
+    // 2. すべてのオブジェクトを描画
+    for (let i = 0; i < this.paths.length; i++) {
+      const path = this.paths[i];
+      const isLatest = i === this.paths.length - 1;
+      const color = OBJECT_COLORS[i % OBJECT_COLORS.length];
+
+      if (isLatest) {
+        // 最後のパスはMotionManagerで描画（アニメーション対応）
+        this.motionManager?.setColor(color);
+        this.motionManager?.setPath(path);
+        this.motionManager?.draw();
+      } else {
+        // それ以外のパスは開始位置に静的オブジェクトを描画
+        if (path.keyframes.length > 0) {
+          const pos = path.keyframes[0].position;
+          p.push();
+          p.fill(color);
+          p.noStroke();
+          p.circle(pos.x, pos.y, OBJECT_SIZE);
+          p.pop();
+        }
+      }
+    }
+
+    // 3. 選択中のパスの軌跡とハンドルを描画
+    if (this.activePath) {
+      const pathIndex = this.paths.indexOf(this.activePath);
+      drawSketchPath(
+        p,
+        this.activePath,
+        this.config,
+        this.colors,
+        true,
+        (curveIndex, pointIndex) =>
+          this.handleManager.isSelected(
+            this.mapCurvePointToHandle(
+              pathIndex,
+              curveIndex,
+              pointIndex,
+            ),
+          ),
       );
     }
 
@@ -262,9 +289,6 @@ export class SketchEditor {
 
     // 提案をプレビュー
     this.suggestionManager.preview(p, this.colors);
-
-    // モーションの更新
-    this.motionManager?.draw();
   }
 
   // p5.js マウス押下
@@ -296,7 +320,7 @@ export class SketchEditor {
   private mouseReleased(p: p5): void {
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
-      this.penTool.mouseReleased(p, ctx);
+      this.penTool.mouseReleased(ctx);
     } else {
       this.selectTool.mouseReleased(p, ctx);
     }
@@ -320,7 +344,8 @@ export class SketchEditor {
       target instanceof HTMLButtonElement ||
       target instanceof HTMLSelectElement ||
       !!target?.closest('form') ||
-      !!target?.closest('#sketchSuggestionContainer')
+      !!target?.closest('#sketchSuggestionContainer') ||
+      !!target?.closest('#sidebarContainer')
     );
   }
 
@@ -335,6 +360,11 @@ export class SketchEditor {
     return this.paths[this.paths.length - 1];
   }
 
+  // 提案マネージャーを取得
+  public getSuggestionManager(): SuggestionManager {
+    return this.suggestionManager;
+  }
+
   // 提案を生成
   public generateSuggestion(userPrompt: string): void {
     const targetPath = this.activePath ?? this.paths[this.paths.length - 1];
@@ -347,5 +377,46 @@ export class SketchEditor {
       userPrompt,
       selectionRange ?? undefined,
     );
+  }
+
+  // SuggestionのUI位置を更新
+  public updateSuggestionUI(): void {
+    this.suggestionManager.updateSelectionRange(
+      this.handleManager.getSelectionRange() ?? undefined,
+    );
+  }
+
+  // キーフレームをハンドルにマッピング
+  private mapCurvePointToHandle(
+    pathIndex: number,
+    curveIndex: number,
+    pointIndex: number,
+  ): HandleSelection {
+    if (pointIndex === 0) {
+      return {
+        pathIndex,
+        keyframeIndex: curveIndex,
+        handleType: 'ANCHOR',
+      };
+    }
+    if (pointIndex === 1) {
+      return {
+        pathIndex,
+        keyframeIndex: curveIndex,
+        handleType: 'SKETCH_OUT',
+      };
+    }
+    if (pointIndex === 2) {
+      return {
+        pathIndex,
+        keyframeIndex: curveIndex + 1,
+        handleType: 'SKETCH_IN',
+      };
+    }
+    return {
+      pathIndex,
+      keyframeIndex: curveIndex + 1,
+      handleType: 'ANCHOR',
+    };
   }
 }

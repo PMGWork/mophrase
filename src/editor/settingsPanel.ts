@@ -53,30 +53,11 @@ export class SettingsPanel {
       this.handleLlmModelChange();
     });
 
-    // チェックボックス
-    this.dom.settingsVisibleRawSketch.addEventListener('change', () => {
-      this.config.showSketch = this.dom.settingsVisibleRawSketch.checked;
-    });
-
     // スライダー: Sketch Tolerance
     this.dom.settingsSketchTolerance.addEventListener('input', () => {
       const value = Number(this.dom.settingsSketchTolerance.value);
       this.config.sketchFitTolerance = value;
       this.dom.settingsSketchToleranceLabel.textContent = `${value}px`;
-    });
-
-    // スライダー: Graph Tolerance
-    this.dom.settingsGraphTolerance.addEventListener('input', () => {
-      const value = Number(this.dom.settingsGraphTolerance.value);
-      this.config.graphFitTolerance = value;
-      this.dom.settingsGraphToleranceLabel.textContent = `${value}%`;
-    });
-
-    // スライダー: Object Size
-    this.dom.settingsObjectSize.addEventListener('input', () => {
-      const value = Number(this.dom.settingsObjectSize.value);
-      this.config.objectSize = value;
-      this.dom.settingsObjectSizeLabel.textContent = `${value}px`;
     });
   }
 
@@ -130,23 +111,10 @@ export class SettingsPanel {
 
   // 全設定をUIに同期
   private syncAllSettings(): void {
-    // Visible Raw Sketch
-    this.dom.settingsVisibleRawSketch.checked = this.config.showSketch;
-
     // Tolerance (Sketch)
     this.dom.settingsSketchTolerance.value = String(
       this.config.sketchFitTolerance,
     );
     this.dom.settingsSketchToleranceLabel.textContent = `${this.config.sketchFitTolerance}px`;
-
-    // Tolerance (Graph)
-    this.dom.settingsGraphTolerance.value = String(
-      this.config.graphFitTolerance,
-    );
-    this.dom.settingsGraphToleranceLabel.textContent = `${this.config.graphFitTolerance}%`;
-
-    // Object Size
-    this.dom.settingsObjectSize.value = String(this.config.objectSize);
-    this.dom.settingsObjectSizeLabel.textContent = `${this.config.objectSize}px`;
   }
 }

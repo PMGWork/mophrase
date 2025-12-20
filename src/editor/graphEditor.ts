@@ -1,11 +1,20 @@
 import p5 from 'p5';
 import type { Colors, Config } from '../config';
-import { HandleManager } from '../core/handleManager';
 import type { DomRefs } from '../dom';
-import { GraphSuggestionManager } from '../suggestion/graphSuggestion';
 import type { Path } from '../types';
 import { drawBezierCurve, drawControls } from '../utils/draw';
+import { buildGraphCurves, buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
+import { applyModifiers, applyGraphModifiers } from '../utils/modifier';
 import { isLeftMouseButton } from '../utils/p5Helpers';
+
+// グラフハンドル選択
+type GraphHandleSelection = {
+  segmentIndex: number;
+  type: 'GRAPH_OUT' | 'GRAPH_IN';
+};
+
+// ハンドルの半径
+const HANDLE_RADIUS = 12;
 
 // グラフエディタ
 export class GraphEditor {
@@ -13,9 +22,11 @@ export class GraphEditor {
   private activePath: Path | null = null;
   private dom: DomRefs;
 
-  // マネージャー
-  private handleManager: HandleManager;
-  private suggestionManager: GraphSuggestionManager;
+  // ドラッグ状態
+  private draggedHandle: GraphHandleSelection | null = null;
+
+  // プレビュープロバイダー
+  private previewProvider?: (p: p5) => { curves: p5.Vector[][]; strength: number } | null;
 
   // 設定
   private config: Config;
@@ -32,37 +43,6 @@ export class GraphEditor {
     this.config = config;
     this.colors = colors;
 
-    // ハンドルマネージャー
-    this.handleManager = new HandleManager(
-      // アクティブパスのタイムカーブを取得
-      () =>
-        this.activePath ? [{ curves: this.activePath.motion.timing }] : [],
-
-      // ピクセル座標から正規化座標への変換
-      (x, y) => this.pixelToNorm(x, y),
-
-      // 正規化座標からピクセル座標への変換
-      (normX, normY) => this.normToPixel(normX, normY),
-    );
-
-    // 提案マネージャー
-    this.suggestionManager = new GraphSuggestionManager(config, {
-      onSelect: (path) => {
-        if (this.activePath) this.activePath.motion.timing = path.timing;
-      },
-    });
-
-    // 提案生成
-    this.dom.graphPromptForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      this.generateSuggestion();
-      this.dom.graphPromptInput.value = '';
-    });
-
-    // 初期状態では入力不可
-    this.dom.graphPromptInput.readOnly = true;
-    this.dom.graphPromptInput.style.cursor = 'not-allowed';
-
     // p5.jsの初期化
     this.init();
   }
@@ -71,24 +51,25 @@ export class GraphEditor {
 
   // パスの設定
   public setPath(path: Path | null): void {
-    if (!path || !path.motion.timing.length) {
+    if (!path || path.keyframes.length < 2) {
       this.activePath = null;
-      this.suggestionManager.close();
-      this.dom.graphPromptInput.readOnly = true;
-      this.dom.graphPromptInput.style.cursor = 'not-allowed';
       this.dom.graphPlaceholder.style.display = 'flex';
       this.dom.graphEditorContent.style.display = 'none';
       return;
     }
 
     this.activePath = path;
-    this.suggestionManager.open(path);
-    this.dom.graphPromptInput.readOnly = false;
-    this.dom.graphPromptInput.style.cursor = 'text';
     this.dom.graphPlaceholder.style.display = 'none';
     this.dom.graphEditorContent.style.display = 'flex';
 
     window.dispatchEvent(new Event('resize'));
+  }
+
+  // プレビュープロバイダーを設定
+  public setPreviewProvider(
+    provider: (p: p5) => { curves: p5.Vector[][]; strength: number } | null,
+  ): void {
+    this.previewProvider = provider;
   }
 
   // #region p5.js
@@ -162,32 +143,71 @@ export class GraphEditor {
       return;
     }
 
-    // ベジェ曲線
+    // グラフデータの生成
+    const graphData = this.getGraphData();
+    if (!graphData) {
+      p.pop();
+      return;
+    }
+
+    const { effectiveCurves } = graphData;
+
+    // ベジェ曲線（Modifier 適用後）
     p.push();
     p.scale(graphW, graphH);
     p.translate(0, 1);
     p.scale(1, -1);
     drawBezierCurve(
       p,
-      this.activePath.motion.timing,
+      effectiveCurves,
       2 / Math.min(graphW, graphH),
       this.colors.curve,
     );
     p.pop();
 
-    // 制御点と制御ポリゴン
+    // 制御点と制御ポリゴン（Modifier 適用後のカーブを使用）
     drawControls(
       p,
-      this.activePath.motion.timing,
+      effectiveCurves,
       this.config.pointSize,
       this.colors.handle,
       (v) => p.createVector(v.x * graphW, (1 - v.y) * graphH),
+      (curveIndex, pointIndex) => {
+        if (
+          this.draggedHandle &&
+          this.draggedHandle.segmentIndex === curveIndex
+        ) {
+          const isOut = this.draggedHandle.type === 'GRAPH_OUT';
+          if (isOut && pointIndex === 1) return this.colors.selection;
+          if (!isOut && pointIndex === 2) return this.colors.selection;
+        }
+        return this.colors.handle;
+      },
     );
 
-    // 提案をプレビュー
-    this.suggestionManager.preview(p, this.colors, {
-      transform: (v) => p.createVector(v.x * graphW, (1 - v.y) * graphH),
-    });
+    // プレビューカーブの描画（点線）
+    if (this.previewProvider) {
+      const previewData = this.previewProvider(p);
+      if (previewData && previewData.curves.length > 0) {
+        const ctx = p.drawingContext as CanvasRenderingContext2D;
+        const previousDash = typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
+        if (typeof ctx.setLineDash === 'function') ctx.setLineDash([6, 4]);
+
+        p.push();
+        p.scale(graphW, graphH);
+        p.translate(0, 1);
+        p.scale(1, -1);
+        drawBezierCurve(
+          p,
+          previewData.curves,
+          2 / Math.min(graphW, graphH),
+          this.colors.handle,
+        );
+        p.pop();
+
+        if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
+      }
+    }
 
     p.pop();
   }
@@ -198,19 +218,25 @@ export class GraphEditor {
     if (!isLeftClick) return;
 
     // ハンドルのドラッグ
-    this.handleManager.startDrag(p.mouseX, p.mouseY);
+    this.draggedHandle = this.hitTestHandle(p.mouseX, p.mouseY);
   }
 
   // p5.js マウスドラッグ
   private mouseDragged(p: p5): void {
     // ハンドルのドラッグ
-    const dragMode = p.keyIsDown(p.ALT) ? 1 : 0;
-    this.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
+    if (!this.draggedHandle || !this.activePath) return;
+
+    const graphData = this.getGraphData();
+    if (!graphData) return;
+
+    const { curves, effectiveCurves, progress } = graphData;
+    const target = this.pixelToNorm(p.mouseX, p.mouseY);
+    this.applyHandleDrag(this.draggedHandle, target.x, target.y, progress, curves, effectiveCurves);
   }
 
   // p5.js マウスリリース
   private mouseReleased(): void {
-    this.handleManager.endDrag();
+    this.draggedHandle = null;
   }
 
   // #region プライベート関数
@@ -247,15 +273,109 @@ export class GraphEditor {
     };
   }
 
-  // 提案の生成
-  private async generateSuggestion(): Promise<void> {
-    const activePath = this.activePath;
-    if (!activePath || activePath.motion.timing.length === 0) return;
+  // グラフデータの生成
+  private getGraphData(): { curves: p5.Vector[][]; effectiveCurves: p5.Vector[][]; progress: number[] } | null {
+    if (!this.activePath) return null;
 
-    const userPrompt = this.dom.graphPromptInput.value;
-    await this.suggestionManager.submit(
-      { timing: activePath.motion.timing },
-      userPrompt,
+    // 空間カーブを構築（Modifier 適用）
+    const originalSketchCurves = buildSketchCurves(this.activePath.keyframes);
+    const sketchCurves = applyModifiers(originalSketchCurves, this.activePath.modifiers);
+
+    // 進行度を計算
+    const progress = computeKeyframeProgress(
+      this.activePath.keyframes,
+      sketchCurves,
     );
+
+    // 時間カーブを構築
+    const curves = buildGraphCurves(this.activePath.keyframes, progress);
+
+    // Modifier 適用後の時間カーブ
+    const effectiveCurves = applyGraphModifiers(curves, this.activePath.modifiers);
+
+    return { curves, effectiveCurves, progress };
+  }
+
+  // ハンドルのヒットテスト
+  private hitTestHandle(x: number, y: number): GraphHandleSelection | null {
+    const graphData = this.getGraphData();
+    if (!graphData) return null;
+
+    const { effectiveCurves: curves } = graphData;
+    for (let i = curves.length - 1; i >= 0; i--) {
+      const curve = curves[i];
+      const controlPoints = [
+        { idx: 1 as const, type: 'GRAPH_OUT' as const },
+        { idx: 2 as const, type: 'GRAPH_IN' as const },
+      ];
+      for (const control of controlPoints) {
+        const point = curve[control.idx];
+        const { x: px, y: py } = this.normToPixel(point.x, point.y);
+        const dx = px - x;
+        const dy = py - y;
+        if (dx * dx + dy * dy <= HANDLE_RADIUS * HANDLE_RADIUS) {
+          return { segmentIndex: i, type: control.type };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // ハンドルのドラッグ
+  private applyHandleDrag(
+    selection: GraphHandleSelection,
+    targetX: number,
+    targetY: number,
+    progress: number[],
+    originalCurves: p5.Vector[][],
+    effectiveCurves: p5.Vector[][],
+  ): void {
+    if (!this.activePath) return;
+    const keyframes = this.activePath.keyframes;
+    const segmentIndex = selection.segmentIndex;
+    const start = keyframes[segmentIndex];
+    const end = keyframes[segmentIndex + 1];
+    if (!start || !end) return;
+
+    // オフセットを計算（Modifierの影響分）
+    const originalCurve = originalCurves[segmentIndex];
+    const effectiveCurve = effectiveCurves[segmentIndex];
+    const pointIndex = selection.type === 'GRAPH_OUT' ? 1 : 2;
+
+    // オフセット = 表示位置 - 元の位置
+    // Target (Mouse) = NewOriginal + Offset
+    // NewOriginal = Target - Offset
+    const offset = effectiveCurve[pointIndex].copy().sub(originalCurve[pointIndex]);
+
+    const t0 = start.time;
+    const t1 = end.time;
+    const v0 = progress[segmentIndex] ?? 0;
+    const v1 = progress[segmentIndex + 1] ?? v0;
+    const dt = t1 - t0;
+    const dv = v1 - v0;
+    if (Math.abs(dt) < 1e-6 || Math.abs(dv) < 1e-6) return;
+
+    // ターゲット位置からオフセットを引いて、元のカーブ上での位置を逆算
+    // ただし targetX, targetY は正規化座標(全体)なので、そこからオフセット(全体座標系)を引く
+    const correctedX = targetX - offset.x;
+    const correctedY = targetY - offset.y;
+
+    // 正規化座標(セグメント内)に変換
+    const normX = (correctedX - t0) / dt;
+    const normY = (correctedY - v0) / dv;
+    const clampedX = Math.max(0, Math.min(1, normX));
+
+    if (selection.type === 'GRAPH_OUT') {
+      start.graphOut = start.position.copy().set(
+        clampedX * dt,
+        normY * dv,
+      );
+    } else {
+      end.graphIn = end.position.copy().set(
+        (clampedX - 1) * dt,
+        (normY - 1) * dv,
+      );
+    }
   }
 }

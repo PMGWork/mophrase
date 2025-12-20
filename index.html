@@ -83,12 +83,47 @@
         <!-- サイドバー -->
         <aside
           id="sidebarContainer"
-          class="flex w-80 flex-col gap-2.5 overflow-hidden transition-all duration-300"
+          class="flex h-full w-80 flex-col gap-2.5 overflow-hidden transition-all duration-300"
         >
+          <div
+            id="graphEditorContainer"
+            class="corner-xl flex flex-none flex-col overflow-hidden border border-gray-800 bg-gray-950"
+          >
+            <!-- ヘッダー -->
+            <div
+              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2.5"
+            >
+              <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
+            </div>
+
+            <!-- プレースホルダー（パス未選択時） -->
+            <div
+              id="graphPlaceholder"
+              class="flex aspect-square w-full items-center justify-center text-sm text-gray-500"
+            >
+              Select a path to edit
+            </div>
+
+            <!-- コンテンツ（パス選択時） -->
+            <div
+              id="graphEditorContent"
+              class="flex aspect-square w-full"
+              style="display: none"
+            >
+              <!-- キャンバス -->
+              <div
+                id="graphEditorCanvas"
+                class="relative h-full w-full border-gray-800"
+              >
+                <!-- ここにモーションエディタのキャンバスが挿入される -->
+              </div>
+            </div>
+          </div>
+
           <!-- Property Editor -->
           <div
             id="propertyEditorContainer"
-            class="corner-xl flex flex-1 flex-col overflow-y-auto border border-gray-800 bg-gray-950"
+            class="corner-xl flex min-h-0 flex-1 flex-col overflow-y-auto border border-gray-800 bg-gray-950"
           >
             <!-- ヘッダー -->
             <div
@@ -100,7 +135,7 @@
             <!-- プレースホルダー（パス未選択時） -->
             <div
               id="propertyPlaceholder"
-              class="flex flex-1 items-center justify-center text-sm text-gray-500"
+              class="flex h-full items-center justify-center text-sm text-gray-500"
             >
               Select a path to edit
             </div>
@@ -172,68 +207,6 @@
                   class="flex flex-col gap-2 overflow-y-auto empty:hidden"
                 >
                   <!-- ここにモディファイアが挿入される -->
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Graph Editor -->
-          <div
-            id="graphEditorContainer"
-            class="corner-xl flex flex-2 flex-col overflow-hidden border border-gray-800 bg-gray-950"
-          >
-            <!-- ヘッダー -->
-            <div
-              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2.5"
-            >
-              <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
-            </div>
-
-            <!-- プレースホルダー（パス未選択時） -->
-            <div
-              id="graphPlaceholder"
-              class="flex flex-1 items-center justify-center text-sm text-gray-500"
-            >
-              Select a path to edit
-            </div>
-
-            <!-- コンテンツ（パス選択時） -->
-            <div
-              id="graphEditorContent"
-              class="flex flex-1 flex-col"
-              style="display: none"
-            >
-              <!-- キャンバス -->
-              <div
-                id="graphEditorCanvas"
-                class="relative aspect-square w-full border-gray-800"
-              >
-                <!-- ここにモーションエディタのキャンバスが挿入される -->
-              </div>
-
-              <!-- 提案機能 -->
-              <div class="flex flex-wrap gap-4 p-4">
-                <div
-                  class="graphSuggestionContainer corner-lg w-full min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
-                >
-                  <form id="graphPromptForm" class="flex items-center">
-                    <input
-                      id="graphPromptInput"
-                      type="text"
-                      placeholder="Enter instructions..."
-                      autocomplete="off"
-                      class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
-                    />
-                    <button type="submit" class="cursor-pointer p-3">
-                      <i data-lucide="send" class="h-3.5 w-3.5"></i>
-                    </button>
-                  </form>
-                  <div
-                    id="graphSuggestionList"
-                    class="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
-                  >
-                    <!-- ここに提案が挿入される -->
-                  </div>
                 </div>
               </div>
             </div>
@@ -312,24 +285,6 @@
             </div>
           </div>
 
-          <!-- Visible Raw Sketch -->
-          <div class="flex items-center justify-between">
-            <label for="settingsVisibleRawSketch" class="text-sm text-gray-400"
-              >Visible Raw Sketch</label
-            >
-            <div class="relative h-5 w-5">
-              <input
-                id="settingsVisibleRawSketch"
-                type="checkbox"
-                class="peer corner-sm h-5 w-5 cursor-pointer appearance-none border-0 bg-gray-700 transition-colors checked:bg-gray-50"
-              />
-              <i
-                data-lucide="check"
-                class="pointer-events-none absolute inset-0 h-5 w-5 text-gray-950 opacity-0 transition-opacity peer-checked:opacity-100"
-              ></i>
-            </div>
-          </div>
-
           <!-- Tolerance (Sketch) -->
           <div class="flex flex-col gap-2">
             <div class="flex items-center justify-between">
@@ -347,50 +302,6 @@
               type="range"
               min="5"
               max="50"
-              step="1"
-              value="20"
-              class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
-            />
-          </div>
-
-          <!-- Tolerance (Graph) -->
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label for="settingsGraphTolerance" class="text-sm text-gray-400"
-                >Tolerance (Graph)</label
-              >
-              <span
-                id="settingsGraphToleranceLabel"
-                class="text-sm text-gray-50"
-                >5%</span
-              >
-            </div>
-            <input
-              id="settingsGraphTolerance"
-              type="range"
-              min="1"
-              max="20"
-              step="1"
-              value="5"
-              class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
-            />
-          </div>
-
-          <!-- Object Size -->
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label for="settingsObjectSize" class="text-sm text-gray-400"
-                >Object Size</label
-              >
-              <span id="settingsObjectSizeLabel" class="text-sm text-gray-50"
-                >20px</span
-              >
-            </div>
-            <input
-              id="settingsObjectSize"
-              type="range"
-              min="5"
-              max="100"
               step="1"
               value="20"
               class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"

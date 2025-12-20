@@ -1,4 +1,4 @@
-import type { FitErrorResult, Range, Tangents, Vector } from '../types';
+import type { FitErrorResult, Keyframe, Vector } from '../types';
 import {
   bernstein,
   bezierCurve,
@@ -6,6 +6,18 @@ import {
   splitTangent,
   unitTangent,
 } from '../utils/math';
+
+// 範囲情報
+interface Range {
+  start: number;
+  end: number;
+}
+
+// 接ベクトル情報
+interface Tangents {
+  start: Vector;
+  end: Vector;
+}
 
 // #region プライベート関数
 // ベジェ曲線の始点と終点の接ベクトルを計算する
@@ -188,7 +200,7 @@ function refineParams(
 
     let newU = refineParameter(cubicControls, point, u);
     if (!Number.isFinite(newU)) continue;
-    newU = Math.max(0, Math.min(1, newU)); // constrain
+    newU = Math.max(0, Math.min(1, newU));
 
     params[i] = newU;
   }
@@ -203,6 +215,7 @@ function fitCurveRange(
   errorTol: number,
   coarseErrTol: number,
   fitError: { current: FitErrorResult },
+  ranges?: Range[],
 ): void {
   // パラメータを計算
   const params = parametrizeRange(points, range);
@@ -224,6 +237,7 @@ function fitCurveRange(
   // 許容誤差内にある場合のみ確定
   if (maxError <= errorTol) {
     curves.push(controls);
+    ranges?.push({ start: range.start, end: range.end });
     return;
   }
 
@@ -245,6 +259,7 @@ function fitCurveRange(
     // 許容誤差内に収まったら確定
     if (maxError <= errorTol) {
       curves.push(controls);
+      ranges?.push({ start: range.start, end: range.end });
       return;
     }
   }
@@ -253,6 +268,7 @@ function fitCurveRange(
   const splitIndex = fitError.current.index;
   if (splitIndex <= range.start || splitIndex >= range.end) {
     curves.push(controls);
+    ranges?.push({ start: range.start, end: range.end });
     return;
   }
 
@@ -260,6 +276,7 @@ function fitCurveRange(
   const tangent = splitTangent(points, splitIndex);
   if (tangent === null) {
     curves.push(controls);
+    ranges?.push({ start: range.start, end: range.end });
     return;
   }
 
@@ -272,6 +289,7 @@ function fitCurveRange(
     errorTol,
     coarseErrTol,
     fitError,
+    ranges,
   );
   fitCurveRange(
     points,
@@ -281,22 +299,21 @@ function fitCurveRange(
     errorTol,
     coarseErrTol,
     fitError,
+    ranges,
   );
 }
 
-// #region メイン関数
-// ベジェ曲線をフィットする関数
-export function fitCurve(
+// フィット結果の曲線と元点列の対応範囲を返す
+function fitCurveWithRanges(
   points: Vector[],
-  curves: Vector[][],
   errorTol: number,
   coarseErrTol: number,
   fitError: { current: FitErrorResult },
-): void {
-  // 全体の接ベクトルを計算
+): { curves: Vector[][]; ranges: Range[] } {
+  const curves: Vector[][] = [];
+  const ranges: Range[] = [];
   const [tangent0, tangent1] = computeEndTangents(points);
 
-  // 再帰的にフィッティングを開始
   fitCurveRange(
     points,
     curves,
@@ -305,5 +322,136 @@ export function fitCurve(
     errorTol,
     coarseErrTol,
     fitError,
+    ranges,
   );
+
+  return { curves, ranges };
+}
+
+// 単一セグメントの3次ベジェをフィット（分割なし）
+function fitCubic(points: Vector[]): Vector[] | null {
+  if (points.length < 2) return null;
+
+  const range = { start: 0, end: points.length - 1 };
+  const params = parametrizeRange(points, range);
+  const [tangent0, tangent1] = computeEndTangents(points);
+  const controls: Vector[] = new Array(4);
+  const [p0, p3] = extractEndPoints(points, range);
+  controls[0] = p0;
+  controls[3] = p3;
+  fitControlPoints(controls, params, { start: tangent0, end: tangent1 }, points, range);
+  return controls;
+}
+
+// キーフレームを生成
+export function generateKeyframes(
+  points: Vector[],
+  timestamps: number[],
+  errorTol: number,
+  coarseErrTol: number,
+  fitError: { current: FitErrorResult },
+): Keyframe[] {
+  if (points.length < 2 || timestamps.length < 2) return [];
+
+  // フィット結果の曲線と範囲を取得
+  const { curves, ranges } = fitCurveWithRanges(
+    points,
+    errorTol,
+    coarseErrTol,
+    fitError,
+  );
+  if (curves.length === 0) return [];
+
+  // タイムスタンプの正規化
+  const totalTime = timestamps[timestamps.length - 1] - timestamps[0];
+  const timeNorm = timestamps.map((t) =>
+    totalTime > 0 ? (t - timestamps[0]) / totalTime : 0,
+  );
+
+  // 空間距離の正規化
+  const { distances, totalDistance } = calculateCumulativeDistances(points);
+  const progressNorm = distances.map((d) =>
+    totalDistance > 0 ? d / totalDistance : 0,
+  );
+
+  const keyframes: Keyframe[] = [];
+
+  // キーフレームの生成
+  for (let i = 0; i < curves.length; i++) {
+    const curve = curves[i];
+    const range = ranges[i];
+    const p0 = curve[0];
+    const p1 = curve[1];
+    const p2 = curve[2];
+    const p3 = curve[3];
+
+    if (i === 0) {
+      const startTime = Math.max(0, Math.min(1, timeNorm[range.start] ?? 0));
+      keyframes.push({
+        time: startTime,
+        position: p0.copy(),
+        sketchOut: p1.copy().sub(p0),
+      });
+    } else {
+      const kf = keyframes[i];
+      if (kf) kf.sketchOut = p1.copy().sub(p0);
+    }
+
+    const endTime = Math.max(0, Math.min(1, timeNorm[range.end] ?? 0));
+    keyframes.push({
+      time: endTime,
+      position: p3.copy(),
+      sketchIn: p2.copy().sub(p3),
+    });
+  }
+
+  // タイミング（グラフ）をセグメントごとに近似
+  for (let i = 0; i < curves.length; i++) {
+    const range = ranges[i];
+    const timingPoints: Vector[] = [];
+    for (let j = range.start; j <= range.end; j++) {
+      const t = timeNorm[j] ?? 0;
+      const v = progressNorm[j] ?? 0;
+      timingPoints.push(points[0].copy().set(t, v));
+    }
+
+    const timingCurve = fitCubic(timingPoints);
+    const startKf = keyframes[i];
+    const endKf = keyframes[i + 1];
+    if (!startKf || !endKf) continue;
+
+    const dt = endKf.time - startKf.time;
+    const dv =
+      (progressNorm[range.end] ?? 0) - (progressNorm[range.start] ?? 0);
+
+    if (timingCurve) {
+      const p0 = timingCurve[0];
+      const p1 = timingCurve[1];
+      const p2 = timingCurve[2];
+      const p3 = timingCurve[3];
+      startKf.graphOut = p1.copy().sub(p0);
+      endKf.graphIn = p2.copy().sub(p3);
+    } else {
+      startKf.graphOut = points[0].copy().set(dt / 3, dv / 3);
+      endKf.graphIn = points[0].copy().set(-dt / 3, -dv / 3);
+    }
+  }
+
+  return keyframes;
+}
+
+// 累積距離を計算
+function calculateCumulativeDistances(points: Vector[]): {
+  distances: number[];
+  totalDistance: number;
+} {
+  const distances = [0];
+  let totalDistance = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    totalDistance += points[i].dist(points[i - 1]);
+    distances.push(totalDistance);
+  }
+
+  return { distances, totalDistance };
 }
