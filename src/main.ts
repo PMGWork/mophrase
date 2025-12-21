@@ -18,6 +18,12 @@ const main = (): void => {
   const playbackPlayButton = document.getElementById(
     'playbackPlayButton',
   ) as HTMLButtonElement | null;
+  const playbackResetButton = document.getElementById(
+    'playbackResetButton',
+  ) as HTMLButtonElement | null;
+  const playbackEndButton = document.getElementById(
+    'playbackEndButton',
+  ) as HTMLButtonElement | null;
   const playbackPlayhead = document.getElementById(
     'playbackPlayhead',
   ) as HTMLDivElement | null;
@@ -67,6 +73,20 @@ const main = (): void => {
     if (playbackPlayButton) {
       playbackPlayButton.addEventListener('click', () => {
         togglePlayback();
+      });
+    }
+    if (playbackResetButton) {
+      playbackResetButton.addEventListener('click', () => {
+        if (!sketchEditor.hasPaths()) return;
+        sketchEditor.resetPlayback();
+        updatePlaybackButtonUI(false);
+      });
+    }
+    if (playbackEndButton) {
+      playbackEndButton.addEventListener('click', () => {
+        if (!sketchEditor.hasPaths()) return;
+        sketchEditor.goToLastFrame();
+        updatePlaybackButtonUI(false);
       });
     }
 
@@ -133,6 +153,18 @@ const main = (): void => {
 
     // プロンプト入力欄のセットアップ
     setupUserPromptInput();
+
+    // OS判定してDeleteキーのヒントを更新
+    const userAgentData = (
+      navigator as Navigator & { userAgentData?: { platform: string } }
+    ).userAgentData;
+    const platform = userAgentData?.platform || navigator.userAgent;
+    const isMac = /Mac|iPod|iPhone|iPad/i.test(platform);
+
+    const deleteKeyLabel = document.getElementById('hint-delete-key');
+    if (deleteKeyLabel) {
+      deleteKeyLabel.textContent = isMac ? 'Opt+X' : 'Alt+X';
+    }
   };
 
   // サイドバーの開閉
@@ -188,6 +220,29 @@ const main = (): void => {
         : 'Play';
     } else {
       playbackPlayButton.title = 'No objects to play';
+    }
+
+    if (playbackResetButton) {
+      playbackResetButton.disabled = !hasPaths;
+      playbackResetButton.classList.toggle('opacity-40', !hasPaths);
+      playbackResetButton.classList.toggle('cursor-pointer', hasPaths);
+      playbackResetButton.classList.toggle('cursor-not-allowed', !hasPaths);
+      playbackResetButton.classList.toggle('hover:bg-gray-700', hasPaths);
+      playbackResetButton.classList.toggle('hover:text-gray-50', hasPaths);
+      playbackResetButton.title = hasPaths
+        ? 'First Frame'
+        : 'No objects to reset';
+    }
+    if (playbackEndButton) {
+      playbackEndButton.disabled = !hasPaths;
+      playbackEndButton.classList.toggle('opacity-40', !hasPaths);
+      playbackEndButton.classList.toggle('cursor-pointer', hasPaths);
+      playbackEndButton.classList.toggle('cursor-not-allowed', !hasPaths);
+      playbackEndButton.classList.toggle('hover:bg-gray-700', hasPaths);
+      playbackEndButton.classList.toggle('hover:text-gray-50', hasPaths);
+      playbackEndButton.title = hasPaths
+        ? 'Last Frame'
+        : 'No objects to seek';
     }
 
     if (playbackTrack) {

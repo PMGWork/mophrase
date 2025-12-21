@@ -70,7 +70,7 @@
 
             <!-- ショートカットキーのヒント -->
             <div
-              class="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-xs text-gray-500"
+              class="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-[10px] text-gray-500"
             >
               <span
                 ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
@@ -84,9 +84,11 @@
                 >
                 Pen</span
               >
-              <span
-                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
-                  >X</kbd
+              <span id="hint-delete-shortcut"
+                ><kbd
+                  id="hint-delete-key"
+                  class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >Alt+X</kbd
                 >
                 Delete</span
               >
@@ -103,13 +105,29 @@
             id="playbackBar"
             class="corner-lg flex items-center gap-3 border border-gray-800 bg-gray-950/80 p-2.5"
           >
-            <button
-              id="playbackPlayButton"
-              class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
-              title="Play"
-            >
-              <i data-lucide="play" class="h-3.5 w-3.5"></i>
-            </button>
+            <div class="flex items-center gap-1">
+              <button
+                id="playbackResetButton"
+                class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+                title="First Frame"
+              >
+                <i data-lucide="skip-back" class="h-3.5 w-3.5"></i>
+              </button>
+              <button
+                id="playbackPlayButton"
+                class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+                title="Play"
+              >
+                <i data-lucide="play" class="h-3.5 w-3.5"></i>
+              </button>
+              <button
+                id="playbackEndButton"
+                class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+                title="Last Frame"
+              >
+                <i data-lucide="skip-forward" class="h-3.5 w-3.5"></i>
+              </button>
+            </div>
             <div id="playbackTrack" class="relative flex-1">
               <div class="relative h-1">
                 <div class="absolute inset-0 rounded-full bg-gray-800"></div>
@@ -121,7 +139,7 @@
             </div>
             <span
               id="playbackTime"
-              class="shrink-0 font-mono text-xs text-gray-500"
+              class="flex shrink-0 items-center gap-0.5 font-mono text-xs text-gray-500"
             >
               <span id="playbackTimeCurrent">00:00</span>
               <span class="text-gray-700">/</span>

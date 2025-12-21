@@ -165,6 +165,7 @@ export class SketchEditor {
       p.mouseDragged = () => this.mouseDragged(p);
       p.mousePressed = () => this.mousePressed(p);
       p.mouseReleased = () => this.mouseReleased(p);
+      p.keyPressed = () => this.keyPressed(p);
       p.keyTyped = () => this.keyTyped(p);
     };
 
@@ -188,22 +189,35 @@ export class SketchEditor {
     p.resizeCanvas(width, height);
   }
 
-  // p5.js キー入力
-  private keyTyped(p: p5): void {
-    // 入力欄にフォーカス中は無視
-    if (
+  // p5.js キー入力（文字入力）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private keyTyped(_: p5): void {
+    // 文字入力固有の処理があればここに記述
+  }
+
+  // p5.js キー押下（ショートカット用）
+  private keyPressed(p: p5): void {
+    const isInputFocused =
       document.activeElement instanceof HTMLInputElement ||
-      document.activeElement instanceof HTMLTextAreaElement
-    ) {
+      document.activeElement instanceof HTMLTextAreaElement;
+
+    // 削除 (Alt+X or Option+X)
+    if (p.keyIsDown(p.ALT) && (p.key === 'x' || p.keyCode === 88)) {
+      if (isInputFocused && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      this.deleteActivePath();
       return;
     }
 
+    // 入力欄にフォーカス中は他のショートカットを無視
+    if (isInputFocused) return;
+
+    // ツール切り替え
     if (p.key === 'v') {
       this.setTool('select');
     } else if (p.key === 'g' || p.key === 'p') {
       this.setTool('pen');
-    } else if (p.key === 'x') {
-      this.deleteActivePath();
     }
   }
 
@@ -319,15 +333,6 @@ export class SketchEditor {
 
     if (!isLeftMouseButton(p.mouseButton, p.LEFT)) return;
 
-    // キャンバスクリック時に入力フィールドのフォーカスを外す
-    if (
-      document.activeElement instanceof HTMLInputElement ||
-      document.activeElement instanceof HTMLTextAreaElement
-    ) {
-      document.activeElement.blur();
-      return;
-    }
-
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
       this.penTool.mousePressed(p, ctx);
@@ -386,7 +391,7 @@ export class SketchEditor {
     // 再生中なら停止
     if (this.motionManager.getIsPlaying()) {
       this.motionManager.stop();
-      this.isPreviewing = false;
+      this.isPreviewing = this.motionManager.getTotalDuration() > 0;
       return false;
     }
 
@@ -399,6 +404,44 @@ export class SketchEditor {
       return true;
     }
     return false;
+  }
+
+  public resetPlayback(): void {
+    if (!this.motionManager) return;
+
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.stop();
+    }
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return;
+    }
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+    this.motionManager.seekTo(0);
+    this.isPreviewing = false;
+  }
+
+  public goToLastFrame(): void {
+    if (!this.motionManager) return;
+
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.stop();
+    }
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return;
+    }
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+    this.motionManager.seekTo(this.motionManager.getTotalDuration());
+    this.isPreviewing = true;
   }
 
   // 再生バー用の情報を取得

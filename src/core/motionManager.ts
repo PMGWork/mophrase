@@ -98,8 +98,6 @@ export class MotionManager {
   // モーション再生を停止
   public stop(): void {
     this.isPlaying = false;
-    this.elapsedTime = 0;
-    this.animationStates = [];
   }
 
   // 静的表示対象のパスを設定（非再生時用）
