@@ -17,6 +17,7 @@ export class SketchEditor {
   // データ構造
   private paths: Path[] = [];
   private activePath: Path | null = null;
+  private isPreviewing: boolean = false;
 
   // ツール
   private currentTool: EditorTool = 'pen';
@@ -227,6 +228,7 @@ export class SketchEditor {
 
     const ctx = this.getToolContext();
     const isPlaying = this.motionManager?.getIsPlaying() ?? false;
+    const shouldPreview = !isPlaying && this.isPreviewing && !!this.motionManager;
 
     // 1. 非選択のパスの軌跡を描画（再生中はスキップ）
     if (!isPlaying) {
@@ -248,6 +250,9 @@ export class SketchEditor {
     if (isPlaying) {
       // 再生中: MotionManagerが全オブジェクトを描画
       this.motionManager?.draw();
+    } else if (shouldPreview) {
+      // シーク時のプレビュー
+      this.motionManager?.drawPreview();
     } else {
       // 非再生時: 個別にオブジェクトを描画
       for (let i = 0; i < this.paths.length; i++) {
@@ -314,6 +319,15 @@ export class SketchEditor {
 
     if (!isLeftMouseButton(p.mouseButton, p.LEFT)) return;
 
+    // キャンバスクリック時に入力フィールドのフォーカスを外す
+    if (
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+    ) {
+      document.activeElement.blur();
+      return;
+    }
+
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
       this.penTool.mousePressed(p, ctx);
@@ -372,13 +386,16 @@ export class SketchEditor {
     // 再生中なら停止
     if (this.motionManager.getIsPlaying()) {
       this.motionManager.stop();
+      this.isPreviewing = false;
       return false;
     }
 
     // 停止中なら全パスの再生開始
     if (this.paths.length > 0) {
       const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
-      this.motionManager.startAll(this.paths, colors);
+      const elapsed = this.motionManager.getElapsedTime();
+      this.motionManager.startAll(this.paths, colors, elapsed);
+      this.isPreviewing = false;
       return true;
     }
     return false;
@@ -403,6 +420,34 @@ export class SketchEditor {
 
   public hasPaths(): boolean {
     return this.paths.length > 0;
+  }
+
+  public refreshPlaybackTimeline(): void {
+    if (!this.motionManager) return;
+    if (this.motionManager.getIsPlaying()) return;
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return;
+    }
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+  }
+
+  public seekPlayback(progress: number): void {
+    if (!this.motionManager || this.paths.length === 0) return;
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+
+    const totalDuration = this.motionManager.getTotalDuration();
+    if (totalDuration <= 0) return;
+
+    const clamped = Math.max(0, Math.min(1, progress));
+    this.motionManager.seekTo(clamped * totalDuration);
+    this.isPreviewing = true;
   }
 
   // 最後のパスを取得

@@ -21,6 +21,9 @@ const main = (): void => {
   const playbackPlayhead = document.getElementById(
     'playbackPlayhead',
   ) as HTMLDivElement | null;
+  const playbackTrack = document.getElementById(
+    'playbackTrack',
+  ) as HTMLDivElement | null;
 
   const playbackTimeCurrent = document.getElementById('playbackTimeCurrent');
   const playbackTimeTotal = document.getElementById('playbackTimeTotal');
@@ -38,12 +41,14 @@ const main = (): void => {
       // パス作成時
       graphEditor.setPath(path);
       updatePlaybackAvailability();
+      sketchEditor.refreshPlaybackTimeline();
     },
     (path) => {
       // パス選択時（作成時も呼ばれる）
       graphEditor.setPath(path);
       propertyEditor.setPath(path);
       updatePlaybackAvailability();
+      sketchEditor.refreshPlaybackTimeline();
     },
   );
   const propertyEditor = new PropertyEditor(dom, {
@@ -63,6 +68,41 @@ const main = (): void => {
       playbackPlayButton.addEventListener('click', () => {
         togglePlayback();
       });
+    }
+
+    if (playbackTrack) {
+      let seekingPointerId: number | null = null;
+
+      const updateByClientX = (clientX: number): void => {
+        if (!playbackTrack || !sketchEditor.hasPaths()) return;
+        const rect = playbackTrack.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const progress = (clientX - rect.left) / rect.width;
+        sketchEditor.seekPlayback(progress);
+      };
+
+      playbackTrack.addEventListener('pointerdown', (event) => {
+        if (!sketchEditor.hasPaths()) return;
+        seekingPointerId = event.pointerId;
+        playbackTrack.setPointerCapture(event.pointerId);
+        updateByClientX(event.clientX);
+      });
+
+      playbackTrack.addEventListener('pointermove', (event) => {
+        if (seekingPointerId !== event.pointerId) return;
+        updateByClientX(event.clientX);
+      });
+
+      const endSeek = (event: PointerEvent): void => {
+        if (seekingPointerId !== event.pointerId) return;
+        if (playbackTrack.hasPointerCapture(event.pointerId)) {
+          playbackTrack.releasePointerCapture(event.pointerId);
+        }
+        seekingPointerId = null;
+      };
+
+      playbackTrack.addEventListener('pointerup', endSeek);
+      playbackTrack.addEventListener('pointercancel', endSeek);
     }
 
     // スペースキーで再生/停止をトグル
@@ -147,6 +187,11 @@ const main = (): void => {
         : 'Play';
     } else {
       playbackPlayButton.title = 'No objects to play';
+    }
+
+    if (playbackTrack) {
+      playbackTrack.classList.toggle('cursor-pointer', hasPaths);
+      playbackTrack.classList.toggle('cursor-not-allowed', !hasPaths);
     }
   }
 
