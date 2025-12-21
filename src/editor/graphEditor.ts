@@ -5,7 +5,7 @@ import type { DomRefs } from '../dom';
 import type { Keyframe, Path } from '../types';
 import { drawBezierCurve, drawControls } from '../utils/draw';
 import { buildGraphCurves, buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
-import { applyModifiers, applyGraphModifiers } from '../utils/modifier';
+import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
 import { isLeftMouseButton } from '../utils/p5Helpers';
 
 // グラフハンドル選択
@@ -278,7 +278,7 @@ export class GraphEditor {
 
     // 空間カーブを構築（Modifier 適用）
     const originalSketchCurves = buildSketchCurves(this.activePath.keyframes);
-    const sketchCurves = applyModifiers(originalSketchCurves, this.activePath.modifiers);
+    const sketchCurves = applySketchModifiers(originalSketchCurves, this.activePath.sketchModifiers);
 
     // 進行度を計算
     const progress = computeKeyframeProgress(
@@ -290,7 +290,7 @@ export class GraphEditor {
     const curves = buildGraphCurves(this.activePath.keyframes, progress);
 
     // Modifier 適用後の時間カーブ
-    const effectiveCurves = applyGraphModifiers(curves, this.activePath.modifiers);
+    const effectiveCurves = applyGraphModifiers(curves, this.activePath.graphModifiers);
 
     return { curves, effectiveCurves, progress };
   }

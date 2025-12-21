@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/style.css" />
@@ -78,6 +78,36 @@
           class="corner-xl relative min-w-0 flex-1 overflow-hidden border border-gray-800"
         >
           <!-- p5.jsキャンバスがここに挿入される -->
+
+          <!-- ショートカットキーのヒント -->
+          <div
+            class="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-xs text-gray-500"
+          >
+            <span
+              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                >V</kbd
+              >
+              Select</span
+            >
+            <span
+              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                >G</kbd
+              >
+              Pen</span
+            >
+            <span
+              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                >X</kbd
+              >
+              Delete</span
+            >
+            <span
+              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                >Space</kbd
+              >
+              Play</span
+            >
+          </div>
         </main>
 
         <!-- サイドバー -->
@@ -194,19 +224,35 @@
                 </div>
               </div>
 
-              <!-- Modifier セクション -->
+              <!-- Sketch セクション -->
               <div
-                id="modifierSection"
-                class="flex flex-col gap-2 border-y border-gray-800 p-3"
+                id="sketchModifierSection"
+                class="flex flex-col gap-2 border-t border-gray-800 p-3"
               >
                 <!-- ヘッダー -->
-                <span class="text-xs font-medium text-gray-400">Modifier</span>
+                <span class="text-xs font-medium text-gray-400">Sketch</span>
                 <!-- リスト -->
                 <div
-                  id="modifierList"
-                  class="flex flex-col gap-2 overflow-y-auto empty:hidden"
+                  id="sketchModifierList"
+                  class="flex flex-col gap-1 overflow-y-auto"
                 >
-                  <!-- ここにモディファイアが挿入される -->
+                  <!-- ここに Sketch Modifier が挿入される -->
+                </div>
+              </div>
+
+              <!-- Graph セクション -->
+              <div
+                id="graphModifierSection"
+                class="flex flex-col gap-2 border-t border-gray-800 p-3"
+              >
+                <!-- ヘッダー -->
+                <span class="text-xs font-medium text-gray-400">Graph</span>
+                <!-- リスト -->
+                <div
+                  id="graphModifierList"
+                  class="flex flex-col gap-1 overflow-y-auto"
+                >
+                  <!-- ここに Graph Modifier が挿入される -->
                 </div>
               </div>
             </div>
@@ -257,55 +303,80 @@
         <div
           class="flex items-center justify-between border-b border-gray-800 px-5 py-4"
         >
-          <h2 class="text-lg font-medium text-gray-50">Settings</h2>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="settings" class="h-5 w-5 text-gray-400"></i>
+            <h2 class="text-lg font-medium text-gray-50">Settings</h2>
+          </div>
           <button
             id="closeSettingsButton"
-            class="corner-md p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+            class="corner-md cursor-pointer p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
           >
             <i data-lucide="x" class="h-5 w-5"></i>
           </button>
         </div>
 
         <!-- コンテンツ -->
-        <div class="flex flex-col gap-5 p-5">
-          <!-- LLM Model -->
-          <div class="flex flex-col gap-2">
-            <label for="settingsLlmModelSelect" class="text-sm text-gray-400"
-              >LLM Model</label
-            >
-            <div class="relative">
-              <select
-                id="settingsLlmModelSelect"
-                class="corner-md h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-50 transition-colors hover:bg-gray-700 focus:ring-1 focus:ring-gray-700 focus:outline-none"
-              ></select>
-              <i
-                data-lucide="chevron-down"
-                class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400"
-              ></i>
+        <div class="flex flex-col divide-y divide-gray-800">
+          <!-- AI セクション -->
+          <div class="flex flex-col gap-3 p-5">
+            <div class="flex items-center gap-2">
+              <i data-lucide="sparkles" class="h-4 w-4 text-blue-400"></i>
+              <span
+                class="text-xs font-medium tracking-wider text-gray-500 uppercase"
+                >AI</span
+              >
+            </div>
+            <!-- LLM Model -->
+            <div class="flex flex-col gap-2">
+              <label for="settingsLlmModelSelect" class="text-sm text-gray-400"
+                >LLM Model</label
+              >
+              <div class="relative">
+                <select
+                  id="settingsLlmModelSelect"
+                  class="corner-md h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-50 transition-colors hover:bg-gray-700 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                ></select>
+                <i
+                  data-lucide="chevron-down"
+                  class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+                ></i>
+              </div>
             </div>
           </div>
 
-          <!-- Tolerance -->
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label for="settingsSketchTolerance" class="text-sm text-gray-400"
-                >Tolerance</label
-              >
+          <!-- Sketch セクション -->
+          <div class="flex flex-col gap-3 p-5">
+            <div class="flex items-center gap-2">
+              <i data-lucide="pencil" class="h-4 w-4 text-amber-400"></i>
               <span
-                id="settingsSketchToleranceLabel"
-                class="text-sm text-gray-50"
-                >20px</span
+                class="text-xs font-medium tracking-wider text-gray-500 uppercase"
+                >Sketch</span
               >
             </div>
-            <input
-              id="settingsSketchTolerance"
-              type="range"
-              min="5"
-              max="50"
-              step="1"
-              value="20"
-              class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
-            />
+            <!-- Tolerance -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label
+                  for="settingsSketchTolerance"
+                  class="text-sm text-gray-400"
+                  >Tolerance</label
+                >
+                <span
+                  id="settingsSketchToleranceLabel"
+                  class="rounded bg-gray-800 px-2 py-0.5 font-mono text-xs text-gray-50"
+                  >20px</span
+                >
+              </div>
+              <input
+                id="settingsSketchTolerance"
+                type="range"
+                min="5"
+                max="50"
+                step="1"
+                value="20"
+                class="corner-md h-1.5 w-full cursor-pointer appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
+              />
+            </div>
           </div>
         </div>
       </div>

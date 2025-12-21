@@ -8,7 +8,7 @@ import type {
   Vector,
 } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
-import { applyModifiers } from '../utils/modifier';
+import { applySketchModifiers } from '../utils/modifier';
 
 type Point = { x: number; y: number };
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
@@ -18,13 +18,13 @@ export class HandleManager {
   private draggedHandle: HandleSelection | null = null; // ドラッグ中のハンドル
   private selectedHandles: HandleSelection[] = []; // 選択中のハンドル
 
-  private getPaths: () => Pick<Path, 'keyframes' | 'modifiers'>[]; // パスの取得関数
+  private getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[]; // パスの取得関数
   private pixelToNorm: (x: number, y: number) => Point; // ピクセル座標を正規化座標に変換
   private normToPixel: (x: number, y: number) => Point; // 正規化座標をピクセル座標に変換
 
   // コンストラクタ
   constructor(
-    getPaths: () => Pick<Path, 'keyframes' | 'modifiers'>[],
+    getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[],
     pixelToNorm: (x: number, y: number) => Point = (x, y) => ({ x, y }),
     normToPixel: (x: number, y: number) => Point = (x, y) => ({ x, y }),
   ) {
@@ -348,7 +348,7 @@ export class HandleManager {
     targetX: number,
     targetY: number,
     mode: number,
-    path: Pick<Path, 'keyframes' | 'modifiers'>,
+    path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
     originalCurves: Vector[][],
     effectiveCurves: Vector[][],
   ): void {
@@ -371,10 +371,10 @@ export class HandleManager {
 
   // 元の曲線とModifier適用後の曲線を取得
   private getCurves(
-    path: Pick<Path, 'keyframes' | 'modifiers'>,
+    path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
   ): { original: Vector[][]; effective: Vector[][] } {
     const original = buildSketchCurves(path.keyframes);
-    const effective = applyModifiers(original, path.modifiers);
+    const effective = applySketchModifiers(original, path.sketchModifiers);
     return { original, effective };
   }
 
@@ -421,7 +421,7 @@ export class HandleManager {
 
   // ハンドル移動を元曲線に反映
   private applyHandleTarget(
-    path: Pick<Path, 'keyframes' | 'modifiers'>,
+    path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
     selection: HandleSelection,
     targetX: number,
     targetY: number,

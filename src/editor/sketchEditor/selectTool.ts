@@ -3,7 +3,7 @@ import { BEZIER_T_STEP, OBJECT_SIZE } from '../../constants';
 import type { MarqueeRect, Path } from '../../types';
 import { bezierCurve } from '../../utils/math';
 import { buildSketchCurves } from '../../utils/keyframes';
-import { applyModifiers } from '../../utils/modifier';
+import { applySketchModifiers } from '../../utils/modifier';
 import type { ToolContext } from './types';
 
 // 選択ツール
@@ -167,7 +167,7 @@ export class SelectTool {
     if (curves.length === 0) return false;
 
     // modifier適用後の曲線で判定
-    const effectiveCurves = applyModifiers(curves, path.modifiers);
+    const effectiveCurves = applySketchModifiers(curves, path.sketchModifiers);
 
     for (const curve of effectiveCurves) {
       for (let t = 0; t <= 1; t += BEZIER_T_STEP) {

@@ -6,121 +6,164 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applyModifiers, applyGraphModifiers } from '../utils/modifier';
+import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
+
+// 個別パスのアニメーション状態
+type PathAnimationState = {
+  path: Path;
+  color: string;
+  spatialCurves: Vector[][];
+  graphCurves: Vector[][];
+  keyframeProgress: number[];
+  startTime: number; // ミリ秒
+  duration: number; // ミリ秒
+};
 
 // モーション管理クラス
 export class MotionManager {
   private p: p5;
-  private objectColor: string;
   private objectSize: number;
   private isPlaying: boolean = false;
-  private currentPath: Path | null = null;
-  private staticPath: Path | null = null;
-  private time: number = 0;
   private elapsedTime: number = 0;
-  private startTime: number = 0;
-  private duration: number = 0;
-  private spatialCurves: Vector[][] = [];
-  private graphCurves: Vector[][] = [];
-  private keyframeProgress: number[] = [];
+  private totalDuration: number = 0;
 
-  constructor(p: p5, objectColor: string, objectSize: number) {
+  // 全パスのアニメーション状態
+  private animationStates: PathAnimationState[] = [];
+
+  // 静的表示用
+  private staticPath: Path | null = null;
+  private staticColor: string = '#ffffff';
+
+  constructor(p: p5, objectSize: number) {
     this.p = p;
-    this.objectColor = objectColor;
     this.objectSize = objectSize;
   }
 
   // #region メイン関数
 
-  // オブジェクトの色を設定
-  public setColor(color: string): void {
-    this.objectColor = color;
+  // 再生中かどうかを取得
+  public getIsPlaying(): boolean {
+    return this.isPlaying;
   }
 
-  // モーション再生を開始
-  public start(path: Path): void {
-    if (path.keyframes.length < 2) return;
+  // 全パスのタイムライン再生を開始
+  public startAll(paths: Path[], colors: string[]): void {
+    if (paths.length === 0) return;
 
-    // パスを設定
-    this.currentPath = path;
-    this.isPlaying = true;
-    this.time = 0;
+    this.animationStates = [];
     this.elapsedTime = 0;
+    this.totalDuration = 0;
 
-    // 開始待機時間を設定（秒→ミリ秒）
-    this.startTime = path.startTime * 1000;
+    // 各パスのアニメーション状態を準備
+    for (let i = 0; i < paths.length; i++) {
+      const path = paths[i];
+      if (path.keyframes.length < 2) continue;
 
-    // 空間カーブと進行度を計算（modifier適用）
-    const originalCurves = buildSketchCurves(path.keyframes);
-    this.spatialCurves = applyModifiers(originalCurves, path.modifiers, this.p);
-    this.keyframeProgress = computeKeyframeProgress(
-      path.keyframes,
-      this.spatialCurves,
-    );
+      const startTime = path.startTime * 1000;
+      const duration = Math.max(1, path.duration * 1000);
+      const endTime = startTime + duration;
 
-    // 時間カーブを生成（modifier適用）
-    const baseGraphCurves = buildGraphCurves(path.keyframes, this.keyframeProgress);
-    this.graphCurves = applyGraphModifiers(baseGraphCurves, path.modifiers, this.p);
+      // タイムライン全体の終了時間を更新
+      if (endTime > this.totalDuration) {
+        this.totalDuration = endTime;
+      }
 
-    // 持続時間を設定 (秒 -> ミリ秒)
-    this.duration = Math.max(1, path.duration * 1000);
+      // 空間カーブと進行度を計算
+      const originalCurves = buildSketchCurves(path.keyframes);
+      const spatialCurves = applySketchModifiers(originalCurves, path.sketchModifiers, this.p);
+      const keyframeProgress = computeKeyframeProgress(path.keyframes, spatialCurves);
+
+      // 時間カーブを生成
+      const baseGraphCurves = buildGraphCurves(path.keyframes, keyframeProgress);
+      const graphCurves = applyGraphModifiers(baseGraphCurves, path.graphModifiers, this.p);
+
+      this.animationStates.push({
+        path,
+        color: colors[i % colors.length],
+        spatialCurves,
+        graphCurves,
+        keyframeProgress,
+        startTime,
+        duration,
+      });
+    }
+
+    this.isPlaying = this.animationStates.length > 0;
   }
 
   // モーション再生を停止
   public stop(): void {
     this.isPlaying = false;
-    this.time = 0;
     this.elapsedTime = 0;
-    this.currentPath = null;
+    this.animationStates = [];
   }
 
-  // 表示対象のパスを設定
+  // 静的表示対象のパスを設定（非再生時用）
   public setPath(path: Path | null): void {
     this.staticPath = path;
   }
 
-  // モーションを更新
+  // オブジェクトの色を設定（非再生時用）
+  public setColor(color: string): void {
+    this.staticColor = color;
+  }
+
+  // モーションを更新・描画
   public draw(): void {
     // 再生中の場合
-    if (this.isPlaying && this.currentPath) {
-      // 経過時間を更新
+    if (this.isPlaying) {
       this.elapsedTime += this.p.deltaTime;
 
-      // 開始時間まで待機
-      if (this.elapsedTime < this.startTime) {
-        // 待機中は開始位置に表示
-        this.drawObject(this.currentPath.keyframes[0].position);
-        return;
+      // 全アニメーション終了したらループ
+      if (this.elapsedTime >= this.totalDuration) {
+        this.elapsedTime = 0;
       }
 
-      // アニメーション進行度を計算
-      this.time += this.p.deltaTime / this.duration;
-
-      if (this.time >= 1.0) {
-        this.time = 1.0;
-        this.isPlaying = false;
+      // 各パスのオブジェクトを描画
+      for (const state of this.animationStates) {
+        const position = this.evaluatePathPosition(state);
+        this.drawObject(position, state.color);
       }
-
-      const position = this.evaluatePosition(this.time);
-      this.drawObject(position);
       return;
     }
 
     // 再生していない場合は、設定されたパスの開始位置を表示
     if (this.staticPath && this.staticPath.keyframes.length > 0) {
       const originalCurves = buildSketchCurves(this.staticPath.keyframes);
-      const effectiveCurves = applyModifiers(originalCurves, this.staticPath.modifiers, this.p);
+      const effectiveCurves = applySketchModifiers(originalCurves, this.staticPath.sketchModifiers, this.p);
       const startPosition = effectiveCurves[0]?.[0] ?? this.staticPath.keyframes[0].position;
-      this.drawObject(startPosition);
+      this.drawObject(startPosition, this.staticColor);
     }
   }
 
   // #region プライベート関数
 
+  // 指定パスの現在位置を評価
+  private evaluatePathPosition(state: PathAnimationState): Vector {
+    const { path, spatialCurves, graphCurves, keyframeProgress, startTime, duration } = state;
+
+    // 開始時間前は開始位置
+    if (this.elapsedTime < startTime) {
+      return spatialCurves[0]?.[0] ?? path.keyframes[0].position;
+    }
+
+    // アニメーション進行度を計算
+    const localTime = (this.elapsedTime - startTime) / duration;
+    const time = Math.min(1, Math.max(0, localTime));
+
+    // 終了後は終点位置
+    if (time >= 1) {
+      const lastCurve = spatialCurves[spatialCurves.length - 1];
+      return lastCurve?.[3] ?? path.keyframes[path.keyframes.length - 1].position;
+    }
+
+    return this.evaluatePosition(time, path.keyframes, spatialCurves, graphCurves, keyframeProgress);
+  }
+
   // オブジェクトを描画
-  private drawObject(position: Vector): void {
+  private drawObject(position: Vector, color: string): void {
     this.p.push();
-    this.p.fill(this.objectColor);
+    this.p.fill(color);
     this.p.noStroke();
     this.p.circle(position.x, position.y, this.objectSize);
     this.p.pop();
@@ -128,7 +171,6 @@ export class MotionManager {
 
   // X(u) = targetX となる u を求める
   private solveBezierX(curve: Vector[], targetX: number): number {
-    // 二分探索で近似
     let low = 0;
     let high = 1;
     let u = 0;
@@ -146,21 +188,28 @@ export class MotionManager {
   }
 
   // 時間に対応する位置を取得
-  private evaluatePosition(time: number): Vector {
-    if (!this.currentPath || this.currentPath.keyframes.length === 0) {
+  private evaluatePosition(
+    time: number,
+    keyframes: Path['keyframes'],
+    spatialCurves: Vector[][],
+    graphCurves: Vector[][],
+    keyframeProgress: number[],
+  ): Vector {
+    if (keyframes.length === 0) {
       return this.p.createVector(0, 0);
     }
 
-    const keyframes = this.currentPath.keyframes;
     if (keyframes.length === 1) return keyframes[0].position;
 
-    if (time <= keyframes[0].time) return keyframes[0].position;
-    if (time >= keyframes[keyframes.length - 1].time)
-      return keyframes[keyframes.length - 1].position;
+    if (time <= keyframes[0].time) return spatialCurves[0]?.[0] ?? keyframes[0].position;
+    if (time >= keyframes[keyframes.length - 1].time) {
+      const lastCurve = spatialCurves[spatialCurves.length - 1];
+      return lastCurve?.[3] ?? keyframes[keyframes.length - 1].position;
+    }
 
     const segmentIndex = this.findSegmentIndex(time, keyframes);
-    const graphCurve = this.graphCurves[segmentIndex];
-    const spatialCurve = this.spatialCurves[segmentIndex];
+    const graphCurve = graphCurves[segmentIndex];
+    const spatialCurve = spatialCurves[segmentIndex];
     if (!graphCurve || !spatialCurve) return keyframes[segmentIndex].position;
 
     const u = this.solveBezierX(graphCurve, time);
@@ -172,11 +221,10 @@ export class MotionManager {
       u,
     ).y;
 
-    const v0 = this.keyframeProgress[segmentIndex] ?? 0;
-    const v1 = this.keyframeProgress[segmentIndex + 1] ?? v0;
+    const v0 = keyframeProgress[segmentIndex] ?? 0;
+    const v1 = keyframeProgress[segmentIndex + 1] ?? v0;
     const denom = v1 - v0;
-    const localU =
-      Math.abs(denom) > 1e-6 ? (progress - v0) / denom : 0;
+    const localU = Math.abs(denom) > 1e-6 ? (progress - v0) / denom : 0;
     const clamped = Math.max(0, Math.min(1, localU));
 
     return bezierCurve(

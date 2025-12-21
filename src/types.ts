@@ -55,15 +55,26 @@ export interface Path {
   keyframes: Keyframe[];
   duration: number;
   startTime: number;
-  modifiers?: Modifier[];
+  sketchModifiers?: SketchModifier[];
+  graphModifiers?: GraphModifier[];
 }
 
-// モディファイア
-export interface Modifier {
+// オフセット配列の型
+type OffsetArray = ({ dx: number; dy: number } | null)[][];
+
+// スケッチ（空間曲線）用モディファイア
+export interface SketchModifier {
   id: string;
   name: string;
-  offsets: ({ dx: number; dy: number } | null)[][];
-  graphOffsets?: ({ dx: number; dy: number } | null)[][];
+  offsets: OffsetArray;
+  strength: number;
+}
+
+// グラフ（タイミング曲線）用モディファイア
+export interface GraphModifier {
+  id: string;
+  name: string;
+  offsets: OffsetArray;
   strength: number;
 }
 

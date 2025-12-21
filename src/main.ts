@@ -48,7 +48,25 @@ const main = (): void => {
   // UIのセットアップ
   const setupUI = (): void => {
     // ボタンのイベントを登録
-    dom.playButton.addEventListener('click', () => sketchEditor.playMotion());
+    dom.playButton.addEventListener('click', () => {
+      togglePlayback();
+    });
+
+    // スペースキーで再生/停止をトグル
+    window.addEventListener('keydown', (e) => {
+      // 入力欄にフォーカス中は無視
+      if (
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayback();
+      }
+    });
 
     // サイドバー開閉ボタン
     dom.editMotionButton.addEventListener('click', () => {
@@ -84,6 +102,44 @@ const main = (): void => {
     el.classList.toggle('bg-gray-800', !isVisible);
     el.classList.toggle('text-gray-50', !isVisible);
     el.classList.toggle('hover:bg-gray-700', !isVisible);
+  }
+
+  // Playボタンの表示更新
+  function updatePlayButtonUI(isPlaying: boolean): void {
+    const text = dom.playButton.querySelector('span');
+
+    // 既存のアイコンを削除
+    const existingIcon = dom.playButton.querySelector('svg, i');
+    if (existingIcon) existingIcon.remove();
+
+    // 新しいi要素を作成
+    const newIcon = document.createElement('i');
+    newIcon.className = 'h-4 w-4';
+
+    if (isPlaying) {
+      // 再生中: Stopボタンに
+      newIcon.setAttribute('data-lucide', 'square');
+      if (text) text.textContent = 'Stop';
+      dom.playButton.classList.remove('bg-blue-900/50', 'hover:bg-blue-900');
+      dom.playButton.classList.add('bg-red-900/50', 'hover:bg-red-900');
+    } else {
+      // 停止中: Playボタンに
+      newIcon.setAttribute('data-lucide', 'play');
+      if (text) text.textContent = 'Play';
+      dom.playButton.classList.remove('bg-red-900/50', 'hover:bg-red-900');
+      dom.playButton.classList.add('bg-blue-900/50', 'hover:bg-blue-900');
+    }
+
+    // i要素をボタンの先頭に挿入
+    dom.playButton.insertBefore(newIcon, dom.playButton.firstChild);
+
+    // アイコンを再描画
+    createIcons({ icons });
+  }
+
+  function togglePlayback(): void {
+    const isPlaying = sketchEditor.toggleMotion();
+    updatePlayButtonUI(isPlaying);
   }
 
   // ユーザー指示入力欄のセットアップ

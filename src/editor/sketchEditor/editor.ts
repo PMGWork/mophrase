@@ -178,7 +178,7 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.motionManager = new MotionManager(p, OBJECT_COLORS[0], OBJECT_SIZE);
+    this.motionManager = new MotionManager(p, OBJECT_SIZE);
   }
 
   // p5.js リサイズ
@@ -189,6 +189,14 @@ export class SketchEditor {
 
   // p5.js キー入力
   private keyTyped(p: p5): void {
+    // 入力欄にフォーカス中は無視
+    if (
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement
+    ) {
+      return;
+    }
+
     if (p.key === 'v') {
       this.setTool('select');
     } else if (p.key === 'g' || p.key === 'p') {
@@ -218,47 +226,56 @@ export class SketchEditor {
     p.background(this.colors.background);
 
     const ctx = this.getToolContext();
+    const isPlaying = this.motionManager?.getIsPlaying() ?? false;
 
-    // 1. 非選択のパスの軌跡を描画
-    for (let pathIndex = 0; pathIndex < this.paths.length; pathIndex++) {
-      const path = this.paths[pathIndex];
-      if (this.activePath === path) continue;
+    // 1. 非選択のパスの軌跡を描画（再生中はスキップ）
+    if (!isPlaying) {
+      for (let pathIndex = 0; pathIndex < this.paths.length; pathIndex++) {
+        const path = this.paths[pathIndex];
+        if (this.activePath === path) continue;
 
-      drawSketchPath(
-        p,
-        path,
-        this.config,
-        this.colors,
-        false, // isSelected
-      );
+        drawSketchPath(
+          p,
+          path,
+          this.config,
+          this.colors,
+          false,
+        );
+      }
     }
 
     // 2. すべてのオブジェクトを描画
-    for (let i = 0; i < this.paths.length; i++) {
-      const path = this.paths[i];
-      const isLatest = i === this.paths.length - 1;
-      const color = OBJECT_COLORS[i % OBJECT_COLORS.length];
+    if (isPlaying) {
+      // 再生中: MotionManagerが全オブジェクトを描画
+      this.motionManager?.draw();
+    } else {
+      // 非再生時: 個別にオブジェクトを描画
+      for (let i = 0; i < this.paths.length; i++) {
+        const path = this.paths[i];
+        const isLatest = i === this.paths.length - 1;
+        const color = OBJECT_COLORS[i % OBJECT_COLORS.length];
 
-      if (isLatest) {
-        // 最後のパスはMotionManagerで描画（アニメーション対応）
-        this.motionManager?.setColor(color);
-        this.motionManager?.setPath(path);
-        this.motionManager?.draw();
-      } else {
-        // それ以外のパスは開始位置に静的オブジェクトを描画
-        if (path.keyframes.length > 0) {
-          const pos = path.keyframes[0].position;
-          p.push();
-          p.fill(color);
-          p.noStroke();
-          p.circle(pos.x, pos.y, OBJECT_SIZE);
-          p.pop();
+        if (isLatest) {
+          // 最後のパスはMotionManagerで描画（静的表示）
+          this.motionManager?.setColor(color);
+          this.motionManager?.setPath(path);
+          this.motionManager?.draw();
+        } else {
+          // それ以外のパスは開始位置に静的オブジェクトを描画
+          if (path.keyframes.length > 0) {
+            const pos = path.keyframes[0].position;
+            p.push();
+            p.fill(color);
+            p.noStroke();
+            p.circle(pos.x, pos.y, OBJECT_SIZE);
+            p.pop();
+          }
         }
       }
     }
 
-    // 3. 選択中のパスの軌跡とハンドルを描画
-    if (this.activePath) {
+    // 3. 選択中のパスの軌跡とハンドルを描画（再生中はスキップ）
+    if (!isPlaying && this.activePath) {
       const pathIndex = this.paths.indexOf(this.activePath);
       drawSketchPath(
         p,
@@ -277,15 +294,17 @@ export class SketchEditor {
       );
     }
 
-    // ツール固有の描画
-    if (this.currentTool === 'pen') {
-      this.penTool.draw(p, ctx);
-    } else {
-      this.selectTool.draw(p, ctx);
-    }
+    // ツール固有の描画（再生中はスキップ）
+    if (!isPlaying) {
+      if (this.currentTool === 'pen') {
+        this.penTool.draw(p, ctx);
+      } else {
+        this.selectTool.draw(p, ctx);
+      }
 
-    // 提案をプレビュー
-    this.suggestionManager.preview(p, this.colors);
+      // 提案をプレビュー
+      this.suggestionManager.preview(p, this.colors);
+    }
   }
 
   // p5.js マウス押下
@@ -346,10 +365,23 @@ export class SketchEditor {
     );
   }
 
-  // モーションを再生
-  public playMotion(): void {
-    const target = this.paths[this.paths.length - 1];
-    if (target && this.motionManager) this.motionManager.start(target);
+  // モーションの再生/停止をトグル
+  public toggleMotion(): boolean {
+    if (!this.motionManager) return false;
+
+    // 再生中なら停止
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.stop();
+      return false;
+    }
+
+    // 停止中なら全パスの再生開始
+    if (this.paths.length > 0) {
+      const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+      this.motionManager.startAll(this.paths, colors);
+      return true;
+    }
+    return false;
   }
 
   // 最後のパスを取得

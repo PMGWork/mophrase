@@ -31,9 +31,13 @@ export type ElementMap = {
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
 
-  // モディファイアパネル
-  modifierSection: HTMLDivElement;
-  modifierList: HTMLDivElement;
+  // Sketch Modifier パネル
+  sketchModifierSection: HTMLDivElement;
+  sketchModifierList: HTMLDivElement;
+
+  // Graph Modifier パネル
+  graphModifierSection: HTMLDivElement;
+  graphModifierList: HTMLDivElement;
 };
 
 // DOM要素IDの定義
@@ -61,8 +65,10 @@ const ELEMENT_IDS: Record<keyof ElementMap, string> = {
   editMotionButton: 'editMotionButton',
   selectToolButton: 'selectToolButton',
   penToolButton: 'penToolButton',
-  modifierSection: 'modifierSection',
-  modifierList: 'modifierList',
+  sketchModifierSection: 'sketchModifierSection',
+  sketchModifierList: 'sketchModifierList',
+  graphModifierSection: 'graphModifierSection',
+  graphModifierList: 'graphModifierList',
 };
 
 // DOM参照の束ね役（ElementMap を実装）
@@ -98,9 +104,13 @@ export class DomRefs implements ElementMap {
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;
 
-  // モディファイアパネル
-  public readonly modifierSection!: HTMLDivElement;
-  public readonly modifierList!: HTMLDivElement;
+  // Sketch Modifier パネル
+  public readonly sketchModifierSection!: HTMLDivElement;
+  public readonly sketchModifierList!: HTMLDivElement;
+
+  // Graph Modifier パネル
+  public readonly graphModifierSection!: HTMLDivElement;
+  public readonly graphModifierList!: HTMLDivElement;
 
   // コンストラクタ
   constructor() {

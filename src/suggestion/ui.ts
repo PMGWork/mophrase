@@ -5,7 +5,7 @@ import type {
   SuggestionState,
 } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
-import { applyModifiers } from '../utils/modifier';
+import { applySketchModifiers } from '../utils/modifier';
 
 type SuggestionUIConfig = {
   containerId?: string;
@@ -208,7 +208,7 @@ export function positionUI({
   const originalCurves = buildSketchCurves(targetPath.keyframes);
   if (originalCurves.length === 0) return;
 
-  const effectiveCurves = applyModifiers(originalCurves, targetPath.modifiers);
+  const effectiveCurves = applySketchModifiers(originalCurves, targetPath.sketchModifiers);
 
   // 終点のインデックスを計算
   const endCurveIndex = selectionRange

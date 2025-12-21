@@ -2,9 +2,10 @@ import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
 import type {
-  Modifier,
+  GraphModifier,
   Path,
   SelectionRange,
+  SketchModifier,
   Suggestion,
   SuggestionState,
 } from '../types';
@@ -13,7 +14,7 @@ import {
   buildGraphCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { createModifierFromLLMResult } from '../utils/modifier';
+import { createSketchModifier, createGraphModifier } from '../utils/modifier';
 import { slicePath } from '../utils/path';
 import {
   deserializeCurves,
@@ -288,25 +289,38 @@ export class SuggestionManager {
       this.pInstance,
     );
 
-    // modifierを作成（空間と時間の差分計算）
+    // modifier名を設定
     const modifierName =
       this.prompts[this.prompts.length - 1] || suggestion.title;
-    const modifier = createModifierFromLLMResult(
+
+    // SketchModifier を作成
+    const sketchModifier = createSketchModifier(
       originalCurves,
       llmCurves,
       modifierName,
       this.selectionRange,
-      originalGraphCurves,
-      llmGraphCurves,
     );
+    sketchModifier.strength = strength;
 
-    console.log('Applied Modifier:', modifier);
+    // GraphModifier を作成（時間カーブの差分がある場合のみ）
+    let graphModifier: GraphModifier | null = null;
+    if (llmGraphCurves.length > 0) {
+      graphModifier = createGraphModifier(
+        originalGraphCurves,
+        llmGraphCurves,
+        modifierName,
+        this.selectionRange,
+      );
+      graphModifier.strength = strength;
+    }
 
-    // クリック時の影響度をmodifierに設定
-    modifier.strength = strength;
+    console.log('Applied SketchModifier:', sketchModifier);
+    if (graphModifier) {
+      console.log('Applied GraphModifier:', graphModifier);
+    }
 
     // パスにmodifierを追加
-    this.addModifierToPath(this.targetPath, modifier);
+    this.addModifiersToPath(this.targetPath, sketchModifier, graphModifier);
 
     this.onSelect?.(this.targetPath, this.targetPath);
 
@@ -316,10 +330,21 @@ export class SuggestionManager {
   }
 
   // パスにmodifierを追加
-  private addModifierToPath(path: Path, modifier: Modifier): void {
-    if (!path.modifiers) {
-      path.modifiers = [];
+  private addModifiersToPath(
+    path: Path,
+    sketchModifier: SketchModifier,
+    graphModifier: GraphModifier | null,
+  ): void {
+    if (!path.sketchModifiers) {
+      path.sketchModifiers = [];
     }
-    path.modifiers.push(modifier);
+    path.sketchModifiers.push(sketchModifier);
+
+    if (graphModifier) {
+      if (!path.graphModifiers) {
+        path.graphModifiers = [];
+      }
+      path.graphModifiers.push(graphModifier);
+    }
   }
 }

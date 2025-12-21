@@ -2,7 +2,7 @@ import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import type { Path, Vector } from '../types';
 import { bezierCurve } from './math';
-import { applyModifiers } from './modifier';
+import { applySketchModifiers } from './modifier';
 import { buildSketchCurves } from './keyframes';
 
 // 入力点の描画
@@ -138,14 +138,14 @@ export function drawControls(
 // パス全体の描画（スケッチ点列 + ベジェ曲線 + 制御点）
 export function drawSketchPath(
   p: p5,
-  path: Pick<Path, 'keyframes' | 'modifiers'>,
+  path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
   config: Pick<Config, 'lineWeight' | 'pointSize'>,
   colors: Pick<Colors, 'curve' | 'background' | 'handle' | 'selection'>,
   isSelected: boolean,
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
 ): void {
   const curves = buildSketchCurves(path.keyframes);
-  const effectiveCurves = applyModifiers(curves, path.modifiers, p);
+  const effectiveCurves = applySketchModifiers(curves, path.sketchModifiers, p);
 
   // ベジェ曲線の描画（modifiers適用後）
   const curveColor = isSelected ? colors.handle : '#4b5563';
