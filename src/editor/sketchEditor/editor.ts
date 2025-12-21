@@ -384,6 +384,27 @@ export class SketchEditor {
     return false;
   }
 
+  // 再生バー用の情報を取得
+  public getPlaybackInfo(): {
+    isPlaying: boolean;
+    elapsedMs: number;
+    totalMs: number;
+  } {
+    if (!this.motionManager) {
+      return { isPlaying: false, elapsedMs: 0, totalMs: 0 };
+    }
+
+    return {
+      isPlaying: this.motionManager.getIsPlaying(),
+      elapsedMs: this.motionManager.getElapsedTime(),
+      totalMs: this.motionManager.getTotalDuration(),
+    };
+  }
+
+  public hasPaths(): boolean {
+    return this.paths.length > 0;
+  }
+
   // 最後のパスを取得
   public getLatestPath(): Path | undefined {
     return this.paths[this.paths.length - 1];

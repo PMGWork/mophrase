@@ -15,6 +15,15 @@ const main = (): void => {
 
   // DOMマネージャー
   const dom = new DomRefs();
+  const playbackPlayButton = document.getElementById(
+    'playbackPlayButton',
+  ) as HTMLButtonElement | null;
+  const playbackPlayhead = document.getElementById(
+    'playbackPlayhead',
+  ) as HTMLDivElement | null;
+
+  const playbackTimeCurrent = document.getElementById('playbackTimeCurrent');
+  const playbackTimeTotal = document.getElementById('playbackTimeTotal');
 
   // 設定パネル
   new SettingsPanel(dom, config);
@@ -28,11 +37,13 @@ const main = (): void => {
     (path) => {
       // パス作成時
       graphEditor.setPath(path);
+      updatePlaybackAvailability();
     },
     (path) => {
       // パス選択時（作成時も呼ばれる）
       graphEditor.setPath(path);
       propertyEditor.setPath(path);
+      updatePlaybackAvailability();
     },
   );
   const propertyEditor = new PropertyEditor(dom, {
@@ -48,9 +59,11 @@ const main = (): void => {
   // UIのセットアップ
   const setupUI = (): void => {
     // ボタンのイベントを登録
-    dom.playButton.addEventListener('click', () => {
-      togglePlayback();
-    });
+    if (playbackPlayButton) {
+      playbackPlayButton.addEventListener('click', () => {
+        togglePlayback();
+      });
+    }
 
     // スペースキーで再生/停止をトグル
     window.addEventListener('keydown', (e) => {
@@ -104,42 +117,83 @@ const main = (): void => {
     el.classList.toggle('hover:bg-gray-700', !isVisible);
   }
 
-  // Playボタンの表示更新
-  function updatePlayButtonUI(isPlaying: boolean): void {
-    const text = dom.playButton.querySelector('span');
+  function updatePlaybackButtonUI(isPlaying: boolean): void {
+    if (!playbackPlayButton) return;
 
-    // 既存のアイコンを削除
-    const existingIcon = dom.playButton.querySelector('svg, i');
+    const existingIcon = playbackPlayButton.querySelector('svg, i');
     if (existingIcon) existingIcon.remove();
 
-    // 新しいi要素を作成
     const newIcon = document.createElement('i');
-    newIcon.className = 'h-4 w-4';
+    newIcon.className = 'h-3.5 w-3.5';
+    newIcon.setAttribute('data-lucide', isPlaying ? 'square' : 'play');
+    playbackPlayButton.insertBefore(newIcon, playbackPlayButton.firstChild);
 
-    if (isPlaying) {
-      // 再生中: Stopボタンに
-      newIcon.setAttribute('data-lucide', 'square');
-      if (text) text.textContent = 'Stop';
-      dom.playButton.classList.remove('bg-blue-900/50', 'hover:bg-blue-900');
-      dom.playButton.classList.add('bg-red-900/50', 'hover:bg-red-900');
-    } else {
-      // 停止中: Playボタンに
-      newIcon.setAttribute('data-lucide', 'play');
-      if (text) text.textContent = 'Play';
-      dom.playButton.classList.remove('bg-red-900/50', 'hover:bg-red-900');
-      dom.playButton.classList.add('bg-blue-900/50', 'hover:bg-blue-900');
-    }
+    playbackPlayButton.title = isPlaying ? 'Stop' : 'Play';
 
-    // i要素をボタンの先頭に挿入
-    dom.playButton.insertBefore(newIcon, dom.playButton.firstChild);
-
-    // アイコンを再描画
     createIcons({ icons });
   }
 
+  function updatePlaybackAvailability(): void {
+    if (!playbackPlayButton) return;
+    const hasPaths = sketchEditor.hasPaths();
+    playbackPlayButton.disabled = !hasPaths;
+    playbackPlayButton.classList.toggle('opacity-40', !hasPaths);
+    playbackPlayButton.classList.toggle('cursor-not-allowed', !hasPaths);
+    playbackPlayButton.classList.toggle('hover:bg-gray-700', hasPaths);
+    playbackPlayButton.classList.toggle('hover:text-gray-50', hasPaths);
+    if (hasPaths) {
+      playbackPlayButton.title = sketchEditor.getPlaybackInfo().isPlaying
+        ? 'Stop'
+        : 'Play';
+    } else {
+      playbackPlayButton.title = 'No objects to play';
+    }
+  }
+
+  function formatPlaybackTime(ms: number): string {
+    const clampedMs = Math.max(0, ms);
+    const totalSeconds = Math.floor(clampedMs / 1000 + 1e-6);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
+  function startPlaybackUISync(): void {
+    if (!playbackPlayhead) return;
+
+    const playhead = playbackPlayhead;
+    const timeCurrent = playbackTimeCurrent;
+    const timeTotal = playbackTimeTotal;
+
+    const update = (): void => {
+      const { elapsedMs, totalMs } = sketchEditor.getPlaybackInfo();
+      const safeTotal = Math.max(1, totalMs);
+      const progress = Math.min(1, Math.max(0, elapsedMs / safeTotal));
+      const left = `${progress * 100}%`;
+
+      playhead.style.left = left;
+
+      const currentLabel = formatPlaybackTime(elapsedMs);
+      const totalLabel = formatPlaybackTime(totalMs);
+      if (timeCurrent && timeCurrent.textContent !== currentLabel) {
+        timeCurrent.textContent = currentLabel;
+      }
+      if (timeTotal && timeTotal.textContent !== totalLabel) {
+        timeTotal.textContent = totalLabel;
+      }
+
+      requestAnimationFrame(update);
+    };
+
+    requestAnimationFrame(update);
+  }
+
   function togglePlayback(): void {
+    if (!sketchEditor.hasPaths()) return;
     const isPlaying = sketchEditor.toggleMotion();
-    updatePlayButtonUI(isPlaying);
+    updatePlaybackButtonUI(isPlaying);
   }
 
   // ユーザー指示入力欄のセットアップ
@@ -154,6 +208,8 @@ const main = (): void => {
   }
 
   setupUI();
+  startPlaybackUISync();
+  updatePlaybackAvailability();
 
   // 初期状態のUI更新
   updateSidebarButtonUI();

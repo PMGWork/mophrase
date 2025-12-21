@@ -26,7 +26,6 @@ export type ElementMap = {
   canvasContainer: HTMLDivElement;
   sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
-  playButton: HTMLButtonElement;
   editMotionButton: HTMLButtonElement;
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
@@ -61,7 +60,6 @@ const ELEMENT_IDS: Record<keyof ElementMap, string> = {
   canvasContainer: 'canvasContainer',
   sketchPromptForm: 'sketchPromptForm',
   sketchPromptInput: 'sketchPromptInput',
-  playButton: 'playButton',
   editMotionButton: 'editMotionButton',
   selectToolButton: 'selectToolButton',
   penToolButton: 'penToolButton',
@@ -99,7 +97,6 @@ export class DomRefs implements ElementMap {
   public readonly canvasContainer!: HTMLDivElement;
   public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
-  public readonly playButton!: HTMLButtonElement;
   public readonly editMotionButton!: HTMLButtonElement;
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;

@@ -40,26 +40,14 @@
 
           <div class="mx-2 h-6 w-px bg-gray-800"></div>
 
-          <!-- アクションボタン -->
-          <button
-            id="playButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-blue-900/50 px-4 py-2 text-sm text-blue-50 transition-colors hover:bg-blue-900"
-          >
-            <i data-lucide="play" class="h-4 w-4"></i>
-            <span>Play</span>
-          </button>
-
+          <!-- サイドバートグル -->
           <button
             id="settingsButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-4 py-2 text-sm text-gray-50 transition-colors hover:bg-gray-700"
+            title="Settings"
+            class="corner-md flex h-9 w-9 cursor-pointer items-center justify-center bg-gray-800 text-gray-50 transition-colors hover:bg-gray-700"
           >
             <i data-lucide="settings" class="h-4 w-4"></i>
-            <span>Settings</span>
           </button>
-
-          <div class="mx-2 h-6 w-px bg-gray-800"></div>
-
-          <!-- サイドバートグル -->
           <button
             id="editMotionButton"
             title="Toggle Sidebar"
@@ -72,43 +60,75 @@
 
       <!-- メインコンテンツ -->
       <div class="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
-        <!-- スケッチキャンバス -->
-        <main
-          id="canvasContainer"
-          class="corner-xl relative min-w-0 flex-1 overflow-hidden border border-gray-800"
-        >
-          <!-- p5.jsキャンバスがここに挿入される -->
-
-          <!-- ショートカットキーのヒント -->
-          <div
-            class="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-xs text-gray-500"
+        <!-- スケッチキャンバス + 再生バー -->
+        <div class="flex min-w-0 flex-1 flex-col gap-2.5">
+          <main
+            id="canvasContainer"
+            class="corner-xl relative min-h-0 min-w-0 flex-1 overflow-hidden border border-gray-800"
           >
-            <span
-              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
-                >V</kbd
-              >
-              Select</span
+            <!-- p5.jsキャンバスがここに挿入される -->
+
+            <!-- ショートカットキーのヒント -->
+            <div
+              class="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-xs text-gray-500"
             >
-            <span
-              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
-                >G</kbd
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >V</kbd
+                >
+                Select</span
               >
-              Pen</span
-            >
-            <span
-              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
-                >X</kbd
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >G</kbd
+                >
+                Pen</span
               >
-              Delete</span
-            >
-            <span
-              ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
-                >Space</kbd
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >X</kbd
+                >
+                Delete</span
               >
-              Play</span
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >Space</kbd
+                >
+                Play</span
+              >
+            </div>
+          </main>
+
+          <section
+            id="playbackBar"
+            class="corner-lg flex items-center gap-3 border border-gray-800 bg-gray-950/80 p-2.5"
+          >
+            <button
+              id="playbackPlayButton"
+              class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+              title="Play"
             >
-          </div>
-        </main>
+              <i data-lucide="play" class="h-3.5 w-3.5"></i>
+            </button>
+            <div class="relative flex-1">
+              <div class="relative h-1">
+                <div class="absolute inset-0 rounded-full bg-gray-800"></div>
+                <div
+                  id="playbackPlayhead"
+                  class="absolute top-1/2 left-0 h-2.5 w-0.5 -translate-y-1/2 rounded-full bg-gray-400"
+                ></div>
+              </div>
+            </div>
+            <span
+              id="playbackTime"
+              class="shrink-0 font-mono text-xs text-gray-500"
+            >
+              <span id="playbackTimeCurrent">00:00</span>
+              <span class="text-gray-700">/</span>
+              <span id="playbackTimeTotal">00:00</span>
+            </span>
+          </section>
+        </div>
 
         <!-- サイドバー -->
         <aside
@@ -320,7 +340,6 @@
           <!-- AI セクション -->
           <div class="flex flex-col gap-3 p-5">
             <div class="flex items-center gap-2">
-              <i data-lucide="sparkles" class="h-4 w-4 text-blue-400"></i>
               <span
                 class="text-xs font-medium tracking-wider text-gray-500 uppercase"
                 >AI</span
@@ -347,7 +366,6 @@
           <!-- Sketch セクション -->
           <div class="flex flex-col gap-3 p-5">
             <div class="flex items-center gap-2">
-              <i data-lucide="pencil" class="h-4 w-4 text-amber-400"></i>
               <span
                 class="text-xs font-medium tracking-wider text-gray-500 uppercase"
                 >Sketch</span

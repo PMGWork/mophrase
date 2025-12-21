@@ -46,6 +46,16 @@ export class MotionManager {
     return this.isPlaying;
   }
 
+  // 経過時間を取得（ミリ秒）
+  public getElapsedTime(): number {
+    return this.elapsedTime;
+  }
+
+  // 総再生時間を取得（ミリ秒）
+  public getTotalDuration(): number {
+    return this.totalDuration;
+  }
+
   // 全パスのタイムライン再生を開始
   public startAll(paths: Path[], colors: string[]): void {
     if (paths.length === 0) return;
