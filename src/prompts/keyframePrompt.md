@@ -83,7 +83,7 @@
 {
   "suggestions": [
     {
-      "title": "string (3単語以内の英語タイトル)",
+      "title": "string (ユーザーの指示と同じ言語で、10文字以内のタイトル)",
       "keyframes": [
         {
           "x": number,
