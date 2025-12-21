@@ -29,7 +29,7 @@ export function generateKeyframes(
   );
 
   // 空間距離の正規化
-  const { distances, totalDistance } = calculateCumulativeDistances(points);
+  const { distances, totalDistance } = cumulativeDistances(points);
   const progressNorm = distances.map((d) =>
     totalDistance > 0 ? d / totalDistance : 0,
   );
@@ -109,7 +109,7 @@ export function generateKeyframes(
 }
 
 // 累積距離を計算
-function calculateCumulativeDistances(points: Vector[]): {
+function cumulativeDistances(points: Vector[]): {
   distances: number[];
   totalDistance: number;
 } {
