@@ -178,6 +178,7 @@ const main = (): void => {
     const hasPaths = sketchEditor.hasPaths();
     playbackPlayButton.disabled = !hasPaths;
     playbackPlayButton.classList.toggle('opacity-40', !hasPaths);
+    playbackPlayButton.classList.toggle('cursor-pointer', hasPaths);
     playbackPlayButton.classList.toggle('cursor-not-allowed', !hasPaths);
     playbackPlayButton.classList.toggle('hover:bg-gray-700', hasPaths);
     playbackPlayButton.classList.toggle('hover:text-gray-50', hasPaths);

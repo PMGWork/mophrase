@@ -66,20 +66,12 @@ type ProviderModelOption = {
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
     defaultModel: 'gpt-5.2',
-    models: [
-      { id: 'gpt-5.2', name: 'GPT-5.2' },
-      { id: 'gpt-5.1', name: 'GPT-5.1' },
-      { id: 'gpt-5-mini', name: 'GPT-5 mini' },
-    ],
+    models: [{ id: 'gpt-5.2', name: 'GPT-5.2' }],
     generate: async (prompt, schema, model) => {
-      const reasoningEffort = ['gpt-5.2', 'gpt-5.1'].includes(model)
-        ? 'none'
-        : 'minimal';
-
       const response = await getOpenAI().responses.parse({
         model,
         input: [{ role: 'user', content: prompt }],
-        reasoning: { effort: reasoningEffort },
+        reasoning: { effort: 'none' },
         text: {
           format: zodTextFormat(schema, 'schema'),
           verbosity: 'low',
@@ -91,10 +83,10 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   },
 
   Gemini: {
-    defaultModel: 'gemini-flash-latest',
+    defaultModel: 'gemini-3-flash-preview',
     models: [
-      { id: 'gemini-flash-latest', name: 'Gemini Flash' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+      { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro' },
+      { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash' },
     ],
     generate: async (prompt, schema, model) => {
       const response = await getGenAI().models.generateContent({
@@ -111,10 +103,9 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   },
 
   Groq: {
-    defaultModel: 'moonshotai/kimi-k2-instruct-0905',
+    defaultModel: 'openai/gpt-oss-120b',
     models: [
       { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
-      { id: 'moonshotai/kimi-k2-instruct-0905', name: 'Kimi K2 Instruct' },
     ],
     generate: async (prompt, schema, model) => {
       const response = await getGroq().chat.completions.create({
