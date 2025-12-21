@@ -2,7 +2,7 @@ import p5 from 'p5';
 import type { Colors, Config } from '../config';
 import { HANDLE_RADIUS } from '../constants';
 import type { DomRefs } from '../dom';
-import type { Path } from '../types';
+import type { Keyframe, Path } from '../types';
 import { drawBezierCurve, drawControls } from '../utils/draw';
 import { buildGraphCurves, buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
 import { applyModifiers, applyGraphModifiers } from '../utils/modifier';
@@ -158,7 +158,7 @@ export class GraphEditor {
     drawBezierCurve(
       p,
       effectiveCurves,
-      2 / Math.min(graphW, graphH),
+      this.config.lineWeight / Math.min(graphW, graphH),
       this.colors.curve,
     );
     p.pop();
@@ -198,7 +198,7 @@ export class GraphEditor {
         drawBezierCurve(
           p,
           previewData.curves,
-          2 / Math.min(graphW, graphH),
+          this.config.lineWeight / Math.min(graphW, graphH),
           this.colors.handle,
         );
         p.pop();
@@ -229,7 +229,8 @@ export class GraphEditor {
 
     const { curves, effectiveCurves, progress } = graphData;
     const target = this.pixelToNorm(p.mouseX, p.mouseY);
-    this.applyHandleDrag(this.draggedHandle, target.x, target.y, progress, curves, effectiveCurves);
+    const sync = !p.keyIsDown(p.ALT);
+    this.applyHandleDrag(this.draggedHandle, target.x, target.y, progress, curves, effectiveCurves, sync);
   }
 
   // p5.js マウスリリース
@@ -328,6 +329,7 @@ export class GraphEditor {
     progress: number[],
     originalCurves: p5.Vector[][],
     effectiveCurves: p5.Vector[][],
+    sync: boolean,
   ): void {
     if (!this.activePath) return;
     const keyframes = this.activePath.keyframes;
@@ -374,6 +376,38 @@ export class GraphEditor {
         (clampedX - 1) * dt,
         (normY - 1) * dv,
       );
+    }
+
+    // 対向ハンドルの同期処理
+    if (sync) {
+      const draggedType = selection.type;
+      const keyframe = draggedType === 'GRAPH_OUT' ? start : end;
+      this.mirrorOppositeGraphHandle(keyframe, draggedType);
+    }
+  }
+
+  // 対向ハンドルのミラーリング
+  private mirrorOppositeGraphHandle(
+    keyframe: Keyframe,
+    type: 'GRAPH_OUT' | 'GRAPH_IN',
+  ): void {
+    const current = type === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;
+    if (!current) return;
+
+    if (type === 'GRAPH_OUT') {
+      if (keyframe.graphIn) {
+        const mag = keyframe.graphIn.mag();
+        if (current.magSq() > 0) {
+          keyframe.graphIn = current.copy().normalize().mult(-mag);
+        }
+      }
+    } else {
+      if (keyframe.graphOut) {
+        const mag = keyframe.graphOut.mag();
+        if (current.magSq() > 0) {
+          keyframe.graphOut = current.copy().normalize().mult(-mag);
+        }
+      }
     }
   }
 }

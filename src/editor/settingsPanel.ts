@@ -111,7 +111,7 @@ export class SettingsPanel {
 
   // 全設定をUIに同期
   private syncAllSettings(): void {
-    // Tolerance (Sketch)
+    // Tolerance
     this.dom.settingsSketchTolerance.value = String(
       this.config.sketchFitTolerance,
     );
