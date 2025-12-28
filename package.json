@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/p5": "^1.7.7",
+    "@vitejs/plugin-react": "^5.0.2",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
@@ -33,6 +34,8 @@
     "lucide": "^0.555.0",
     "openai": "^6.9.0",
     "p5": "^2.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^4.1.17",
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.24.6"
