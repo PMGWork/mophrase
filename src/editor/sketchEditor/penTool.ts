@@ -1,13 +1,19 @@
 import type p5 from 'p5';
-import { fitCurve } from '../../core/fitting';
+import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
 import { drawPoints } from '../../utils/draw';
 import { isInRect } from '../../utils/p5Helpers';
 import type { ToolContext } from './types';
 
+type DraftPath = {
+  points: Path['keyframes'][number]['position'][];
+  timestamps: number[];
+  fitError: { current: { maxError: number; index: number } };
+};
+
 // ペンツール
 export class PenTool {
-  private draftPath: Path | null = null;
+  private draftPath: DraftPath | null = null;
 
   // #region メイン関数
 
@@ -15,22 +21,13 @@ export class PenTool {
   mousePressed(p: p5, ctx: ToolContext): void {
     // 新しいパスを開始
     this.draftPath = {
-      id: crypto.randomUUID(),
-      sketch: {
-        points: [p.createVector(p.mouseX, p.mouseY)],
-        curves: [],
-        fitError: {
-          current: {
-            maxError: Number.MAX_VALUE,
-            index: -1,
-          },
+      points: [p.createVector(p.mouseX, p.mouseY)],
+      timestamps: [p.millis()],
+      fitError: {
+        current: {
+          maxError: Number.MAX_VALUE,
+          index: -1,
         },
-      },
-      motion: {
-        timestamps: [p.millis()],
-        timing: [],
-        startTime: 0,
-        duration: 0,
       },
     };
 
@@ -44,17 +41,17 @@ export class PenTool {
       this.draftPath &&
       isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)
     ) {
-      this.draftPath.sketch.points.push(p.createVector(p.mouseX, p.mouseY));
-      this.draftPath.motion.timestamps.push(p.millis());
+      this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
+      this.draftPath.timestamps.push(p.millis());
     }
   }
 
   // マウスリリース
-  mouseReleased(p: p5, ctx: ToolContext): void {
+  mouseReleased(ctx: ToolContext): void {
     if (!this.draftPath) return;
 
-    if (this.draftPath.sketch.points.length >= 2) {
-      this.finalizePath(p, ctx);
+    if (this.draftPath.points.length >= 2) {
+      this.finalizePath(ctx);
     }
 
     // 描画中のパスをリセット
@@ -67,7 +64,7 @@ export class PenTool {
 
     drawPoints(
       p,
-      this.draftPath.sketch.points,
+      this.draftPath.points,
       ctx.config.lineWeight,
       ctx.config.pointSize - ctx.config.lineWeight,
       ctx.colors.curve,
@@ -78,35 +75,34 @@ export class PenTool {
   // #region プライベート関数
 
   // パスを確定
-  private finalizePath(p: p5, ctx: ToolContext): void {
+  private finalizePath(ctx: ToolContext): void {
     if (!this.draftPath) return;
 
-    // フィッティングを実行
-    fitCurve(
-      this.draftPath.sketch.points,
-      this.draftPath.sketch.curves,
+    const keyframes = generateKeyframes(
+      this.draftPath.points,
+      this.draftPath.timestamps,
       ctx.config.sketchFitTolerance,
       ctx.config.sketchFitTolerance * ctx.config.coarseErrorWeight,
-      this.draftPath.sketch.fitError,
+      this.draftPath.fitError,
     );
 
-    // モーションのタイミングをフィッティング
-    const normalizedTol = ctx.config.graphFitTolerance / 100;
-    ctx.motionManager?.fitTiming(this.draftPath, p, normalizedTol);
+    if (keyframes.length < 2) return;
 
-    // 持続時間を計算 (ミリ秒 -> 秒)
-    const timestamps = this.draftPath.motion.timestamps;
-    if (timestamps.length > 0) {
-      const durationMs = timestamps[timestamps.length - 1] - timestamps[0];
-      this.draftPath.motion.duration = durationMs / 1000;
-    }
+    const timestamps = this.draftPath.timestamps;
+    const durationMs =
+      timestamps[timestamps.length - 1] - timestamps[0];
+    const duration = Math.max(0.01, Math.round(durationMs) / 1000);
 
-    // 確定済みパスに追加
-    ctx.addPath(this.draftPath);
-    ctx.setActivePath(this.draftPath);
+    const path: Path = {
+      id: crypto.randomUUID(),
+      keyframes,
+      startTime: 0,
+      duration,
+    };
 
-    // グラフエディタにも反映
-    ctx.onPathCreated(this.draftPath);
-    ctx.onPathSelected(this.draftPath);
+    ctx.addPath(path);
+    ctx.setActivePath(path);
+    ctx.onPathCreated(path);
+    ctx.onPathSelected(path);
   }
 }

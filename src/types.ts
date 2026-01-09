@@ -2,11 +2,17 @@
 import type p5 from 'p5';
 import { z } from 'zod';
 
-// #region 基本スキーマ定義
+// #region 1. 基本/汎用型
+
 // p5.jsベクトル
 export type Vector = p5.Vector;
 
-// マーキー選択用の矩形
+// #region 2. エディタ関連
+
+// 編集ツール
+export type EditorTool = 'select' | 'pen';
+
+// 範囲選択用の矩形
 export interface MarqueeRect {
   startX: number;
   startY: number;
@@ -14,63 +20,81 @@ export interface MarqueeRect {
   endY: number;
 }
 
-// 選択範囲（制御点のインデックス範囲）
+// 選択範囲
 export interface SelectionRange {
   pathIndex: number;
   startCurveIndex: number;
   endCurveIndex: number;
 }
 
-// LLMプロバイダの種類
-export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
-
-// 編集ツール
-export type EditorTool = 'select' | 'pen';
-
-// モディファイア
-export interface Modifier {
-  id: string;
-  name: string;
-  offsets: ({ dx: number; dy: number } | null)[][];
-  strength: number;
+// ベジエハンドルの選択情報
+export interface HandleSelection {
+  pathIndex: number;
+  keyframeIndex: number;
+  handleType: HandleType;
 }
 
-// スケッチ情報
-export interface Sketch {
-  points: Vector[];
-  curves: Vector[][];
-  fitError: { current: FitErrorResult };
-  modifiers?: Modifier[];
-}
+// ハンドル種別
+export type HandleType = 'ANCHOR' | 'SKETCH_IN' | 'SKETCH_OUT';
 
-// モーション情報
-export interface Motion {
-  timestamps: number[];
-  timing: Vector[][];
-  startTime: number;
-  duration: number;
-  modifiers?: Modifier[];
+// #region 3. コアデータモデル
+
+// キーフレーム
+export interface Keyframe {
+  time: number;
+  position: Vector;
+  sketchIn?: Vector;
+  sketchOut?: Vector;
+  graphIn?: Vector;
+  graphOut?: Vector;
 }
 
 // 描画パス情報
 export interface Path {
   id: string;
-  sketch: Sketch;
-  motion: Motion;
+  keyframes: Keyframe[];
+  duration: number;
+  startTime: number;
+  sketchModifiers?: SketchModifier[];
+  graphModifiers?: GraphModifier[];
 }
 
-// シリアライズされたハンドル情報（正規化済み）
-export interface SerializedHandlePoint {
+// オフセット配列の型
+type OffsetArray = ({ dx: number; dy: number } | null)[][];
+
+// スケッチ（空間曲線）用モディファイア
+export interface SketchModifier {
+  id: string;
+  name: string;
+  offsets: OffsetArray;
+  strength: number;
+}
+
+// グラフ（タイミング曲線）用モディファイア
+export interface GraphModifier {
+  id: string;
+  name: string;
+  offsets: OffsetArray;
+  strength: number;
+}
+
+// #region 4. シリアライズ（LLM通信用）
+
+// シリアライズされたハンドル（スケッチ・グラフ共通・極座標）
+export interface SerializedHandle {
   angle: number;
   dist: number;
 }
 
-// シリアライズされたアンカーポイント（正規化済み）
-export interface SerializedAnchorPoint {
+// シリアライズされたキーフレーム（正規化済み）
+export interface SerializedKeyframe {
   x: number;
   y: number;
-  in?: SerializedHandlePoint | null;
-  out?: SerializedHandlePoint | null;
+  time?: number;
+  sketchIn?: SerializedHandle | null;
+  sketchOut?: SerializedHandle | null;
+  graphIn?: SerializedHandle | null;
+  graphOut?: SerializedHandle | null;
 }
 
 // シリアライズされたパスのバウンディングボックス
@@ -81,18 +105,28 @@ export interface SerializedBoundingBox {
   height: number;
 }
 
-// シリアライズされたセグメント
-export interface SerializedSegment {
-  startIndex: number;
-  endIndex: number;
-}
-
 // シリアライズされたパス情報
 export interface SerializedPath {
-  anchors: SerializedAnchorPoint[];
-  segments: SerializedSegment[];
+  keyframes: SerializedKeyframe[];
   bbox: SerializedBoundingBox;
 }
+
+// #region 5. 提案/LLM関連
+
+// LLMプロバイダの種類
+export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
+
+// 提案情報
+export interface Suggestion {
+  id: string;
+  title: string;
+  path: SerializedPath;
+}
+
+// 提案の状態
+export type SuggestionState = 'idle' | 'generating' | 'error' | 'input';
+
+// #region 6. フィッティング関連
 
 // フィッティングエラーの結果
 export interface FitErrorResult {
@@ -100,55 +134,29 @@ export interface FitErrorResult {
   index: number;
 }
 
-// 範囲情報
-export interface Range {
-  start: number;
-  end: number;
-}
+// #region 7. Zodスキーマ定義
 
-// 接ベクトル情報
-export interface Tangents {
-  start: Vector;
-  end: Vector;
-}
-
-// ベジエハンドルの選択情報
-export interface HandleSelection {
-  pathIndex: number;
-  curveIndex: number;
-  pointIndex: number;
-}
-
-// 提案情報
-export interface Suggestion {
-  id: string;
-  title: string;
-  type: 'sketch' | 'graph';
-  path: SerializedPath;
-}
-
-// 提案の状態
-export type SuggestionState = 'idle' | 'generating' | 'error' | 'input';
-
-// #region Zodスキーマ定義
-// 制御点スキーマ
-const handlePointSchema = z.object({
+// ハンドルスキーマ
+const handleSchema = z.object({
   angle: z.number(),
   dist: z.number(),
 });
 
-// アンカーポイントスキーマ
-const anchorPointSchema = z.object({
+// キーフレームスキーマ
+const keyframeSchema = z.object({
   x: z.number(),
   y: z.number(),
-  in: handlePointSchema.nullable().optional(),
-  out: handlePointSchema.nullable().optional(),
+  time: z.number(),
+  sketchIn: handleSchema.nullable(),
+  sketchOut: handleSchema.nullable(),
+  graphIn: handleSchema.nullable(),
+  graphOut: handleSchema.nullable(),
 });
 
 // 提案アイテム
 const suggestionItemSchema = z.object({
   title: z.string(),
-  anchors: z.array(anchorPointSchema),
+  keyframes: z.array(keyframeSchema),
 });
 
 // 提案レスポンス

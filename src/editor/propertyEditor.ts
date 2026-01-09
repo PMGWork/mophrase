@@ -1,15 +1,26 @@
 import type { DomRefs } from '../dom';
-import type { Modifier, Path } from '../types';
-import { removeModifier, updateModifierStrength } from '../utils/modifier';
+import type { GraphModifier, Path, SketchModifier } from '../types';
+import {
+  removeSketchModifier,
+  removeGraphModifier,
+  updateSketchModifierStrength,
+  updateGraphModifierStrength,
+} from '../utils/modifier';
 import { createIcons, icons } from 'lucide';
+
+type PropertyEditorOptions = {
+  onModifierChange?: () => void;
+};
 
 // プロパティエディタ
 export class PropertyEditor {
   private dom: DomRefs;
   private activePath: Path | null = null;
+  private onModifierChange?: () => void;
 
-  constructor(dom: DomRefs) {
+  constructor(dom: DomRefs, options: PropertyEditorOptions = {}) {
     this.dom = dom;
+    this.onModifierChange = options.onModifierChange;
 
     // StartTimeの更新イベント
     this.dom.startTimeInput.addEventListener('change', () =>
@@ -26,7 +37,7 @@ export class PropertyEditor {
   public setPath(path: Path | null): void {
     this.activePath = path;
 
-    if (!path || !path.motion.timing.length) {
+    if (!path || path.keyframes.length < 2) {
       // プレースホルダーを表示、コンテンツを非表示
       this.dom.propertyPlaceholder.style.display = 'flex';
       this.dom.propertyEditorContent.style.display = 'none';
@@ -38,12 +49,12 @@ export class PropertyEditor {
     this.dom.propertyEditorContent.style.display = 'flex';
 
     // StartTimeを表示（秒単位）
-    const rawStartTime = path.motion.startTime ?? 0;
+    const rawStartTime = path.startTime ?? 0;
     const startTime = Number.isFinite(rawStartTime) ? rawStartTime : 0;
     this.dom.startTimeInput.value = String(startTime);
 
     // Durationを表示 (秒単位)
-    this.dom.durationInput.value = String(path.motion.duration);
+    this.dom.durationInput.value = String(path.duration);
 
     // モディファイアパネルを更新
     this.updateModifierPanel();
@@ -54,7 +65,7 @@ export class PropertyEditor {
     if (!this.activePath) return;
     const newStartTime = Number(this.dom.startTimeInput.value);
     if (Number.isFinite(newStartTime) && newStartTime >= 0) {
-      this.activePath.motion.startTime = newStartTime;
+      this.activePath.startTime = newStartTime;
     }
   }
 
@@ -65,7 +76,7 @@ export class PropertyEditor {
     const newDurationSec = Number(this.dom.durationInput.value);
     if (!Number.isFinite(newDurationSec) || newDurationSec <= 0) return;
 
-    this.activePath.motion.duration = newDurationSec;
+    this.activePath.duration = newDurationSec;
   }
 
   private refreshLucideIcons(): void {
@@ -74,19 +85,43 @@ export class PropertyEditor {
 
   // モディファイアパネルの更新
   private updateModifierPanel(): void {
-    this.dom.modifierList.innerHTML = '';
+    // Sketch セクションをクリア
+    this.dom.sketchModifierList.innerHTML = '';
+    // Graph セクションをクリア
+    this.dom.graphModifierList.innerHTML = '';
 
-    if (this.activePath?.sketch.modifiers?.length) {
-      for (const modifier of this.activePath.sketch.modifiers) {
-        const item = this.createModifierItem(modifier);
-        this.dom.modifierList.appendChild(item);
+    const hasSketchModifiers = (this.activePath?.sketchModifiers?.length ?? 0) > 0;
+    const hasGraphModifiers = (this.activePath?.graphModifiers?.length ?? 0) > 0;
+
+    // Sketch セクションの表示/非表示
+    this.dom.sketchModifierSection.style.display = hasSketchModifiers ? 'flex' : 'none';
+    if (hasSketchModifiers) {
+      for (const modifier of this.activePath!.sketchModifiers!) {
+        const item = this.createModifierItem(modifier, 'sketch');
+        this.dom.sketchModifierList.appendChild(item);
       }
+    }
+
+    // Graph セクションの表示/非表示
+    this.dom.graphModifierSection.style.display = hasGraphModifiers ? 'flex' : 'none';
+    if (hasGraphModifiers) {
+      for (const modifier of this.activePath!.graphModifiers!) {
+        const item = this.createModifierItem(modifier, 'graph');
+        this.dom.graphModifierList.appendChild(item);
+      }
+    }
+
+    if (hasSketchModifiers || hasGraphModifiers) {
       this.refreshLucideIcons();
     }
   }
 
+
   // モディファイア項目の作成
-  private createModifierItem(modifier: Modifier): HTMLDivElement {
+  private createModifierItem(
+    modifier: SketchModifier | GraphModifier,
+    type: 'sketch' | 'graph',
+  ): HTMLDivElement {
     const container = document.createElement('div');
     container.className = 'flex items-center gap-2';
 
@@ -127,13 +162,22 @@ export class PropertyEditor {
 
     slider.addEventListener('input', () => {
       const strength = Number(slider.value) / 100;
-      updateModifierStrength(
-        this.activePath?.sketch.modifiers,
-        modifier.id,
-        strength,
-      );
+      if (type === 'sketch') {
+        updateSketchModifierStrength(
+          this.activePath?.sketchModifiers,
+          modifier.id,
+          strength,
+        );
+      } else {
+        updateGraphModifierStrength(
+          this.activePath?.graphModifiers,
+          modifier.id,
+          strength,
+        );
+      }
       valueLabel.textContent = `${slider.value}%`;
       indicator.style.width = `${Number(slider.value) / 2}%`;
+      this.onModifierChange?.();
     });
 
     control.appendChild(slider);
@@ -145,11 +189,19 @@ export class PropertyEditor {
     deleteButton.innerHTML = '<i data-lucide="minus" class="h-4 w-4"></i>';
     deleteButton.addEventListener('click', () => {
       if (!this.activePath) return;
-      this.activePath.sketch.modifiers = removeModifier(
-        this.activePath.sketch.modifiers,
-        modifier.id,
-      );
+      if (type === 'sketch') {
+        this.activePath.sketchModifiers = removeSketchModifier(
+          this.activePath.sketchModifiers,
+          modifier.id,
+        );
+      } else {
+        this.activePath.graphModifiers = removeGraphModifier(
+          this.activePath.graphModifiers,
+          modifier.id,
+        );
+      }
       this.updateModifierPanel();
+      this.onModifierChange?.();
     });
 
     container.appendChild(control);

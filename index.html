@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/style.css" />
@@ -40,26 +40,14 @@
 
           <div class="mx-2 h-6 w-px bg-gray-800"></div>
 
-          <!-- アクションボタン -->
-          <button
-            id="playButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-blue-900/50 px-4 py-2 text-sm text-blue-50 transition-colors hover:bg-blue-900"
-          >
-            <i data-lucide="play" class="h-4 w-4"></i>
-            <span>Play</span>
-          </button>
-
+          <!-- サイドバートグル -->
           <button
             id="settingsButton"
-            class="corner-md flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-4 py-2 text-sm text-gray-50 transition-colors hover:bg-gray-700"
+            title="Settings"
+            class="corner-md flex h-9 w-9 cursor-pointer items-center justify-center bg-gray-800 text-gray-50 transition-colors hover:bg-gray-700"
           >
             <i data-lucide="settings" class="h-4 w-4"></i>
-            <span>Settings</span>
           </button>
-
-          <div class="mx-2 h-6 w-px bg-gray-800"></div>
-
-          <!-- サイドバートグル -->
           <button
             id="editMotionButton"
             title="Toggle Sidebar"
@@ -72,23 +60,138 @@
 
       <!-- メインコンテンツ -->
       <div class="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
-        <!-- スケッチキャンバス -->
-        <main
-          id="canvasContainer"
-          class="corner-xl relative min-w-0 flex-1 overflow-hidden border border-gray-800"
-        >
-          <!-- p5.jsキャンバスがここに挿入される -->
-        </main>
+        <!-- スケッチキャンバス + 再生バー -->
+        <div class="flex min-w-0 flex-1 flex-col gap-2.5">
+          <main
+            id="canvasContainer"
+            class="corner-xl relative min-h-0 min-w-0 flex-1 overflow-hidden border border-gray-800"
+          >
+            <!-- p5.jsキャンバスがここに挿入される -->
+
+            <!-- ショートカットキーのヒント -->
+            <div
+              class="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-[10px] text-gray-500"
+            >
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >V</kbd
+                >
+                Select</span
+              >
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >G</kbd
+                >
+                Pen</span
+              >
+              <span id="hint-delete-shortcut"
+                ><kbd
+                  id="hint-delete-key"
+                  class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >Alt+X</kbd
+                >
+                Delete</span
+              >
+              <span
+                ><kbd class="rounded bg-gray-800 px-1.5 py-0.5 text-gray-400"
+                  >Space</kbd
+                >
+                Play</span
+              >
+            </div>
+          </main>
+
+          <section
+            id="playbackBar"
+            class="corner-lg flex items-center gap-3 border border-gray-800 bg-gray-950/80 p-2.5"
+          >
+            <div class="flex items-center gap-1">
+              <button
+                id="playbackResetButton"
+                class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+                title="First Frame"
+              >
+                <i data-lucide="skip-back" class="h-3.5 w-3.5"></i>
+              </button>
+              <button
+                id="playbackPlayButton"
+                class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+                title="Play"
+              >
+                <i data-lucide="play" class="h-3.5 w-3.5"></i>
+              </button>
+              <button
+                id="playbackEndButton"
+                class="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-50"
+                title="Last Frame"
+              >
+                <i data-lucide="skip-forward" class="h-3.5 w-3.5"></i>
+              </button>
+            </div>
+            <div id="playbackTrack" class="relative flex-1">
+              <div class="relative h-1">
+                <div class="absolute inset-0 rounded-full bg-gray-800"></div>
+                <div
+                  id="playbackPlayhead"
+                  class="absolute top-1/2 left-0 h-2.5 w-0.5 -translate-y-1/2 rounded-full bg-gray-400"
+                ></div>
+              </div>
+            </div>
+            <span
+              id="playbackTime"
+              class="flex shrink-0 items-center gap-0.5 font-mono text-xs text-gray-500"
+            >
+              <span id="playbackTimeCurrent">00:00</span>
+              <span class="text-gray-700">/</span>
+              <span id="playbackTimeTotal">00:00</span>
+            </span>
+          </section>
+        </div>
 
         <!-- サイドバー -->
         <aside
           id="sidebarContainer"
-          class="flex w-80 flex-col gap-2.5 overflow-hidden transition-all duration-300"
+          class="flex h-full w-80 flex-col gap-2.5 overflow-hidden transition-all duration-300"
         >
+          <div
+            id="graphEditorContainer"
+            class="corner-xl flex flex-none flex-col overflow-hidden border border-gray-800 bg-gray-950"
+          >
+            <!-- ヘッダー -->
+            <div
+              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2.5"
+            >
+              <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
+            </div>
+
+            <!-- プレースホルダー（パス未選択時） -->
+            <div
+              id="graphPlaceholder"
+              class="flex aspect-square w-full items-center justify-center text-sm text-gray-500"
+            >
+              Select a path to edit
+            </div>
+
+            <!-- コンテンツ（パス選択時） -->
+            <div
+              id="graphEditorContent"
+              class="flex aspect-square w-full"
+              style="display: none"
+            >
+              <!-- キャンバス -->
+              <div
+                id="graphEditorCanvas"
+                class="relative h-full w-full border-gray-800"
+              >
+                <!-- ここにモーションエディタのキャンバスが挿入される -->
+              </div>
+            </div>
+          </div>
+
           <!-- Property Editor -->
           <div
             id="propertyEditorContainer"
-            class="corner-xl flex flex-1 flex-col overflow-y-auto border border-gray-800 bg-gray-950"
+            class="corner-xl flex min-h-0 flex-1 flex-col overflow-y-auto border border-gray-800 bg-gray-950"
           >
             <!-- ヘッダー -->
             <div
@@ -100,7 +203,7 @@
             <!-- プレースホルダー（パス未選択時） -->
             <div
               id="propertyPlaceholder"
-              class="flex flex-1 items-center justify-center text-sm text-gray-500"
+              class="flex h-full items-center justify-center text-sm text-gray-500"
             >
               Select a path to edit
             </div>
@@ -159,81 +262,35 @@
                 </div>
               </div>
 
-              <!-- Modifier セクション -->
+              <!-- Sketch セクション -->
               <div
-                id="modifierSection"
-                class="flex flex-col gap-2 border-y border-gray-800 p-3"
+                id="sketchModifierSection"
+                class="flex flex-col gap-2 border-t border-gray-800 p-3"
               >
                 <!-- ヘッダー -->
-                <span class="text-xs font-medium text-gray-400">Modifier</span>
+                <span class="text-xs font-medium text-gray-400">Sketch</span>
                 <!-- リスト -->
                 <div
-                  id="modifierList"
-                  class="flex flex-col gap-2 overflow-y-auto empty:hidden"
+                  id="sketchModifierList"
+                  class="flex flex-col gap-1 overflow-y-auto"
                 >
-                  <!-- ここにモディファイアが挿入される -->
+                  <!-- ここに Sketch Modifier が挿入される -->
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Graph Editor -->
-          <div
-            id="graphEditorContainer"
-            class="corner-xl flex flex-2 flex-col overflow-hidden border border-gray-800 bg-gray-950"
-          >
-            <!-- ヘッダー -->
-            <div
-              class="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2.5"
-            >
-              <h2 class="text-sm font-medium text-gray-200">Graph Editor</h2>
-            </div>
-
-            <!-- プレースホルダー（パス未選択時） -->
-            <div
-              id="graphPlaceholder"
-              class="flex flex-1 items-center justify-center text-sm text-gray-500"
-            >
-              Select a path to edit
-            </div>
-
-            <!-- コンテンツ（パス選択時） -->
-            <div
-              id="graphEditorContent"
-              class="flex flex-1 flex-col"
-              style="display: none"
-            >
-              <!-- キャンバス -->
+              <!-- Graph セクション -->
               <div
-                id="graphEditorCanvas"
-                class="relative aspect-square w-full border-gray-800"
+                id="graphModifierSection"
+                class="flex flex-col gap-2 border-t border-gray-800 p-3"
               >
-                <!-- ここにモーションエディタのキャンバスが挿入される -->
-              </div>
-
-              <!-- 提案機能 -->
-              <div class="flex flex-wrap gap-4 p-4">
+                <!-- ヘッダー -->
+                <span class="text-xs font-medium text-gray-400">Graph</span>
+                <!-- リスト -->
                 <div
-                  class="graphSuggestionContainer corner-lg w-full min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+                  id="graphModifierList"
+                  class="flex flex-col gap-1 overflow-y-auto"
                 >
-                  <form id="graphPromptForm" class="flex items-center">
-                    <input
-                      id="graphPromptInput"
-                      type="text"
-                      placeholder="Enter instructions..."
-                      autocomplete="off"
-                      class="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
-                    />
-                    <button type="submit" class="cursor-pointer p-3">
-                      <i data-lucide="send" class="h-3.5 w-3.5"></i>
-                    </button>
-                  </form>
-                  <div
-                    id="graphSuggestionList"
-                    class="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
-                  >
-                    <!-- ここに提案が挿入される -->
-                  </div>
+                  <!-- ここに Graph Modifier が挿入される -->
                 </div>
               </div>
             </div>
@@ -284,117 +341,78 @@
         <div
           class="flex items-center justify-between border-b border-gray-800 px-5 py-4"
         >
-          <h2 class="text-lg font-medium text-gray-50">Settings</h2>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="settings" class="h-5 w-5 text-gray-400"></i>
+            <h2 class="text-lg font-medium text-gray-50">Settings</h2>
+          </div>
           <button
             id="closeSettingsButton"
-            class="corner-md p-1 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+            class="corner-md cursor-pointer p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
           >
             <i data-lucide="x" class="h-5 w-5"></i>
           </button>
         </div>
 
         <!-- コンテンツ -->
-        <div class="flex flex-col gap-5 p-5">
-          <!-- LLM Model -->
-          <div class="flex flex-col gap-2">
-            <label for="settingsLlmModelSelect" class="text-sm text-gray-400"
-              >LLM Model</label
-            >
-            <div class="relative">
-              <select
-                id="settingsLlmModelSelect"
-                class="corner-md h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-50 transition-colors hover:bg-gray-700 focus:ring-1 focus:ring-gray-700 focus:outline-none"
-              ></select>
-              <i
-                data-lucide="chevron-down"
-                class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400"
-              ></i>
+        <div class="flex flex-col divide-y divide-gray-800">
+          <!-- AI セクション -->
+          <div class="flex flex-col gap-3 p-5">
+            <div class="flex items-center gap-2">
+              <span
+                class="text-xs font-medium tracking-wider text-gray-500 uppercase"
+                >AI</span
+              >
+            </div>
+            <!-- LLM Model -->
+            <div class="flex flex-col gap-2">
+              <label for="settingsLlmModelSelect" class="text-sm text-gray-400"
+                >LLM Model</label
+              >
+              <div class="relative">
+                <select
+                  id="settingsLlmModelSelect"
+                  class="corner-md h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-50 transition-colors hover:bg-gray-700 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                ></select>
+                <i
+                  data-lucide="chevron-down"
+                  class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+                ></i>
+              </div>
             </div>
           </div>
 
-          <!-- Visible Raw Sketch -->
-          <div class="flex items-center justify-between">
-            <label for="settingsVisibleRawSketch" class="text-sm text-gray-400"
-              >Visible Raw Sketch</label
-            >
-            <div class="relative h-5 w-5">
+          <!-- Sketch セクション -->
+          <div class="flex flex-col gap-3 p-5">
+            <div class="flex items-center gap-2">
+              <span
+                class="text-xs font-medium tracking-wider text-gray-500 uppercase"
+                >Sketch</span
+              >
+            </div>
+            <!-- Tolerance -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label
+                  for="settingsSketchTolerance"
+                  class="text-sm text-gray-400"
+                  >Tolerance</label
+                >
+                <span
+                  id="settingsSketchToleranceLabel"
+                  class="rounded bg-gray-800 px-2 py-0.5 font-mono text-xs text-gray-50"
+                  >20px</span
+                >
+              </div>
               <input
-                id="settingsVisibleRawSketch"
-                type="checkbox"
-                class="peer corner-sm h-5 w-5 cursor-pointer appearance-none border-0 bg-gray-700 transition-colors checked:bg-gray-50"
+                id="settingsSketchTolerance"
+                type="range"
+                min="5"
+                max="50"
+                step="1"
+                value="20"
+                class="corner-md h-1.5 w-full cursor-pointer appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
               />
-              <i
-                data-lucide="check"
-                class="pointer-events-none absolute inset-0 h-5 w-5 text-gray-950 opacity-0 transition-opacity peer-checked:opacity-100"
-              ></i>
             </div>
-          </div>
-
-          <!-- Tolerance (Sketch) -->
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label for="settingsSketchTolerance" class="text-sm text-gray-400"
-                >Tolerance (Sketch)</label
-              >
-              <span
-                id="settingsSketchToleranceLabel"
-                class="text-sm text-gray-50"
-                >20px</span
-              >
-            </div>
-            <input
-              id="settingsSketchTolerance"
-              type="range"
-              min="5"
-              max="50"
-              step="1"
-              value="20"
-              class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
-            />
-          </div>
-
-          <!-- Tolerance (Graph) -->
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label for="settingsGraphTolerance" class="text-sm text-gray-400"
-                >Tolerance (Graph)</label
-              >
-              <span
-                id="settingsGraphToleranceLabel"
-                class="text-sm text-gray-50"
-                >5%</span
-              >
-            </div>
-            <input
-              id="settingsGraphTolerance"
-              type="range"
-              min="1"
-              max="20"
-              step="1"
-              value="5"
-              class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
-            />
-          </div>
-
-          <!-- Object Size -->
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <label for="settingsObjectSize" class="text-sm text-gray-400"
-                >Object Size</label
-              >
-              <span id="settingsObjectSizeLabel" class="text-sm text-gray-50"
-                >20px</span
-              >
-            </div>
-            <input
-              id="settingsObjectSize"
-              type="range"
-              min="5"
-              max="100"
-              step="1"
-              value="20"
-              class="corner-md h-1 w-full cursor-grab appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
-            />
           </div>
         </div>
       </div>

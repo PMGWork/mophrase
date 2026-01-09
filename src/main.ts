@@ -15,13 +15,30 @@ const main = (): void => {
 
   // DOMマネージャー
   const dom = new DomRefs();
+  const playbackPlayButton = document.getElementById(
+    'playbackPlayButton',
+  ) as HTMLButtonElement | null;
+  const playbackResetButton = document.getElementById(
+    'playbackResetButton',
+  ) as HTMLButtonElement | null;
+  const playbackEndButton = document.getElementById(
+    'playbackEndButton',
+  ) as HTMLButtonElement | null;
+  const playbackPlayhead = document.getElementById(
+    'playbackPlayhead',
+  ) as HTMLDivElement | null;
+  const playbackTrack = document.getElementById(
+    'playbackTrack',
+  ) as HTMLDivElement | null;
+
+  const playbackTimeCurrent = document.getElementById('playbackTimeCurrent');
+  const playbackTimeTotal = document.getElementById('playbackTimeTotal');
 
   // 設定パネル
   new SettingsPanel(dom, config);
 
   // エディタ
   const graphEditor = new GraphEditor(dom, config, colors);
-  const propertyEditor = new PropertyEditor(dom);
   const sketchEditor = new SketchEditor(
     dom,
     config,
@@ -29,19 +46,100 @@ const main = (): void => {
     (path) => {
       // パス作成時
       graphEditor.setPath(path);
+      updatePlaybackAvailability();
+      sketchEditor.refreshPlaybackTimeline();
     },
     (path) => {
       // パス選択時（作成時も呼ばれる）
       graphEditor.setPath(path);
       propertyEditor.setPath(path);
+      updatePlaybackAvailability();
+      sketchEditor.refreshPlaybackTimeline();
     },
+  );
+  const propertyEditor = new PropertyEditor(dom, {
+    onModifierChange: () => sketchEditor.updateSuggestionUI(),
+  });
+
+  // GraphEditor と SketchSuggestionManager を連携
+  graphEditor.setPreviewProvider((p) =>
+    sketchEditor.getSuggestionManager().getPreviewGraphCurves(p),
   );
 
   // #region セットアップ
   // UIのセットアップ
   const setupUI = (): void => {
     // ボタンのイベントを登録
-    dom.playButton.addEventListener('click', () => sketchEditor.playMotion());
+    if (playbackPlayButton) {
+      playbackPlayButton.addEventListener('click', () => {
+        togglePlayback();
+      });
+    }
+    if (playbackResetButton) {
+      playbackResetButton.addEventListener('click', () => {
+        if (!sketchEditor.hasPaths()) return;
+        sketchEditor.resetPlayback();
+        updatePlaybackButtonUI(false);
+      });
+    }
+    if (playbackEndButton) {
+      playbackEndButton.addEventListener('click', () => {
+        if (!sketchEditor.hasPaths()) return;
+        sketchEditor.goToLastFrame();
+        updatePlaybackButtonUI(false);
+      });
+    }
+
+    if (playbackTrack) {
+      let seekingPointerId: number | null = null;
+
+      const updateByClientX = (clientX: number): void => {
+        if (!playbackTrack || !sketchEditor.hasPaths()) return;
+        const rect = playbackTrack.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const progress = (clientX - rect.left) / rect.width;
+        sketchEditor.seekPlayback(progress);
+      };
+
+      playbackTrack.addEventListener('pointerdown', (event) => {
+        if (!sketchEditor.hasPaths()) return;
+        seekingPointerId = event.pointerId;
+        playbackTrack.setPointerCapture(event.pointerId);
+        updateByClientX(event.clientX);
+      });
+
+      playbackTrack.addEventListener('pointermove', (event) => {
+        if (seekingPointerId !== event.pointerId) return;
+        updateByClientX(event.clientX);
+      });
+
+      const endSeek = (event: PointerEvent): void => {
+        if (seekingPointerId !== event.pointerId) return;
+        if (playbackTrack.hasPointerCapture(event.pointerId)) {
+          playbackTrack.releasePointerCapture(event.pointerId);
+        }
+        seekingPointerId = null;
+      };
+
+      playbackTrack.addEventListener('pointerup', endSeek);
+      playbackTrack.addEventListener('pointercancel', endSeek);
+    }
+
+    // スペースキーで再生/停止をトグル
+    window.addEventListener('keydown', (e) => {
+      // 入力欄にフォーカス中は無視
+      if (
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayback();
+      }
+    });
 
     // サイドバー開閉ボタン
     dom.editMotionButton.addEventListener('click', () => {
@@ -55,6 +153,18 @@ const main = (): void => {
 
     // プロンプト入力欄のセットアップ
     setupUserPromptInput();
+
+    // OS判定してDeleteキーのヒントを更新
+    const userAgentData = (
+      navigator as Navigator & { userAgentData?: { platform: string } }
+    ).userAgentData;
+    const platform = userAgentData?.platform || navigator.userAgent;
+    const isMac = /Mac|iPod|iPhone|iPad/i.test(platform);
+
+    const deleteKeyLabel = document.getElementById('hint-delete-key');
+    if (deleteKeyLabel) {
+      deleteKeyLabel.textContent = isMac ? 'Opt+X' : 'Alt+X';
+    }
   };
 
   // サイドバーの開閉
@@ -79,6 +189,114 @@ const main = (): void => {
     el.classList.toggle('hover:bg-gray-700', !isVisible);
   }
 
+  function updatePlaybackButtonUI(isPlaying: boolean): void {
+    if (!playbackPlayButton) return;
+
+    const existingIcon = playbackPlayButton.querySelector('svg, i');
+    if (existingIcon) existingIcon.remove();
+
+    const newIcon = document.createElement('i');
+    newIcon.className = 'h-3.5 w-3.5';
+    newIcon.setAttribute('data-lucide', isPlaying ? 'square' : 'play');
+    playbackPlayButton.insertBefore(newIcon, playbackPlayButton.firstChild);
+
+    playbackPlayButton.title = isPlaying ? 'Stop' : 'Play';
+
+    createIcons({ icons });
+  }
+
+  function updatePlaybackAvailability(): void {
+    if (!playbackPlayButton) return;
+    const hasPaths = sketchEditor.hasPaths();
+    playbackPlayButton.disabled = !hasPaths;
+    playbackPlayButton.classList.toggle('opacity-40', !hasPaths);
+    playbackPlayButton.classList.toggle('cursor-pointer', hasPaths);
+    playbackPlayButton.classList.toggle('cursor-not-allowed', !hasPaths);
+    playbackPlayButton.classList.toggle('hover:bg-gray-700', hasPaths);
+    playbackPlayButton.classList.toggle('hover:text-gray-50', hasPaths);
+    if (hasPaths) {
+      playbackPlayButton.title = sketchEditor.getPlaybackInfo().isPlaying
+        ? 'Stop'
+        : 'Play';
+    } else {
+      playbackPlayButton.title = 'No objects to play';
+    }
+
+    if (playbackResetButton) {
+      playbackResetButton.disabled = !hasPaths;
+      playbackResetButton.classList.toggle('opacity-40', !hasPaths);
+      playbackResetButton.classList.toggle('cursor-pointer', hasPaths);
+      playbackResetButton.classList.toggle('cursor-not-allowed', !hasPaths);
+      playbackResetButton.classList.toggle('hover:bg-gray-700', hasPaths);
+      playbackResetButton.classList.toggle('hover:text-gray-50', hasPaths);
+      playbackResetButton.title = hasPaths
+        ? 'First Frame'
+        : 'No objects to reset';
+    }
+    if (playbackEndButton) {
+      playbackEndButton.disabled = !hasPaths;
+      playbackEndButton.classList.toggle('opacity-40', !hasPaths);
+      playbackEndButton.classList.toggle('cursor-pointer', hasPaths);
+      playbackEndButton.classList.toggle('cursor-not-allowed', !hasPaths);
+      playbackEndButton.classList.toggle('hover:bg-gray-700', hasPaths);
+      playbackEndButton.classList.toggle('hover:text-gray-50', hasPaths);
+      playbackEndButton.title = hasPaths
+        ? 'Last Frame'
+        : 'No objects to seek';
+    }
+
+    if (playbackTrack) {
+      playbackTrack.classList.toggle('cursor-pointer', hasPaths);
+      playbackTrack.classList.toggle('cursor-not-allowed', !hasPaths);
+    }
+  }
+
+  function formatPlaybackTime(ms: number): string {
+    const clampedMs = Math.max(0, ms);
+    const totalSeconds = Math.floor(clampedMs / 1000 + 1e-6);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
+  function startPlaybackUISync(): void {
+    if (!playbackPlayhead) return;
+
+    const playhead = playbackPlayhead;
+    const timeCurrent = playbackTimeCurrent;
+    const timeTotal = playbackTimeTotal;
+
+    const update = (): void => {
+      const { elapsedMs, totalMs } = sketchEditor.getPlaybackInfo();
+      const safeTotal = Math.max(1, totalMs);
+      const progress = Math.min(1, Math.max(0, elapsedMs / safeTotal));
+      const left = `${progress * 100}%`;
+
+      playhead.style.left = left;
+
+      const currentLabel = formatPlaybackTime(elapsedMs);
+      const totalLabel = formatPlaybackTime(totalMs);
+      if (timeCurrent && timeCurrent.textContent !== currentLabel) {
+        timeCurrent.textContent = currentLabel;
+      }
+      if (timeTotal && timeTotal.textContent !== totalLabel) {
+        timeTotal.textContent = totalLabel;
+      }
+
+      requestAnimationFrame(update);
+    };
+
+    requestAnimationFrame(update);
+  }
+
+  function togglePlayback(): void {
+    if (!sketchEditor.hasPaths()) return;
+    const isPlaying = sketchEditor.toggleMotion();
+    updatePlaybackButtonUI(isPlaying);
+  }
+
   // ユーザー指示入力欄のセットアップ
   function setupUserPromptInput(): void {
     dom.sketchPromptForm.addEventListener('submit', (event) => {
@@ -91,6 +309,8 @@ const main = (): void => {
   }
 
   setupUI();
+  startPlaybackUISync();
+  updatePlaybackAvailability();
 
   // 初期状態のUI更新
   updateSidebarButtonUI();

@@ -1,10 +1,11 @@
 import p5 from 'p5';
-import type { Colors, Config } from '../../config';
+import { type Colors, type Config } from '../../config';
+import { OBJECT_COLORS, OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import type { DomRefs } from '../../dom';
-import { SketchSuggestionManager } from '../../suggestion/sketchSuggestion';
-import type { EditorTool, Path } from '../../types';
+import { SuggestionManager } from '../../suggestion/suggestion';
+import type { EditorTool, HandleSelection, Path } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
 import { PenTool } from './penTool';
@@ -16,6 +17,7 @@ export class SketchEditor {
   // データ構造
   private paths: Path[] = [];
   private activePath: Path | null = null;
+  private isPreviewing: boolean = false;
 
   // ツール
   private currentTool: EditorTool = 'pen';
@@ -26,7 +28,7 @@ export class SketchEditor {
   private dom: DomRefs;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
-  private suggestionManager: SketchSuggestionManager;
+  private suggestionManager: SuggestionManager;
 
   // 設定
   private config: Config;
@@ -55,12 +57,10 @@ export class SketchEditor {
     this.selectTool = new SelectTool();
 
     // ハンドルマネージャー
-    this.handleManager = new HandleManager(() =>
-      this.paths.map((p) => p.sketch),
-    );
+    this.handleManager = new HandleManager(() => this.paths);
 
     // 提案マネージャー
-    this.suggestionManager = new SketchSuggestionManager(this.config, {
+    this.suggestionManager = new SuggestionManager(this.config, {
       onSelect: (updated, targetPath) => {
         if (!updated) return;
 
@@ -165,8 +165,8 @@ export class SketchEditor {
       p.mouseDragged = () => this.mouseDragged(p);
       p.mousePressed = () => this.mousePressed(p);
       p.mouseReleased = () => this.mouseReleased(p);
-      p.keyTyped = () => this.keyTyped(p);
       p.keyPressed = () => this.keyPressed(p);
+      p.keyTyped = () => this.keyTyped(p);
     };
 
     new p5(sketch);
@@ -180,11 +180,7 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.motionManager = new MotionManager(
-      p,
-      this.colors.object,
-      this.config.objectSize,
-    );
+    this.motionManager = new MotionManager(p, OBJECT_SIZE);
   }
 
   // p5.js リサイズ
@@ -193,20 +189,35 @@ export class SketchEditor {
     p.resizeCanvas(width, height);
   }
 
-  // p5.js キー入力
-  private keyTyped(p: p5): void {
+  // p5.js キー入力（文字入力）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private keyTyped(_: p5): void {
+    // 文字入力固有の処理があればここに記述
+  }
+
+  // p5.js キー押下（ショートカット用）
+  private keyPressed(p: p5): void {
+    const isInputFocused =
+      document.activeElement instanceof HTMLInputElement ||
+      document.activeElement instanceof HTMLTextAreaElement;
+
+    // 削除 (Alt+X or Option+X)
+    if (p.keyIsDown(p.ALT) && (p.key === 'x' || p.keyCode === 88)) {
+      if (isInputFocused && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      this.deleteActivePath();
+      return;
+    }
+
+    // 入力欄にフォーカス中は他のショートカットを無視
+    if (isInputFocused) return;
+
+    // ツール切り替え
     if (p.key === 'v') {
       this.setTool('select');
     } else if (p.key === 'g' || p.key === 'p') {
       this.setTool('pen');
-    }
-  }
-
-  // p5.js キー押下（特殊キー用）
-  private keyPressed(p: p5): void {
-    // Delete (46) or Backspace (8) で選択中のパスを削除
-    if (p.keyCode === 46 || p.keyCode === 8) {
-      this.deleteActivePath();
     }
   }
 
@@ -230,41 +241,89 @@ export class SketchEditor {
     p.background(this.colors.background);
 
     const ctx = this.getToolContext();
+    const isPlaying = this.motionManager?.getIsPlaying() ?? false;
+    const shouldPreview = !isPlaying && this.isPreviewing && !!this.motionManager;
 
-    // 確定済みパスの描画
-    for (let pathIndex = 0; pathIndex < this.paths.length; pathIndex++) {
-      const path = this.paths[pathIndex];
-      const isSelectedPath = this.activePath === path;
+    // 1. 非選択のパスの軌跡を描画（再生中はスキップ）
+    if (!isPlaying) {
+      for (let pathIndex = 0; pathIndex < this.paths.length; pathIndex++) {
+        const path = this.paths[pathIndex];
+        if (this.activePath === path) continue;
 
+        drawSketchPath(
+          p,
+          path,
+          this.config,
+          this.colors,
+          false,
+        );
+      }
+    }
+
+    // 2. すべてのオブジェクトを描画
+    if (isPlaying) {
+      // 再生中: MotionManagerが全オブジェクトを描画
+      this.motionManager?.draw();
+    } else if (shouldPreview) {
+      // シーク時のプレビュー
+      this.motionManager?.drawPreview();
+    } else {
+      // 非再生時: 個別にオブジェクトを描画
+      for (let i = 0; i < this.paths.length; i++) {
+        const path = this.paths[i];
+        const isLatest = i === this.paths.length - 1;
+        const color = OBJECT_COLORS[i % OBJECT_COLORS.length];
+
+        if (isLatest) {
+          // 最後のパスはMotionManagerで描画（静的表示）
+          this.motionManager?.setColor(color);
+          this.motionManager?.setPath(path);
+          this.motionManager?.draw();
+        } else {
+          // それ以外のパスは開始位置に静的オブジェクトを描画
+          if (path.keyframes.length > 0) {
+            const pos = path.keyframes[0].position;
+            p.push();
+            p.fill(color);
+            p.noStroke();
+            p.circle(pos.x, pos.y, OBJECT_SIZE);
+            p.pop();
+          }
+        }
+      }
+    }
+
+    // 3. 選択中のパスの軌跡とハンドルを描画（再生中はスキップ）
+    if (!isPlaying && this.activePath) {
+      const pathIndex = this.paths.indexOf(this.activePath);
       drawSketchPath(
         p,
-        path.sketch,
+        this.activePath,
         this.config,
         this.colors,
-        isSelectedPath,
-        isSelectedPath
-          ? (curveIndex, pointIndex) =>
-              this.handleManager.isSelected({
-                pathIndex,
-                curveIndex,
-                pointIndex,
-              })
-          : undefined,
+        true,
+        (curveIndex, pointIndex) =>
+          this.handleManager.isSelected(
+            this.mapCurvePointToHandle(
+              pathIndex,
+              curveIndex,
+              pointIndex,
+            ),
+          ),
       );
     }
 
-    // ツール固有の描画
-    if (this.currentTool === 'pen') {
-      this.penTool.draw(p, ctx);
-    } else {
-      this.selectTool.draw(p, ctx);
+    // ツール固有の描画（再生中はスキップ）
+    if (!isPlaying) {
+      if (this.currentTool === 'pen') {
+        this.penTool.draw(p, ctx);
+      } else {
+        this.selectTool.draw(p, ctx);
+      }
+
+      // 提案をプレビュー
+      this.suggestionManager.preview(p, this.colors);
     }
-
-    // 提案をプレビュー
-    this.suggestionManager.preview(p, this.colors);
-
-    // モーションの更新
-    this.motionManager?.draw();
   }
 
   // p5.js マウス押下
@@ -296,7 +355,7 @@ export class SketchEditor {
   private mouseReleased(p: p5): void {
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
-      this.penTool.mouseReleased(p, ctx);
+      this.penTool.mouseReleased(ctx);
     } else {
       this.selectTool.mouseReleased(p, ctx);
     }
@@ -320,19 +379,128 @@ export class SketchEditor {
       target instanceof HTMLButtonElement ||
       target instanceof HTMLSelectElement ||
       !!target?.closest('form') ||
-      !!target?.closest('#sketchSuggestionContainer')
+      !!target?.closest('#sketchSuggestionContainer') ||
+      !!target?.closest('#sidebarContainer')
     );
   }
 
-  // モーションを再生
-  public playMotion(): void {
-    const target = this.paths[this.paths.length - 1];
-    if (target && this.motionManager) this.motionManager.start(target);
+  // モーションの再生/停止をトグル
+  public toggleMotion(): boolean {
+    if (!this.motionManager) return false;
+
+    // 再生中なら停止
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.stop();
+      this.isPreviewing = this.motionManager.getTotalDuration() > 0;
+      return false;
+    }
+
+    // 停止中なら全パスの再生開始
+    if (this.paths.length > 0) {
+      const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+      const elapsed = this.motionManager.getElapsedTime();
+      this.motionManager.startAll(this.paths, colors, elapsed);
+      this.isPreviewing = false;
+      return true;
+    }
+    return false;
+  }
+
+  public resetPlayback(): void {
+    if (!this.motionManager) return;
+
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.stop();
+    }
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return;
+    }
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+    this.motionManager.seekTo(0);
+    this.isPreviewing = false;
+  }
+
+  public goToLastFrame(): void {
+    if (!this.motionManager) return;
+
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.stop();
+    }
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return;
+    }
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+    this.motionManager.seekTo(this.motionManager.getTotalDuration());
+    this.isPreviewing = true;
+  }
+
+  // 再生バー用の情報を取得
+  public getPlaybackInfo(): {
+    isPlaying: boolean;
+    elapsedMs: number;
+    totalMs: number;
+  } {
+    if (!this.motionManager) {
+      return { isPlaying: false, elapsedMs: 0, totalMs: 0 };
+    }
+
+    return {
+      isPlaying: this.motionManager.getIsPlaying(),
+      elapsedMs: this.motionManager.getElapsedTime(),
+      totalMs: this.motionManager.getTotalDuration(),
+    };
+  }
+
+  public hasPaths(): boolean {
+    return this.paths.length > 0;
+  }
+
+  public refreshPlaybackTimeline(): void {
+    if (!this.motionManager) return;
+    if (this.motionManager.getIsPlaying()) return;
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return;
+    }
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+  }
+
+  public seekPlayback(progress: number): void {
+    if (!this.motionManager || this.paths.length === 0) return;
+
+    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    this.motionManager.prepareAll(this.paths, colors);
+
+    const totalDuration = this.motionManager.getTotalDuration();
+    if (totalDuration <= 0) return;
+
+    const clamped = Math.max(0, Math.min(1, progress));
+    this.motionManager.seekTo(clamped * totalDuration);
+    this.isPreviewing = true;
   }
 
   // 最後のパスを取得
   public getLatestPath(): Path | undefined {
     return this.paths[this.paths.length - 1];
+  }
+
+  // 提案マネージャーを取得
+  public getSuggestionManager(): SuggestionManager {
+    return this.suggestionManager;
   }
 
   // 提案を生成
@@ -347,5 +515,46 @@ export class SketchEditor {
       userPrompt,
       selectionRange ?? undefined,
     );
+  }
+
+  // SuggestionのUI位置を更新
+  public updateSuggestionUI(): void {
+    this.suggestionManager.updateSelectionRange(
+      this.handleManager.getSelectionRange() ?? undefined,
+    );
+  }
+
+  // キーフレームをハンドルにマッピング
+  private mapCurvePointToHandle(
+    pathIndex: number,
+    curveIndex: number,
+    pointIndex: number,
+  ): HandleSelection {
+    if (pointIndex === 0) {
+      return {
+        pathIndex,
+        keyframeIndex: curveIndex,
+        handleType: 'ANCHOR',
+      };
+    }
+    if (pointIndex === 1) {
+      return {
+        pathIndex,
+        keyframeIndex: curveIndex,
+        handleType: 'SKETCH_OUT',
+      };
+    }
+    if (pointIndex === 2) {
+      return {
+        pathIndex,
+        keyframeIndex: curveIndex + 1,
+        handleType: 'SKETCH_IN',
+      };
+    }
+    return {
+      pathIndex,
+      keyframeIndex: curveIndex + 1,
+      handleType: 'ANCHOR',
+    };
   }
 }

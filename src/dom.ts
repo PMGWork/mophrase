@@ -1,18 +1,13 @@
-// DOM要素のマップ
-type ElementMap = {
+// DOM要素の型定義
+export type ElementMap = {
   // 設定モーダル
   settingsButton: HTMLButtonElement;
   settingsModal: HTMLDivElement;
   settingsPanel: HTMLDivElement;
   closeSettingsButton: HTMLButtonElement;
   settingsLlmModelSelect: HTMLSelectElement;
-  settingsVisibleRawSketch: HTMLInputElement;
   settingsSketchTolerance: HTMLInputElement;
   settingsSketchToleranceLabel: HTMLElement;
-  settingsGraphTolerance: HTMLInputElement;
-  settingsGraphToleranceLabel: HTMLElement;
-  settingsObjectSize: HTMLInputElement;
-  settingsObjectSizeLabel: HTMLElement;
 
   // サイドバー
   sidebarContainer: HTMLDivElement;
@@ -26,39 +21,64 @@ type ElementMap = {
   graphPlaceholder: HTMLDivElement;
   graphEditorContent: HTMLDivElement;
   graphEditorCanvas: HTMLDivElement;
-  graphPromptForm: HTMLFormElement;
-  graphPromptInput: HTMLInputElement;
-  graphSuggestionList: HTMLDivElement;
 
   // スケッチエディタ
   canvasContainer: HTMLDivElement;
   sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
-  playButton: HTMLButtonElement;
   editMotionButton: HTMLButtonElement;
   selectToolButton: HTMLButtonElement;
   penToolButton: HTMLButtonElement;
 
-  // モディファイアパネル
-  modifierSection: HTMLDivElement;
-  modifierList: HTMLDivElement;
+  // Sketch Modifier パネル
+  sketchModifierSection: HTMLDivElement;
+  sketchModifierList: HTMLDivElement;
+
+  // Graph Modifier パネル
+  graphModifierSection: HTMLDivElement;
+  graphModifierList: HTMLDivElement;
 };
 
-// DOM参照の束ね役
-export class DomRefs {
+// DOM要素IDの定義
+const ELEMENT_IDS: Record<keyof ElementMap, string> = {
+  settingsButton: 'settingsButton',
+  settingsModal: 'settingsModal',
+  settingsPanel: 'settingsPanel',
+  closeSettingsButton: 'closeSettingsButton',
+  settingsLlmModelSelect: 'settingsLlmModelSelect',
+  settingsSketchTolerance: 'settingsSketchTolerance',
+  settingsSketchToleranceLabel: 'settingsSketchToleranceLabel',
+  sidebarContainer: 'sidebarContainer',
+  propertyPlaceholder: 'propertyPlaceholder',
+  propertyEditorContent: 'propertyEditorContent',
+  startTimeInput: 'startTimeInput',
+  durationInput: 'durationInput',
+  graphEditorContainer: 'graphEditorContainer',
+  graphPlaceholder: 'graphPlaceholder',
+  graphEditorContent: 'graphEditorContent',
+  graphEditorCanvas: 'graphEditorCanvas',
+  canvasContainer: 'canvasContainer',
+  sketchPromptForm: 'sketchPromptForm',
+  sketchPromptInput: 'sketchPromptInput',
+  editMotionButton: 'editMotionButton',
+  selectToolButton: 'selectToolButton',
+  penToolButton: 'penToolButton',
+  sketchModifierSection: 'sketchModifierSection',
+  sketchModifierList: 'sketchModifierList',
+  graphModifierSection: 'graphModifierSection',
+  graphModifierList: 'graphModifierList',
+};
+
+// DOM参照の束ね役（ElementMap を実装）
+export class DomRefs implements ElementMap {
   // 設定モーダル
   public readonly settingsButton!: HTMLButtonElement;
   public readonly settingsModal!: HTMLDivElement;
   public readonly settingsPanel!: HTMLDivElement;
   public readonly closeSettingsButton!: HTMLButtonElement;
   public readonly settingsLlmModelSelect!: HTMLSelectElement;
-  public readonly settingsVisibleRawSketch!: HTMLInputElement;
   public readonly settingsSketchTolerance!: HTMLInputElement;
   public readonly settingsSketchToleranceLabel!: HTMLElement;
-  public readonly settingsGraphTolerance!: HTMLInputElement;
-  public readonly settingsGraphToleranceLabel!: HTMLElement;
-  public readonly settingsObjectSize!: HTMLInputElement;
-  public readonly settingsObjectSizeLabel!: HTMLElement;
 
   // サイドバー
   public readonly sidebarContainer!: HTMLDivElement;
@@ -72,88 +92,38 @@ export class DomRefs {
   public readonly graphPlaceholder!: HTMLDivElement;
   public readonly graphEditorContent!: HTMLDivElement;
   public readonly graphEditorCanvas!: HTMLDivElement;
-  public readonly graphPromptForm!: HTMLFormElement;
-  public readonly graphPromptInput!: HTMLInputElement;
-  public readonly graphSuggestionList!: HTMLDivElement;
 
   // スケッチエディタ
   public readonly canvasContainer!: HTMLDivElement;
   public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
-  public readonly playButton!: HTMLButtonElement;
   public readonly editMotionButton!: HTMLButtonElement;
   public readonly selectToolButton!: HTMLButtonElement;
   public readonly penToolButton!: HTMLButtonElement;
 
-  // モディファイアパネル
-  public readonly modifierSection!: HTMLDivElement;
-  public readonly modifierList!: HTMLDivElement;
+  // Sketch Modifier パネル
+  public readonly sketchModifierSection!: HTMLDivElement;
+  public readonly sketchModifierList!: HTMLDivElement;
+
+  // Graph Modifier パネル
+  public readonly graphModifierSection!: HTMLDivElement;
+  public readonly graphModifierList!: HTMLDivElement;
 
   // コンストラクタ
   constructor() {
-    const elements = this.collectElements<ElementMap>({
-      // 設定モーダル
-      settingsButton: 'settingsButton',
-      settingsModal: 'settingsModal',
-      settingsPanel: 'settingsPanel',
-      closeSettingsButton: 'closeSettingsButton',
-      settingsLlmModelSelect: 'settingsLlmModelSelect',
-      settingsVisibleRawSketch: 'settingsVisibleRawSketch',
-      settingsSketchTolerance: 'settingsSketchTolerance',
-      settingsSketchToleranceLabel: 'settingsSketchToleranceLabel',
-      settingsGraphTolerance: 'settingsGraphTolerance',
-      settingsGraphToleranceLabel: 'settingsGraphToleranceLabel',
-      settingsObjectSize: 'settingsObjectSize',
-      settingsObjectSizeLabel: 'settingsObjectSizeLabel',
-
-      // サイドバー
-      sidebarContainer: 'sidebarContainer',
-      propertyPlaceholder: 'propertyPlaceholder',
-      propertyEditorContent: 'propertyEditorContent',
-      startTimeInput: 'startTimeInput',
-      durationInput: 'durationInput',
-
-      // グラフエディタ
-      graphEditorContainer: 'graphEditorContainer',
-      graphPlaceholder: 'graphPlaceholder',
-      graphEditorContent: 'graphEditorContent',
-      graphEditorCanvas: 'graphEditorCanvas',
-      graphPromptForm: 'graphPromptForm',
-      graphPromptInput: 'graphPromptInput',
-      graphSuggestionList: 'graphSuggestionList',
-
-      // スケッチエディタ
-      canvasContainer: 'canvasContainer',
-      sketchPromptForm: 'sketchPromptForm',
-      sketchPromptInput: 'sketchPromptInput',
-      playButton: 'playButton',
-      editMotionButton: 'editMotionButton',
-      selectToolButton: 'selectToolButton',
-      penToolButton: 'penToolButton',
-
-      // モディファイアパネル
-      modifierSection: 'modifierSection',
-      modifierList: 'modifierList',
-    });
-
+    const elements = this.collectElements(ELEMENT_IDS);
     Object.assign(this, elements);
   }
 
   // DOM要素を取得する
-  private collectElements<T extends Record<string, HTMLElement>>(
-    ids: Record<keyof T, string>,
-  ): T {
+  private collectElements(ids: Record<string, string>): ElementMap {
     const entries = Object.entries(ids).map(([key, id]) => {
-      // 指定されたIDでDOM要素を検索
       const element = document.getElementById(id);
       if (!element)
         throw new Error(`ID '${id}' のDOM要素が見つかりませんでした。`);
-
-      // キーと要素のペアを返す
       return [key, element];
     });
-
-    return Object.fromEntries(entries) as T;
+    return Object.fromEntries(entries) as ElementMap;
   }
 
   // キャンバスサイズを取得する
