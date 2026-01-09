@@ -23,7 +23,7 @@ export type ElementMap = {
   graphEditorCanvas: HTMLDivElement;
 
   // スケッチエディタ
-  canvasContainer: HTMLDivElement;
+  canvasContainer: HTMLElement;
   sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
   editMotionButton: HTMLButtonElement;
@@ -94,7 +94,7 @@ export class DomRefs implements ElementMap {
   public readonly graphEditorCanvas!: HTMLDivElement;
 
   // スケッチエディタ
-  public readonly canvasContainer!: HTMLDivElement;
+  public readonly canvasContainer!: HTMLElement;
   public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
   public readonly editMotionButton!: HTMLButtonElement;
@@ -110,14 +110,20 @@ export class DomRefs implements ElementMap {
   public readonly graphModifierList!: HTMLDivElement;
 
   // コンストラクタ
-  constructor() {
-    const elements = this.collectElements(ELEMENT_IDS);
+  constructor(overrides: Partial<ElementMap> = {}) {
+    const elements = this.collectElements(ELEMENT_IDS, overrides);
     Object.assign(this, elements);
   }
 
   // DOM要素を取得する
-  private collectElements(ids: Record<string, string>): ElementMap {
+  private collectElements(
+    ids: Record<string, string>,
+    overrides: Partial<ElementMap>,
+  ): ElementMap {
     const entries = Object.entries(ids).map(([key, id]) => {
+      const override = overrides[key as keyof ElementMap];
+      if (override) return [key, override];
+
       const element = document.getElementById(id);
       if (!element)
         throw new Error(`ID '${id}' のDOM要素が見つかりませんでした。`);
