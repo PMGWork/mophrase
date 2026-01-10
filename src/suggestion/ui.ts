@@ -45,15 +45,13 @@ export class SuggestionUI {
     status: SuggestionState,
     suggestions: Suggestion[],
     targetPath?: Path,
-    promptCount: number = 0,
   ): void {
-    const { containerId, listId } = this.config;
+    const { listId } = this.config;
     const listContainer = document.getElementById(listId);
     if (!listContainer) return;
 
     // 状態の判定
     const showLoading = status === 'generating';
-    const showSketchInput = status === 'input';
     const hasSuggestions = suggestions.length > 0;
 
     // 提案項目のクリア

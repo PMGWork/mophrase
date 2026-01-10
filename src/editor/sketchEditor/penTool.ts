@@ -18,7 +18,7 @@ export class PenTool {
   // #region メイン関数
 
   // マウス押下
-  mousePressed(p: p5, ctx: ToolContext): void {
+  mousePressed(p: p5): void {
     // 新しいパスを開始
     this.draftPath = {
       points: [p.createVector(p.mouseX, p.mouseY)],
