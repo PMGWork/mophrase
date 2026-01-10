@@ -26,7 +26,7 @@ export const SketchSuggestion = ({
   return (
     <div
       id="sketchSuggestionContainer"
-      className="corner-lg fixed z-50 min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+      className="corner-lg fixed z-50 flex min-w-60 flex-col overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
       style={{ display: isVisible ? 'flex' : 'none' }}
     >
       <form
