@@ -373,9 +373,7 @@ export class SketchEditor {
 
     // 停止中なら全パスの再生開始
     if (this.paths.length > 0) {
-      const colors = this.paths.map(
-        (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
-      );
+      const colors = this.getPathColors();
       const elapsed = this.motionManager.getElapsedTime();
       this.motionManager.startAll(this.paths, colors, elapsed);
       this.isPreviewing = false;
@@ -391,16 +389,7 @@ export class SketchEditor {
       this.motionManager.stop();
     }
 
-    if (this.paths.length === 0) {
-      this.motionManager.prepareAll([], []);
-      this.isPreviewing = false;
-      return;
-    }
-
-    const colors = this.paths.map(
-      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
-    );
-    this.motionManager.prepareAll(this.paths, colors);
+    if (!this.prepareAllPaths()) return;
     this.motionManager.seekTo(0);
     this.isPreviewing = false;
   }
@@ -412,16 +401,7 @@ export class SketchEditor {
       this.motionManager.stop();
     }
 
-    if (this.paths.length === 0) {
-      this.motionManager.prepareAll([], []);
-      this.isPreviewing = false;
-      return;
-    }
-
-    const colors = this.paths.map(
-      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
-    );
-    this.motionManager.prepareAll(this.paths, colors);
+    if (!this.prepareAllPaths()) return;
     this.motionManager.seekTo(this.motionManager.getTotalDuration());
     this.isPreviewing = true;
   }
@@ -463,26 +443,12 @@ export class SketchEditor {
   public refreshPlaybackTimeline(): void {
     if (!this.motionManager) return;
     if (this.motionManager.getIsPlaying()) return;
-
-    if (this.paths.length === 0) {
-      this.motionManager.prepareAll([], []);
-      this.isPreviewing = false;
-      return;
-    }
-
-    const colors = this.paths.map(
-      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
-    );
-    this.motionManager.prepareAll(this.paths, colors);
+    this.prepareAllPaths();
   }
 
   public seekPlayback(progress: number): void {
-    if (!this.motionManager || this.paths.length === 0) return;
-
-    const colors = this.paths.map(
-      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
-    );
-    this.motionManager.prepareAll(this.paths, colors);
+    if (!this.motionManager) return;
+    if (!this.prepareAllPaths()) return;
 
     const totalDuration = this.motionManager.getTotalDuration();
     if (totalDuration <= 0) return;
@@ -490,6 +456,23 @@ export class SketchEditor {
     const clamped = Math.max(0, Math.min(1, progress));
     this.motionManager.seekTo(clamped * totalDuration);
     this.isPreviewing = true;
+  }
+
+  private getPathColors(): string[] {
+    return this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+  }
+
+  private prepareAllPaths(): boolean {
+    if (!this.motionManager) return false;
+
+    if (this.paths.length === 0) {
+      this.motionManager.prepareAll([], []);
+      this.isPreviewing = false;
+      return false;
+    }
+
+    this.motionManager.prepareAll(this.paths, this.getPathColors());
+    return true;
   }
 
   // 最後のパスを取得

@@ -58,31 +58,21 @@ export interface Path {
   keyframes: Keyframe[];
   duration: number;
   startTime: number;
-  sketchModifiers?: SketchModifier[];
-  graphModifiers?: GraphModifier[];
+  sketchModifiers?: Modifier[];
+  graphModifiers?: Modifier[];
 }
 
 // オフセット配列の型
 type OffsetArray = ({ dx: number; dy: number } | null)[][];
 
-// スケッチ（空間曲線）用モディファイア
-export interface SketchModifier {
-  id: string;
-  name: string;
-  offsets: OffsetArray;
-  strength: number;
-}
-
-// グラフ（タイミング曲線）用モディファイア
-export interface GraphModifier {
-  id: string;
-  name: string;
-  offsets: OffsetArray;
-  strength: number;
-}
-
 // モディファイアの共通型
-export type Modifier = SketchModifier | GraphModifier;
+export interface Modifier {
+  id: string;
+  name: string;
+  offsets: OffsetArray;
+  strength: number;
+}
+
 
 // #region 4. シリアライズ（LLM通信用）
 

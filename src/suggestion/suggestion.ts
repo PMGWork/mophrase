@@ -2,10 +2,9 @@ import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
 import type {
-  GraphModifier,
+  Modifier,
   Path,
   SelectionRange,
-  SketchModifier,
   Suggestion,
   SuggestionState,
 } from '../types';
@@ -15,7 +14,7 @@ import {
   computeKeyframeProgress,
 } from '../utils/keyframes';
 import { createSketchModifier, createGraphModifier } from '../utils/modifier';
-import { slicePath } from '../utils/path';
+import { getSelectionReference, slicePath } from '../utils/path';
 import {
   deserializeCurves,
   deserializeGraphCurves,
@@ -261,23 +260,8 @@ export class SuggestionManager {
       originalCurves,
     );
 
-    let referenceKeyframes = this.targetPath.keyframes;
-    let referenceProgress = allProgress;
-
-    if (this.selectionRange) {
-      const sliced = slicePath(this.targetPath, this.selectionRange);
-      referenceKeyframes = sliced.keyframes;
-
-      // progress も同様にスライス
-      const start = Math.max(0, this.selectionRange.startCurveIndex);
-      const end = Math.min(
-        this.targetPath.keyframes.length - 2,
-        this.selectionRange.endCurveIndex,
-      );
-      if (start <= end) {
-        referenceProgress = allProgress.slice(start, end + 2);
-      }
-    }
+    const { keyframes: referenceKeyframes, progress: referenceProgress } =
+      getSelectionReference(this.targetPath, this.selectionRange, allProgress);
 
     const originalGraphCurves = buildGraphCurves(
       this.targetPath.keyframes,
@@ -304,7 +288,7 @@ export class SuggestionManager {
     sketchModifier.strength = strength;
 
     // GraphModifier を作成（時間カーブの差分がある場合のみ）
-    let graphModifier: GraphModifier | null = null;
+    let graphModifier: Modifier | null = null;
     if (llmGraphCurves.length > 0) {
       graphModifier = createGraphModifier(
         originalGraphCurves,
@@ -333,8 +317,8 @@ export class SuggestionManager {
   // パスにmodifierを追加
   private addModifiersToPath(
     path: Path,
-    sketchModifier: SketchModifier,
-    graphModifier: GraphModifier | null,
+    sketchModifier: Modifier,
+    graphModifier: Modifier | null,
   ): void {
     if (!path.sketchModifiers) {
       path.sketchModifiers = [];

@@ -1,9 +1,4 @@
-import type {
-  GraphModifier,
-  Path,
-  SketchModifier,
-  ModifierKind,
-} from '../types';
+import type { Modifier, Path, ModifierKind } from '../types';
 import { ModifierSection } from './ModifierSection';
 import { TimeSection } from './TimeSection';
 
@@ -56,14 +51,14 @@ export const PropertyEditor = ({
 
   // モディファイア変更ハンドラ
   const handleModifierChange = (
-    modifier: SketchModifier | GraphModifier,
+    modifier: Modifier,
     type: ModifierKind,
     value: number,
   ) => handlers?.onModifierChange?.(modifier.id, type, value);
 
   // モディファイア削除ハンドラ
   const handleModifierRemove = (
-    modifier: SketchModifier | GraphModifier,
+    modifier: Modifier,
     type: ModifierKind,
   ) => handlers?.onModifierRemove?.(modifier.id, type);
 

@@ -1,16 +1,9 @@
 import type p5 from 'p5';
-import type {
-  GraphModifier,
-  Modifier,
-  SelectionRange,
-  SketchModifier,
-  Vector,
-} from '../types';
+import type { Modifier, SelectionRange, Vector } from '../types';
 
-// スケッチモディファイアを適用したカーブを計算
-export function applySketchModifiers(
+function applyModifiers(
   curves: Vector[][],
-  modifiers: SketchModifier[] | undefined,
+  modifiers: Modifier[] | undefined,
   p?: p5,
 ): Vector[][] {
   if (!modifiers || modifiers.length === 0) return curves;
@@ -39,36 +32,22 @@ export function applySketchModifiers(
   );
 }
 
+// スケッチモディファイアを適用したカーブを計算
+export function applySketchModifiers(
+  curves: Vector[][],
+  modifiers: Modifier[] | undefined,
+  p?: p5,
+): Vector[][] {
+  return applyModifiers(curves, modifiers, p);
+}
+
 // グラフモディファイアを適用したカーブを計算
 export function applyGraphModifiers(
   curves: Vector[][],
-  modifiers: GraphModifier[] | undefined,
+  modifiers: Modifier[] | undefined,
   p?: p5,
 ): Vector[][] {
-  if (!modifiers || modifiers.length === 0) return curves;
-
-  return curves.map((curve, curveIndex) =>
-    curve.map((point, pointIndex) => {
-      let totalDx = 0;
-      let totalDy = 0;
-
-      for (const modifier of modifiers) {
-        const offset = modifier.offsets[curveIndex]?.[pointIndex];
-        if (offset) {
-          totalDx += offset.dx * modifier.strength;
-          totalDy += offset.dy * modifier.strength;
-        }
-      }
-
-      if (totalDx === 0 && totalDy === 0) return point;
-
-      if (p) return p.createVector(point.x + totalDx, point.y + totalDy);
-      if (typeof point.copy === 'function') {
-        return point.copy().add(totalDx, totalDy);
-      }
-      return { x: point.x + totalDx, y: point.y + totalDy } as Vector;
-    }),
-  );
+  return applyModifiers(curves, modifiers, p);
 }
 
 // LLMの出力からスケッチモディファイアを作成
@@ -77,12 +56,12 @@ export function createSketchModifier(
   modifiedCurves: Vector[][],
   name: string,
   selectionRange?: SelectionRange,
-): SketchModifier {
+): Modifier {
   const startCurveIndex = selectionRange?.startCurveIndex ?? 0;
   const endCurveIndex =
     selectionRange?.endCurveIndex ?? originalCurves.length - 1;
 
-  const offsets: SketchModifier['offsets'] = originalCurves.map(
+  const offsets: Modifier['offsets'] = originalCurves.map(
     (curve, curveIndex) => {
       if (curveIndex < startCurveIndex || curveIndex > endCurveIndex) {
         return curve.map(() => null);
@@ -144,12 +123,12 @@ export function createGraphModifier(
   modifiedCurves: Vector[][],
   name: string,
   selectionRange?: SelectionRange,
-): GraphModifier {
+): Modifier {
   const startCurveIndex = selectionRange?.startCurveIndex ?? 0;
   const endCurveIndex =
     selectionRange?.endCurveIndex ?? originalCurves.length - 1;
 
-  const offsets: GraphModifier['offsets'] = originalCurves.map(
+  const offsets: Modifier['offsets'] = originalCurves.map(
     (curve, curveIndex) => {
       if (curveIndex < startCurveIndex || curveIndex > endCurveIndex) {
         return curve.map(() => null);

@@ -9,7 +9,7 @@ import {
   computeKeyframeProgress,
 } from '../utils/keyframes';
 import { applyGraphModifiers, applySketchModifiers } from '../utils/modifier';
-import { slicePath } from '../utils/path';
+import { getSelectionReference } from '../utils/path';
 import {
   deserializeCurves,
   deserializeGraphCurves,
@@ -117,21 +117,8 @@ export function getPreviewGraphCurves(
     return null;
 
   // LLM の提案から時間カーブを取得
-  let referenceKeyframes = targetPath.keyframes;
-  let referenceProgress = baseProgress;
-
-  if (selectionRange) {
-    const sliced = slicePath(targetPath, selectionRange);
-    referenceKeyframes = sliced.keyframes;
-    const start = Math.max(0, selectionRange.startCurveIndex);
-    const end = Math.min(
-      targetPath.keyframes.length - 2,
-      selectionRange.endCurveIndex,
-    );
-    if (start <= end) {
-      referenceProgress = baseProgress.slice(start, end + 2);
-    }
-  }
+  const { keyframes: referenceKeyframes, progress: referenceProgress } =
+    getSelectionReference(targetPath, selectionRange, baseProgress);
 
   const llmGraphCurves = deserializeGraphCurves(
     suggestion.path.keyframes,
