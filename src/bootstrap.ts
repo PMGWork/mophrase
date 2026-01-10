@@ -5,6 +5,7 @@ import { SketchEditor } from './editor/sketchEditor/editor';
 import type { Config } from './config';
 import type { Path, ToolKind } from './types';
 import type { PlaybackController } from './components/PlaybackBar';
+import type { SuggestionUIState } from './suggestion/suggestion';
 
 // メイン処理
 export type BootstrapResult = {
@@ -27,6 +28,7 @@ type BootstrapRefs = {
 type BootstrapCallbacks = {
   onPathSelected?: (path: Path | null) => void;
   onToolChanged?: (tool: ToolKind) => void;
+  onSuggestionUIChange?: (state: SuggestionUIState) => void;
 };
 
 // 初期化処理
@@ -89,6 +91,9 @@ export const bootstrap = (
     },
     (tool) => {
       callbacks.onToolChanged?.(tool);
+    },
+    (state) => {
+      callbacks.onSuggestionUIChange?.(state);
     },
   );
 

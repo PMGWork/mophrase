@@ -3,7 +3,10 @@ import { type Colors, type Config } from '../../config';
 import { OBJECT_COLORS, OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
-import { SuggestionManager } from '../../suggestion/suggestion';
+import {
+  SuggestionManager,
+  type SuggestionUIState,
+} from '../../suggestion/suggestion';
 import type { HandleSelection, Path, ToolKind } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
@@ -46,6 +49,7 @@ export class SketchEditor {
     onPathCreated: (path: Path) => void,
     onPathSelected: (path: Path | null) => void,
     onToolChanged?: (tool: ToolKind) => void,
+    onSuggestionUIChange?: (state: SuggestionUIState) => void,
   ) {
     this.dom = dom;
     this.config = config;
@@ -79,6 +83,7 @@ export class SketchEditor {
         this.onPathSelected(updated);
         this.onPathCreated(updated);
       },
+      onUIStateChange: onSuggestionUIChange,
     });
 
     // p5.jsの初期化

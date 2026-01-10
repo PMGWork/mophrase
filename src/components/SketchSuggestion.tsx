@@ -1,18 +1,33 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 
 type SketchSuggestionProps = {
   onSubmit: (prompt: string) => void;
+  isVisible: boolean;
+  placeholder: string;
+  shouldFocus: boolean;
 };
 
-export const SketchSuggestion = ({ onSubmit }: SketchSuggestionProps) => {
+export const SketchSuggestion = ({
+  onSubmit,
+  isVisible,
+  placeholder,
+  shouldFocus,
+}: SketchSuggestionProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!shouldFocus || !isVisible) return;
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, [shouldFocus, isVisible]);
 
   return (
     <div
       id="sketchSuggestionContainer"
       className="corner-lg fixed z-50 min-w-60 overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
-      style={{ display: 'none' }}
+      style={{ display: isVisible ? 'flex' : 'none' }}
     >
       <form
         id="sketchPromptForm"
@@ -28,9 +43,8 @@ export const SketchSuggestion = ({ onSubmit }: SketchSuggestionProps) => {
       >
         <input
           ref={inputRef}
-          id="sketchPromptInput"
           type="text"
-          placeholder="Enter instructions..."
+          placeholder={placeholder}
           autoComplete="off"
           className="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
         />

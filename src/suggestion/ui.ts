@@ -8,9 +8,8 @@ import { buildSketchCurves } from '../utils/keyframes';
 import { applySketchModifiers } from '../utils/modifier';
 
 type SuggestionUIConfig = {
-  containerId?: string;
   listId: string;
-  inputId?: string;
+  containerId?: string;
   itemClass: string;
   position?: (args: {
     container: HTMLElement | null;
@@ -36,21 +35,8 @@ export class SuggestionUI {
     this.onSuggestionClick = onSuggestionClick;
   }
 
-  // UIを表示
-  show(): void {
-    const { inputId } = this.config;
-    if (!inputId) return;
-    const el = document.getElementById(inputId) as HTMLInputElement | null;
-    if (el) requestAnimationFrame(() => el.focus());
-  }
-
   // UIを非表示
   hide(): void {
-    const { containerId } = this.config;
-    if (containerId) {
-      const container = document.getElementById(containerId);
-      if (container) container.style.display = 'none';
-    }
     this.clearItems();
   }
 
@@ -61,35 +47,14 @@ export class SuggestionUI {
     targetPath?: Path,
     promptCount: number = 0,
   ): void {
-    const { containerId, listId, inputId } = this.config;
+    const { containerId, listId } = this.config;
     const listContainer = document.getElementById(listId);
     if (!listContainer) return;
-
-    // containerの取得
-    const container = containerId ? document.getElementById(containerId) : null;
 
     // 状態の判定
     const showLoading = status === 'generating';
     const showSketchInput = status === 'input';
     const hasSuggestions = suggestions.length > 0;
-
-    // containerの表示/非表示
-    if (container) {
-      container.style.display =
-        showLoading || showSketchInput || hasSuggestions ? 'flex' : 'none';
-      container.style.flexDirection = 'column';
-    }
-
-    // placeholderを履歴に応じて変更
-    if (inputId) {
-      const inputElement = document.getElementById(
-        inputId,
-      ) as HTMLInputElement | null;
-      if (inputElement) {
-        inputElement.placeholder =
-          promptCount > 0 ? 'Refine instruction...' : 'Enter instructions...';
-      }
-    }
 
     // 提案項目のクリア
     this.clearItems();

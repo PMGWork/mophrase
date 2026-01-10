@@ -3,6 +3,7 @@ import { bootstrap } from './bootstrap';
 import type { Config } from './config';
 import type { Path, ToolKind } from './types';
 import type { PlaybackController } from './components/PlaybackBar';
+import type { SuggestionUIState } from './suggestion/suggestion';
 import {
   removeModifier,
   updateModifierStrength,
@@ -26,6 +27,11 @@ export const App = () => {
     useState<PlaybackController | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const [activePath, setActivePath] = useState<Path | null>(null);
+  const [suggestionUI, setSuggestionUI] = useState<SuggestionUIState>({
+    status: 'idle',
+    promptCount: 0,
+    isVisible: false,
+  });
 
   // エディタ内部参照
   const updateSuggestionUIRef = useRef<(() => void) | null>(null);
@@ -162,6 +168,7 @@ export const App = () => {
         onToolChanged: (tool) => {
           setSelectedTool(tool);
         },
+        onSuggestionUIChange: setSuggestionUI,
       },
     );
     setPlaybackController(controller);
@@ -200,6 +207,13 @@ export const App = () => {
 
       <SketchSuggestion
         onSubmit={(prompt) => submitPromptRef.current?.(prompt)}
+        isVisible={suggestionUI.isVisible}
+        placeholder={
+          suggestionUI.promptCount > 0
+            ? 'Refine instruction...'
+            : 'Enter instructions...'
+        }
+        shouldFocus={suggestionUI.status === 'input'}
       />
       <SettingsModal
         isOpen={isSettingsOpen}

@@ -31,6 +31,13 @@ import { positionUI, SuggestionUI } from './ui';
 // 型定義
 type SuggestionManagerOptions = {
   onSelect?: (path: Path, targetPath?: Path) => void;
+  onUIStateChange?: (state: SuggestionUIState) => void;
+};
+
+export type SuggestionUIState = {
+  status: SuggestionState;
+  promptCount: number;
+  isVisible: boolean;
 };
 
 // 提案マネージャー
@@ -45,17 +52,18 @@ export class SuggestionManager {
   private targetPath: Path | undefined;
   private ui: SuggestionUI;
   private onSelect?: (path: Path, targetPath?: Path) => void;
+  private onUIStateChange?: (state: SuggestionUIState) => void;
   private selectionRange?: SelectionRange;
 
   // コンストラクタ
   constructor(config: Config, options: SuggestionManagerOptions = {}) {
     this.config = config;
     this.onSelect = options.onSelect;
+    this.onUIStateChange = options.onUIStateChange;
     this.ui = new SuggestionUI(
       {
         containerId: 'sketchSuggestionContainer',
         listId: 'sketchSuggestionList',
-        inputId: 'sketchPromptInput',
         itemClass:
           'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
         position: positionUI,
@@ -82,7 +90,6 @@ export class SuggestionManager {
     this.targetPath = targetPath;
     this.setState('input');
     this.updateUI();
-    this.ui.show();
   }
 
   // 提案UIを閉じる
@@ -91,6 +98,7 @@ export class SuggestionManager {
     this.prompts = [];
     this.targetPath = undefined;
     this.setState('idle');
+    this.updateUI();
     this.ui.hide();
   }
 
@@ -178,6 +186,14 @@ export class SuggestionManager {
       this.targetPath,
       this.prompts.length,
     );
+    const showLoading = this.status === 'generating';
+    const showSketchInput = this.status === 'input';
+    const hasSuggestions = this.suggestions.length > 0;
+    this.onUIStateChange?.({
+      status: this.status,
+      promptCount: this.prompts.length,
+      isVisible: showLoading || showSketchInput || hasSuggestions,
+    });
   }
 
   // 提案を生成
