@@ -50,9 +50,6 @@ export const Sidebar = ({
       </div>
     </div>
 
-    <PropertyEditor
-      activePath={activePath}
-      handlers={propertyEditorHandlers}
-    />
+    <PropertyEditor activePath={activePath} handlers={propertyEditorHandlers} />
   </aside>
 );

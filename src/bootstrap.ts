@@ -47,7 +47,8 @@ export const bootstrap = (
 
   const getRequiredElement = <T extends HTMLElement>(id: string): T => {
     const element = document.getElementById(id);
-    if (!element) throw new Error(`ID '${id}' のDOM要素が見つかりませんでした。`);
+    if (!element)
+      throw new Error(`ID '${id}' のDOM要素が見つかりませんでした。`);
     return element as T;
   };
 

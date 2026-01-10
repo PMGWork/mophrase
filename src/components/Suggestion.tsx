@@ -30,9 +30,10 @@ export const SketchSuggestion = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // ホバー状態
-  const [hovered, setHovered] = useState<{ id: string | null; strength: number }>(
-    { id: null, strength: 1 },
-  );
+  const [hovered, setHovered] = useState<{
+    id: string | null;
+    strength: number;
+  }>({ id: null, strength: 1 });
 
   // ローディング表示
   const showLoading = status === 'generating';
@@ -79,22 +80,20 @@ export const SketchSuggestion = ({
   };
 
   // マウスイベントハンドラ
-  const handleMouseEnter = (id: string) => (
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const strength = computeStrength(event.clientX, rect);
-    updateHover(id, strength);
-  };
+  const handleMouseEnter =
+    (id: string) => (event: React.MouseEvent<HTMLButtonElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      updateHover(id, strength);
+    };
 
   // マウス移動ハンドラ
-  const handleMouseMove = (id: string) => (
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const strength = computeStrength(event.clientX, rect);
-    updateHover(id, strength);
-  };
+  const handleMouseMove =
+    (id: string) => (event: React.MouseEvent<HTMLButtonElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      updateHover(id, strength);
+    };
 
   // マウス離脱ハンドラ
   const handleMouseLeave = () => {
@@ -102,13 +101,12 @@ export const SketchSuggestion = ({
   };
 
   // クリックハンドラ
-  const handleClick = (id: string) => (
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const strength = computeStrength(event.clientX, rect);
-    onSuggestionClick(id, strength);
-  };
+  const handleClick =
+    (id: string) => (event: React.MouseEvent<HTMLButtonElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      onSuggestionClick(id, strength);
+    };
 
   return (
     <div

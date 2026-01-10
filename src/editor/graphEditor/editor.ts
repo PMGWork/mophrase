@@ -8,7 +8,10 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../../utils/keyframes';
-import { applySketchModifiers, applyGraphModifiers } from '../../utils/modifier';
+import {
+  applySketchModifiers,
+  applyGraphModifiers,
+} from '../../utils/modifier';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 

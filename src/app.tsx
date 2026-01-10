@@ -4,10 +4,7 @@ import type { Config } from './config';
 import type { Path, ToolKind } from './types';
 import type { PlaybackController } from './components/Playback';
 import type { SuggestionUIState } from './suggestion/suggestion';
-import {
-  removeModifier,
-  updateModifierStrength,
-} from './utils/modifier';
+import { removeModifier, updateModifierStrength } from './utils/modifier';
 import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';
