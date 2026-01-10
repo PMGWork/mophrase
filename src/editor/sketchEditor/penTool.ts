@@ -30,7 +30,6 @@ export class PenTool {
         },
       },
     };
-
   }
 
   // マウスドラッグ

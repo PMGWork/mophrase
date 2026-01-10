@@ -1,9 +1,6 @@
 import type { RefObject } from 'react';
 import type { Path } from '../types';
-import {
-  PropertyEditorPanel,
-  type PropertyEditorHandlers,
-} from './PropertyEditorPanel';
+import { PropertyEditor, type PropertyEditorHandlers } from './PropertyEditor';
 
 // Props
 type SidebarProps = {
@@ -53,7 +50,7 @@ export const Sidebar = ({
       </div>
     </div>
 
-    <PropertyEditorPanel
+    <PropertyEditor
       activePath={activePath}
       handlers={propertyEditorHandlers}
     />

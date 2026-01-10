@@ -308,7 +308,7 @@ export class SketchEditor {
 
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
-      this.penTool.mousePressed(p, ctx);
+      this.penTool.mousePressed(p);
     } else {
       this.selectTool.mousePressed(p, ctx);
     }

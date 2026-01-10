@@ -26,7 +26,7 @@ import {
   drawSketchPreview,
   getPreviewGraphCurves as buildPreviewGraphCurves,
 } from './suggestionPreview';
-import { positionUI, SuggestionUI } from './ui';
+import { computeSuggestionPosition } from './ui';
 
 // 型定義
 type SuggestionManagerOptions = {
@@ -38,6 +38,8 @@ export type SuggestionUIState = {
   status: SuggestionState;
   promptCount: number;
   isVisible: boolean;
+  suggestions: Suggestion[];
+  position: { left: number; top: number } | null;
 };
 
 // 提案マネージャー
@@ -50,7 +52,6 @@ export class SuggestionManager {
   private pInstance: p5 | null = null;
   private prompts: string[] = [];
   private targetPath: Path | undefined;
-  private ui: SuggestionUI;
   private onSelect?: (path: Path, targetPath?: Path) => void;
   private onUIStateChange?: (state: SuggestionUIState) => void;
   private selectionRange?: SelectionRange;
@@ -60,20 +61,6 @@ export class SuggestionManager {
     this.config = config;
     this.onSelect = options.onSelect;
     this.onUIStateChange = options.onUIStateChange;
-    this.ui = new SuggestionUI(
-      {
-        containerId: 'sketchSuggestionContainer',
-        listId: 'sketchSuggestionList',
-        itemClass:
-          'px-3 py-2 text-sm text-left text-gray-50 hover:bg-gray-900 transition-colors cursor-pointer',
-        position: positionUI,
-      },
-      (id, strength) => {
-        this.hoveredId = id;
-        this.hoveredStrength = strength;
-      },
-      (id, strength) => this.selectById(id, strength),
-    );
   }
 
   // #region パブリックメソッド
@@ -99,13 +86,11 @@ export class SuggestionManager {
     this.targetPath = undefined;
     this.setState('idle');
     this.updateUI();
-    this.ui.hide();
   }
 
   // 選択範囲を設定してUIを更新
   updateSelectionRange(selectionRange?: SelectionRange): void {
     this.selectionRange = selectionRange;
-    this.ui.setSelectionRange(selectionRange);
     this.updateUI();
   }
 
@@ -180,19 +165,19 @@ export class SuggestionManager {
 
   // UIの更新
   private updateUI(): void {
-    this.ui.update(
-      this.status,
-      this.suggestions,
-      this.targetPath,
-      this.prompts.length,
-    );
     const showLoading = this.status === 'generating';
     const showSketchInput = this.status === 'input';
     const hasSuggestions = this.suggestions.length > 0;
+    const position = computeSuggestionPosition({
+      targetPath: this.targetPath,
+      selectionRange: this.selectionRange,
+    });
     this.onUIStateChange?.({
       status: this.status,
       promptCount: this.prompts.length,
       isVisible: showLoading || showSketchInput || hasSuggestions,
+      suggestions: this.suggestions,
+      position,
     });
   }
 
@@ -362,5 +347,16 @@ export class SuggestionManager {
       }
       path.graphModifiers.push(graphModifier);
     }
+  }
+
+  // Hover状態を設定
+  public setHover(id: string | null, strength: number): void {
+    this.hoveredId = id;
+    this.hoveredStrength = strength;
+  }
+
+  // UIからの選択
+  public selectSuggestion(id: string, strength: number): void {
+    this.selectById(id, strength);
   }
 }

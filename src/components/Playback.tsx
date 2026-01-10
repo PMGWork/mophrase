@@ -20,7 +20,7 @@ export type PlaybackController = {
 };
 
 // Props
-type PlaybackBarProps = {
+type PlaybackProps = {
   controller: PlaybackController | null;
 };
 
@@ -44,7 +44,7 @@ const formatPlaybackTime = (ms: number): string => {
 };
 
 // コンポーネント
-export const PlaybackBar = ({ controller }: PlaybackBarProps) => {
+export const Playback = ({ controller }: PlaybackProps) => {
   const [state, setState] = useState<PlaybackState>(initialPlaybackState);
   const latestStateRef = useRef<PlaybackState>(initialPlaybackState);
   const seekingPointerId = useRef<number | null>(null);

@@ -4,7 +4,7 @@ import { GraphEditor } from './editor/graphEditor/editor';
 import { SketchEditor } from './editor/sketchEditor/editor';
 import type { Config } from './config';
 import type { Path, ToolKind } from './types';
-import type { PlaybackController } from './components/PlaybackBar';
+import type { PlaybackController } from './components/Playback';
 import type { SuggestionUIState } from './suggestion/suggestion';
 
 // メイン処理
@@ -16,6 +16,8 @@ export type BootstrapResult = {
   selectLatestPath: () => Path | null;
   setSketchTool: (tool: ToolKind) => void;
   getSketchTool: () => ToolKind;
+  setSuggestionHover: (id: string | null, strength: number) => void;
+  selectSuggestion: (id: string, strength: number) => void;
 };
 
 // 引数
@@ -136,5 +138,11 @@ export const bootstrap = (
       sketchEditor.setTool(tool);
     },
     getSketchTool: () => sketchEditor.getCurrentTool(),
+    setSuggestionHover: (id, strength) => {
+      sketchEditor.getSuggestionManager().setHover(id, strength);
+    },
+    selectSuggestion: (id, strength) => {
+      sketchEditor.getSuggestionManager().selectSuggestion(id, strength);
+    },
   };
 };

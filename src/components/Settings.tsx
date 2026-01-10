@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ChevronDown, Settings, X } from 'lucide-react';
+import { ChevronDown, Settings as SettingsIcon, X } from 'lucide-react';
 import type { Config } from '../config';
 import type { LLMProvider } from '../types';
 import { getModels } from '../services/llm';
@@ -10,7 +10,7 @@ type ModelOption = {
   name: string;
 };
 
-type SettingsModalProps = {
+type SettingsProps = {
   isOpen: boolean;
   config: Config | null;
   onClose: () => void;
@@ -21,12 +21,12 @@ type SettingsModalProps = {
   }) => void;
 };
 
-export const SettingsModal = ({
+export const Settings = ({
   isOpen,
   config,
   onClose,
   onChange,
-}: SettingsModalProps) => {
+}: SettingsProps) => {
   const models = useMemo<ModelOption[]>(() => getModels(), []);
 
   const selectedProvider = config?.llmProvider ?? 'OpenAI';
@@ -53,7 +53,7 @@ export const SettingsModal = ({
       >
         <div className="flex items-center justify-between border-b border-gray-800 px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <Settings className="h-5 w-5 text-gray-400" />
+            <SettingsIcon className="h-5 w-5 text-gray-400" />
             <h2 className="text-lg font-medium text-gray-50">Settings</h2>
           </div>
           <button

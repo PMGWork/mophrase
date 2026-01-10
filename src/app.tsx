@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { bootstrap } from './bootstrap';
 import type { Config } from './config';
 import type { Path, ToolKind } from './types';
-import type { PlaybackController } from './components/PlaybackBar';
+import type { PlaybackController } from './components/Playback';
 import type { SuggestionUIState } from './suggestion/suggestion';
 import {
   removeModifier,
@@ -10,10 +10,10 @@ import {
 } from './utils/modifier';
 import { CanvasArea } from './components/CanvasArea';
 import { Header } from './components/Header';
-import { PlaybackBar } from './components/PlaybackBar';
-import { SettingsModal } from './components/SettingsModal';
+import { Playback } from './components/Playback';
+import { Settings } from './components/Settings';
 import { Sidebar } from './components/Sidebar';
-import { SketchSuggestion } from './components/SketchSuggestion';
+import { SketchSuggestion } from './components/Suggestion';
 
 export const App = () => {
   // DOM参照
@@ -31,12 +31,20 @@ export const App = () => {
     status: 'idle',
     promptCount: 0,
     isVisible: false,
+    suggestions: [],
+    position: null,
   });
 
   // エディタ内部参照
   const updateSuggestionUIRef = useRef<(() => void) | null>(null);
   const submitPromptRef = useRef<((prompt: string) => void) | null>(null);
   const setSketchToolRef = useRef<((tool: ToolKind) => void) | null>(null);
+  const setSuggestionHoverRef = useRef<
+    ((id: string | null, strength: number) => void) | null
+  >(null);
+  const selectSuggestionRef = useRef<
+    ((id: string, strength: number) => void) | null
+  >(null);
 
   // パス更新ヘルパー
   const handlePathSelected = (path: Path | null) => {
@@ -158,6 +166,8 @@ export const App = () => {
       submitPrompt,
       setSketchTool,
       getSketchTool,
+      setSuggestionHover,
+      selectSuggestion,
     } = bootstrap(
       {
         canvasContainer: sketchCanvasRef.current,
@@ -176,6 +186,8 @@ export const App = () => {
     updateSuggestionUIRef.current = updateSuggestionUI;
     submitPromptRef.current = submitPrompt;
     setSketchToolRef.current = setSketchTool;
+    setSuggestionHoverRef.current = setSuggestionHover;
+    selectSuggestionRef.current = selectSuggestion;
     setSelectedTool(getSketchTool());
   }, []);
 
@@ -190,7 +202,7 @@ export const App = () => {
       <div className="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <CanvasArea canvasRef={sketchCanvasRef} />
-          <PlaybackBar controller={playbackController} />
+          <Playback controller={playbackController} />
         </div>
 
         <Sidebar
@@ -211,11 +223,19 @@ export const App = () => {
         placeholder={
           suggestionUI.promptCount > 0
             ? 'Refine instruction...'
-            : 'Enter instructions...'
+            : 'Enter instruction...'
         }
-        shouldFocus={suggestionUI.status === 'input'}
+        status={suggestionUI.status}
+        suggestions={suggestionUI.suggestions}
+        position={suggestionUI.position}
+        onHoverChange={(id, strength) =>
+          setSuggestionHoverRef.current?.(id, strength)
+        }
+        onSuggestionClick={(id, strength) =>
+          selectSuggestionRef.current?.(id, strength)
+        }
       />
-      <SettingsModal
+      <Settings
         isOpen={isSettingsOpen}
         config={config}
         onClose={() => setIsSettingsOpen(false)}

@@ -19,16 +19,16 @@ export type PropertyEditorHandlers = {
 };
 
 // プロパティ型定義
-type PropertyEditorPanelProps = {
+type PropertyEditorProps = {
   activePath: Path | null; // 編集中のアクティブなパス
   handlers?: PropertyEditorHandlers; // 各種ハンドラ
 };
 
 // プロパティエディタパネルコンポーネント
-export const PropertyEditorPanel = ({
+export const PropertyEditor = ({
   activePath,
   handlers,
-}: PropertyEditorPanelProps) => {
+}: PropertyEditorProps) => {
   // 編集可能なパスがあるかどうか
   const hasEditablePath =
     !!activePath && (activePath.keyframes?.length ?? 0) >= 2;
