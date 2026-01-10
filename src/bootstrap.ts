@@ -1,7 +1,6 @@
 import '../style.css';
 import { DEFAULT_COLORS, DEFAULT_CONFIG } from './config';
-import { DomRefs } from './dom';
-import { GraphEditor } from './editor/graphEditor';
+import { GraphEditor } from './editor/graphEditor/editor';
 import { SketchEditor } from './editor/sketchEditor/editor';
 import type { Config } from './config';
 import type { Path, ToolKind } from './types';
@@ -18,16 +17,19 @@ export type BootstrapResult = {
   getSketchTool: () => ToolKind;
 };
 
+// 引数
 type BootstrapRefs = {
   canvasContainer?: HTMLElement | null;
   graphEditorCanvas?: HTMLDivElement | null;
 };
 
+// コールバック
 type BootstrapCallbacks = {
   onPathSelected?: (path: Path | null) => void;
   onToolChanged?: (tool: ToolKind) => void;
 };
 
+// 初期化処理
 export const bootstrap = (
   refs: BootstrapRefs = {},
   callbacks: BootstrapCallbacks = {},
@@ -36,16 +38,50 @@ export const bootstrap = (
   const config = { ...DEFAULT_CONFIG };
   const colors = { ...DEFAULT_COLORS };
 
-  // DOMマネージャー
-  const dom = new DomRefs({
-    canvasContainer: refs.canvasContainer ?? undefined,
-    graphEditorCanvas: refs.graphEditorCanvas ?? undefined,
-  });
+  const getRequiredElement = <T extends HTMLElement>(id: string): T => {
+    const element = document.getElementById(id);
+    if (!element) throw new Error(`ID '${id}' のDOM要素が見つかりませんでした。`);
+    return element as T;
+  };
+
+  const canvasContainer =
+    refs.canvasContainer ?? getRequiredElement<HTMLElement>('canvasContainer');
+  const graphEditorCanvas =
+    refs.graphEditorCanvas ??
+    getRequiredElement<HTMLDivElement>('graphEditorCanvas');
+  const sidebarContainer =
+    getRequiredElement<HTMLDivElement>('sidebarContainer');
+  const graphPlaceholder =
+    getRequiredElement<HTMLDivElement>('graphPlaceholder');
+  const graphEditorContent =
+    getRequiredElement<HTMLDivElement>('graphEditorContent');
+  const sketchPromptInput =
+    getRequiredElement<HTMLInputElement>('sketchPromptInput');
 
   // エディタ
-  const graphEditor = new GraphEditor(dom, config, colors);
+  const graphEditor = new GraphEditor(
+    {
+      sidebarContainer,
+      graphPlaceholder,
+      graphEditorContent,
+      graphEditorCanvas,
+      getGraphCanvasSize: () => ({
+        width: graphEditorCanvas.clientWidth,
+        height: graphEditorCanvas.clientHeight,
+      }),
+    },
+    config,
+    colors,
+  );
   const sketchEditor = new SketchEditor(
-    dom,
+    {
+      canvasContainer,
+      sketchPromptInput,
+      getCanvasSize: () => ({
+        width: canvasContainer.clientWidth,
+        height: canvasContainer.clientHeight,
+      }),
+    },
     config,
     colors,
     (path) => {

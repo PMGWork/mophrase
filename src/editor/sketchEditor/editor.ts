@@ -3,14 +3,13 @@ import { type Colors, type Config } from '../../config';
 import { OBJECT_COLORS, OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
-import type { DomRefs } from '../../dom';
 import { SuggestionManager } from '../../suggestion/suggestion';
 import type { HandleSelection, Path, ToolKind } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
-import type { ToolContext } from './types';
+import type { SketchDomRefs, ToolContext } from './types';
 
 // スケッチエディタ
 export class SketchEditor {
@@ -25,7 +24,7 @@ export class SketchEditor {
   private selectTool: SelectTool;
 
   // マネージャー
-  private dom: DomRefs;
+  private dom: SketchDomRefs;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
   private suggestionManager: SuggestionManager;
@@ -41,7 +40,7 @@ export class SketchEditor {
 
   // コンストラクタ
   constructor(
-    dom: DomRefs,
+    dom: SketchDomRefs,
     config: Config,
     colors: Colors,
     onPathCreated: (path: Path) => void,

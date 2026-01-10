@@ -1,28 +1,22 @@
 import p5 from 'p5';
-import type { Colors, Config } from '../config';
-import { HANDLE_RADIUS } from '../constants';
-import type { DomRefs } from '../dom';
-import type { Keyframe, Path } from '../types';
-import { drawBezierCurve, drawControls } from '../utils/draw';
+import type { Colors, Config } from '../../config';
+import { HANDLE_RADIUS } from '../../constants';
+import type { Keyframe, Path } from '../../types';
+import { drawBezierCurve, drawControls } from '../../utils/draw';
 import {
   buildGraphCurves,
   buildSketchCurves,
   computeKeyframeProgress,
-} from '../utils/keyframes';
-import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
-import { isLeftMouseButton } from '../utils/p5Helpers';
-
-// グラフハンドル選択
-type GraphHandleSelection = {
-  segmentIndex: number;
-  type: 'GRAPH_OUT' | 'GRAPH_IN';
-};
+} from '../../utils/keyframes';
+import { applySketchModifiers, applyGraphModifiers } from '../../utils/modifier';
+import { isLeftMouseButton } from '../../utils/p5Helpers';
+import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
 // グラフエディタ
 export class GraphEditor {
   // データ
   private activePath: Path | null = null;
-  private dom: DomRefs;
+  private dom: GraphEditorDomRefs;
 
   // ドラッグ状態
   private draggedHandle: GraphHandleSelection | null = null;
@@ -42,7 +36,7 @@ export class GraphEditor {
   }
 
   // コンストラクタ
-  constructor(dom: DomRefs, config: Config, colors: Colors) {
+  constructor(dom: GraphEditorDomRefs, config: Config, colors: Colors) {
     this.dom = dom;
     this.config = config;
     this.colors = colors;
