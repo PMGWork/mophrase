@@ -1,7 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Play, SkipBack, SkipForward, Square } from 'lucide-react';
-import type { PlaybackController, PlaybackState } from '../types/playback';
+
+// 再生状態型定義
+type PlaybackState = {
+  hasPaths: boolean;
+  isPlaying: boolean;
+  elapsedMs: number;
+  totalMs: number;
+};
+
+// コントローラ型定義
+export type PlaybackController = {
+  getState: () => PlaybackState;
+  togglePlayback: () => boolean;
+  resetPlayback: () => void;
+  goToLastFrame: () => void;
+  seekPlayback: (progress: number) => void;
+};
 
 // Props
 type PlaybackBarProps = {
@@ -62,7 +78,6 @@ export const PlaybackBar = ({ controller }: PlaybackBarProps) => {
   // キーボード操作
   useEffect(() => {
     if (!controller) return;
-
     const handleKeydown = (event: KeyboardEvent) => {
       if (
         document.activeElement instanceof HTMLInputElement ||

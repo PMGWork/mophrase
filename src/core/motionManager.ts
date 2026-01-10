@@ -57,7 +57,11 @@ export class MotionManager {
   }
 
   // 全パスのタイムライン再生を開始
-  public startAll(paths: Path[], colors: string[], startAtMs: number = 0): void {
+  public startAll(
+    paths: Path[],
+    colors: string[],
+    startAtMs: number = 0,
+  ): void {
     if (paths.length === 0) return;
 
     const { states, totalDuration } = this.buildAnimationStates(paths, colors);
@@ -132,8 +136,13 @@ export class MotionManager {
     // 再生していない場合は、設定されたパスの開始位置を表示
     if (this.staticPath && this.staticPath.keyframes.length > 0) {
       const originalCurves = buildSketchCurves(this.staticPath.keyframes);
-      const effectiveCurves = applySketchModifiers(originalCurves, this.staticPath.sketchModifiers, this.p);
-      const startPosition = effectiveCurves[0]?.[0] ?? this.staticPath.keyframes[0].position;
+      const effectiveCurves = applySketchModifiers(
+        originalCurves,
+        this.staticPath.sketchModifiers,
+        this.p,
+      );
+      const startPosition =
+        effectiveCurves[0]?.[0] ?? this.staticPath.keyframes[0].position;
       this.drawObject(startPosition, this.staticColor);
     }
   }
@@ -142,7 +151,10 @@ export class MotionManager {
   public drawPreview(): void {
     if (this.animationStates.length === 0) return;
 
-    const previewTime = Math.max(0, Math.min(this.totalDuration, this.elapsedTime));
+    const previewTime = Math.max(
+      0,
+      Math.min(this.totalDuration, this.elapsedTime),
+    );
     for (const state of this.animationStates) {
       const position = this.evaluatePathPosition(state, previewTime);
       this.drawObject(position, state.color);
@@ -173,12 +185,26 @@ export class MotionManager {
 
       // 空間カーブと進行度を計算
       const originalCurves = buildSketchCurves(path.keyframes);
-      const spatialCurves = applySketchModifiers(originalCurves, path.sketchModifiers, this.p);
-      const keyframeProgress = computeKeyframeProgress(path.keyframes, spatialCurves);
+      const spatialCurves = applySketchModifiers(
+        originalCurves,
+        path.sketchModifiers,
+        this.p,
+      );
+      const keyframeProgress = computeKeyframeProgress(
+        path.keyframes,
+        spatialCurves,
+      );
 
       // 時間カーブを生成
-      const baseGraphCurves = buildGraphCurves(path.keyframes, keyframeProgress);
-      const graphCurves = applyGraphModifiers(baseGraphCurves, path.graphModifiers, this.p);
+      const baseGraphCurves = buildGraphCurves(
+        path.keyframes,
+        keyframeProgress,
+      );
+      const graphCurves = applyGraphModifiers(
+        baseGraphCurves,
+        path.graphModifiers,
+        this.p,
+      );
 
       states.push({
         path,
@@ -195,8 +221,18 @@ export class MotionManager {
   }
 
   // 指定パスの現在位置を評価
-  private evaluatePathPosition(state: PathAnimationState, elapsedTime: number): Vector {
-    const { path, spatialCurves, graphCurves, keyframeProgress, startTime, duration } = state;
+  private evaluatePathPosition(
+    state: PathAnimationState,
+    elapsedTime: number,
+  ): Vector {
+    const {
+      path,
+      spatialCurves,
+      graphCurves,
+      keyframeProgress,
+      startTime,
+      duration,
+    } = state;
 
     // 開始時間前は開始位置
     if (elapsedTime < startTime) {
@@ -210,10 +246,18 @@ export class MotionManager {
     // 終了後は終点位置
     if (time >= 1) {
       const lastCurve = spatialCurves[spatialCurves.length - 1];
-      return lastCurve?.[3] ?? path.keyframes[path.keyframes.length - 1].position;
+      return (
+        lastCurve?.[3] ?? path.keyframes[path.keyframes.length - 1].position
+      );
     }
 
-    return this.evaluatePosition(time, path.keyframes, spatialCurves, graphCurves, keyframeProgress);
+    return this.evaluatePosition(
+      time,
+      path.keyframes,
+      spatialCurves,
+      graphCurves,
+      keyframeProgress,
+    );
   }
 
   // オブジェクトを描画
@@ -257,7 +301,8 @@ export class MotionManager {
 
     if (keyframes.length === 1) return keyframes[0].position;
 
-    if (time <= keyframes[0].time) return spatialCurves[0]?.[0] ?? keyframes[0].position;
+    if (time <= keyframes[0].time)
+      return spatialCurves[0]?.[0] ?? keyframes[0].position;
     if (time >= keyframes[keyframes.length - 1].time) {
       const lastCurve = spatialCurves[spatialCurves.length - 1];
       return lastCurve?.[3] ?? keyframes[keyframes.length - 1].position;

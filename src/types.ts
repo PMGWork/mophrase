@@ -10,7 +10,10 @@ export type Vector = p5.Vector;
 // #region 2. エディタ関連
 
 // 編集ツール
-export type EditorTool = 'select' | 'pen';
+export type ToolKind = 'select' | 'pen';
+
+// モディファイア種別
+export type ModifierKind = 'sketch' | 'graph';
 
 // 範囲選択用の矩形
 export interface MarqueeRect {
@@ -77,6 +80,9 @@ export interface GraphModifier {
   offsets: OffsetArray;
   strength: number;
 }
+
+// モディファイアの共通型
+export type Modifier = SketchModifier | GraphModifier;
 
 // #region 4. シリアライズ（LLM通信用）
 

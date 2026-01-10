@@ -1,113 +1,41 @@
 // DOM要素の型定義
 export type ElementMap = {
-  // 設定モーダル
-  settingsButton: HTMLButtonElement;
-  settingsModal: HTMLDivElement;
-  settingsPanel: HTMLDivElement;
-  closeSettingsButton: HTMLButtonElement;
-  settingsLlmModelSelect: HTMLSelectElement;
-  settingsSketchTolerance: HTMLInputElement;
-  settingsSketchToleranceLabel: HTMLElement;
-
   // サイドバー
   sidebarContainer: HTMLDivElement;
-  propertyPlaceholder: HTMLDivElement;
-  propertyEditorContent: HTMLDivElement;
-  startTimeInput: HTMLInputElement;
-  durationInput: HTMLInputElement;
 
   // グラフエディタ
-  graphEditorContainer: HTMLDivElement;
   graphPlaceholder: HTMLDivElement;
   graphEditorContent: HTMLDivElement;
   graphEditorCanvas: HTMLDivElement;
 
   // スケッチエディタ
   canvasContainer: HTMLElement;
-  sketchPromptForm: HTMLFormElement;
   sketchPromptInput: HTMLInputElement;
-  editMotionButton: HTMLButtonElement;
-  selectToolButton: HTMLButtonElement;
-  penToolButton: HTMLButtonElement;
-
-  // Sketch Modifier パネル
-  sketchModifierSection: HTMLDivElement;
-  sketchModifierList: HTMLDivElement;
-
-  // Graph Modifier パネル
-  graphModifierSection: HTMLDivElement;
-  graphModifierList: HTMLDivElement;
 };
 
 // DOM要素IDの定義
 const ELEMENT_IDS: Record<keyof ElementMap, string> = {
-  settingsButton: 'settingsButton',
-  settingsModal: 'settingsModal',
-  settingsPanel: 'settingsPanel',
-  closeSettingsButton: 'closeSettingsButton',
-  settingsLlmModelSelect: 'settingsLlmModelSelect',
-  settingsSketchTolerance: 'settingsSketchTolerance',
-  settingsSketchToleranceLabel: 'settingsSketchToleranceLabel',
   sidebarContainer: 'sidebarContainer',
-  propertyPlaceholder: 'propertyPlaceholder',
-  propertyEditorContent: 'propertyEditorContent',
-  startTimeInput: 'startTimeInput',
-  durationInput: 'durationInput',
-  graphEditorContainer: 'graphEditorContainer',
   graphPlaceholder: 'graphPlaceholder',
   graphEditorContent: 'graphEditorContent',
   graphEditorCanvas: 'graphEditorCanvas',
   canvasContainer: 'canvasContainer',
-  sketchPromptForm: 'sketchPromptForm',
   sketchPromptInput: 'sketchPromptInput',
-  editMotionButton: 'editMotionButton',
-  selectToolButton: 'selectToolButton',
-  penToolButton: 'penToolButton',
-  sketchModifierSection: 'sketchModifierSection',
-  sketchModifierList: 'sketchModifierList',
-  graphModifierSection: 'graphModifierSection',
-  graphModifierList: 'graphModifierList',
 };
 
 // DOM参照の束ね役（ElementMap を実装）
 export class DomRefs implements ElementMap {
-  // 設定モーダル
-  public readonly settingsButton!: HTMLButtonElement;
-  public readonly settingsModal!: HTMLDivElement;
-  public readonly settingsPanel!: HTMLDivElement;
-  public readonly closeSettingsButton!: HTMLButtonElement;
-  public readonly settingsLlmModelSelect!: HTMLSelectElement;
-  public readonly settingsSketchTolerance!: HTMLInputElement;
-  public readonly settingsSketchToleranceLabel!: HTMLElement;
-
   // サイドバー
   public readonly sidebarContainer!: HTMLDivElement;
-  public readonly propertyPlaceholder!: HTMLDivElement;
-  public readonly propertyEditorContent!: HTMLDivElement;
-  public readonly startTimeInput!: HTMLInputElement;
-  public readonly durationInput!: HTMLInputElement;
 
   // グラフエディタ
-  public readonly graphEditorContainer!: HTMLDivElement;
   public readonly graphPlaceholder!: HTMLDivElement;
   public readonly graphEditorContent!: HTMLDivElement;
   public readonly graphEditorCanvas!: HTMLDivElement;
 
   // スケッチエディタ
   public readonly canvasContainer!: HTMLElement;
-  public readonly sketchPromptForm!: HTMLFormElement;
   public readonly sketchPromptInput!: HTMLInputElement;
-  public readonly editMotionButton!: HTMLButtonElement;
-  public readonly selectToolButton!: HTMLButtonElement;
-  public readonly penToolButton!: HTMLButtonElement;
-
-  // Sketch Modifier パネル
-  public readonly sketchModifierSection!: HTMLDivElement;
-  public readonly sketchModifierList!: HTMLDivElement;
-
-  // Graph Modifier パネル
-  public readonly graphModifierSection!: HTMLDivElement;
-  public readonly graphModifierList!: HTMLDivElement;
 
   // コンストラクタ
   constructor(overrides: Partial<ElementMap> = {}) {

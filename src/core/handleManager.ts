@@ -142,12 +142,7 @@ export class HandleManager {
         const anchor = this.getHandlePoint(path, selection, effective);
         if (!anchor) continue;
         const pos = this.normToPixel(anchor.x, anchor.y);
-        if (
-          pos.x >= minX &&
-          pos.x <= maxX &&
-          pos.y >= minY &&
-          pos.y <= maxY
-        ) {
+        if (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY) {
           this.selectedHandles.push({
             pathIndex,
             keyframeIndex,
@@ -231,7 +226,6 @@ export class HandleManager {
     return { pathIndex, startCurveIndex: minIdx, endCurveIndex: maxIdx };
   }
 
-
   // #region プライベート - ハンドル検索
 
   // 指定位置にハンドルがあるかを検索
@@ -293,7 +287,15 @@ export class HandleManager {
     }
 
     // 単体選択されている場合
-    this.applySingleDrag(dragged, targetX, targetY, mode, path, original, effective);
+    this.applySingleDrag(
+      dragged,
+      targetX,
+      targetY,
+      mode,
+      path,
+      original,
+      effective,
+    );
   }
 
   // 複数選択時のドラッグ処理
@@ -308,10 +310,7 @@ export class HandleManager {
 
     for (const selection of this.selectedHandles) {
       const anchorKey = `${selection.pathIndex}:${selection.keyframeIndex}`;
-      if (
-        selection.handleType !== 'ANCHOR' &&
-        anchorKeys.has(anchorKey)
-      ) {
+      if (selection.handleType !== 'ANCHOR' && anchorKeys.has(anchorKey)) {
         continue;
       }
 
@@ -370,9 +369,10 @@ export class HandleManager {
   // #region プライベート - 曲線・ハンドル補助
 
   // 元の曲線とModifier適用後の曲線を取得
-  private getCurves(
-    path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
-  ): { original: Vector[][]; effective: Vector[][] } {
+  private getCurves(path: Pick<Path, 'keyframes' | 'sketchModifiers'>): {
+    original: Vector[][];
+    effective: Vector[][];
+  } {
     const original = buildSketchCurves(path.keyframes);
     const effective = applySketchModifiers(original, path.sketchModifiers);
     return { original, effective };
@@ -458,7 +458,10 @@ export class HandleManager {
   // #region プライベート - ハンドル操作
 
   // ハンドルベクトルを取得
-  private getHandleVector(keyframe: Path['keyframes'][number], type: HandleType) {
+  private getHandleVector(
+    keyframe: Path['keyframes'][number],
+    type: HandleType,
+  ) {
     if (type === 'SKETCH_IN') return keyframe.sketchIn;
     if (type === 'SKETCH_OUT') return keyframe.sketchOut;
     return null;

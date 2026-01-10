@@ -79,4 +79,3 @@ export function buildGraphCurves(
 
   return curves;
 }
-

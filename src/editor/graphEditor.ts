@@ -4,7 +4,11 @@ import { HANDLE_RADIUS } from '../constants';
 import type { DomRefs } from '../dom';
 import type { Keyframe, Path } from '../types';
 import { drawBezierCurve, drawControls } from '../utils/draw';
-import { buildGraphCurves, buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
+import {
+  buildGraphCurves,
+  buildSketchCurves,
+  computeKeyframeProgress,
+} from '../utils/keyframes';
 import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
 import { isLeftMouseButton } from '../utils/p5Helpers';
 
@@ -24,7 +28,9 @@ export class GraphEditor {
   private draggedHandle: GraphHandleSelection | null = null;
 
   // プレビュープロバイダー
-  private previewProvider?: (p: p5) => { curves: p5.Vector[][]; strength: number } | null;
+  private previewProvider?: (
+    p: p5,
+  ) => { curves: p5.Vector[][]; strength: number } | null;
 
   // 設定
   private config: Config;
@@ -188,7 +194,8 @@ export class GraphEditor {
       const previewData = this.previewProvider(p);
       if (previewData && previewData.curves.length > 0) {
         const ctx = p.drawingContext as CanvasRenderingContext2D;
-        const previousDash = typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
+        const previousDash =
+          typeof ctx.getLineDash === 'function' ? ctx.getLineDash() : [];
         if (typeof ctx.setLineDash === 'function') ctx.setLineDash([6, 4]);
 
         p.push();
@@ -203,7 +210,8 @@ export class GraphEditor {
         );
         p.pop();
 
-        if (typeof ctx.setLineDash === 'function') ctx.setLineDash(previousDash);
+        if (typeof ctx.setLineDash === 'function')
+          ctx.setLineDash(previousDash);
       }
     }
 
@@ -230,7 +238,15 @@ export class GraphEditor {
     const { curves, effectiveCurves, progress } = graphData;
     const target = this.pixelToNorm(p.mouseX, p.mouseY);
     const sync = !p.keyIsDown(p.ALT);
-    this.applyHandleDrag(this.draggedHandle, target.x, target.y, progress, curves, effectiveCurves, sync);
+    this.applyHandleDrag(
+      this.draggedHandle,
+      target.x,
+      target.y,
+      progress,
+      curves,
+      effectiveCurves,
+      sync,
+    );
   }
 
   // p5.js マウスリリース
@@ -273,12 +289,19 @@ export class GraphEditor {
   }
 
   // グラフデータの生成
-  private getGraphData(): { curves: p5.Vector[][]; effectiveCurves: p5.Vector[][]; progress: number[] } | null {
+  private getGraphData(): {
+    curves: p5.Vector[][];
+    effectiveCurves: p5.Vector[][];
+    progress: number[];
+  } | null {
     if (!this.activePath) return null;
 
     // 空間カーブを構築（Modifier 適用）
     const originalSketchCurves = buildSketchCurves(this.activePath.keyframes);
-    const sketchCurves = applySketchModifiers(originalSketchCurves, this.activePath.sketchModifiers);
+    const sketchCurves = applySketchModifiers(
+      originalSketchCurves,
+      this.activePath.sketchModifiers,
+    );
 
     // 進行度を計算
     const progress = computeKeyframeProgress(
@@ -290,7 +313,10 @@ export class GraphEditor {
     const curves = buildGraphCurves(this.activePath.keyframes, progress);
 
     // Modifier 適用後の時間カーブ
-    const effectiveCurves = applyGraphModifiers(curves, this.activePath.graphModifiers);
+    const effectiveCurves = applyGraphModifiers(
+      curves,
+      this.activePath.graphModifiers,
+    );
 
     return { curves, effectiveCurves, progress };
   }
@@ -346,7 +372,9 @@ export class GraphEditor {
     // オフセット = 表示位置 - 元の位置
     // Target (Mouse) = NewOriginal + Offset
     // NewOriginal = Target - Offset
-    const offset = effectiveCurve[pointIndex].copy().sub(originalCurve[pointIndex]);
+    const offset = effectiveCurve[pointIndex]
+      .copy()
+      .sub(originalCurve[pointIndex]);
 
     const t0 = start.time;
     const t1 = end.time;
@@ -367,15 +395,11 @@ export class GraphEditor {
     const clampedX = Math.max(0, Math.min(1, normX));
 
     if (selection.type === 'GRAPH_OUT') {
-      start.graphOut = start.position.copy().set(
-        clampedX * dt,
-        normY * dv,
-      );
+      start.graphOut = start.position.copy().set(clampedX * dt, normY * dv);
     } else {
-      end.graphIn = end.position.copy().set(
-        (clampedX - 1) * dt,
-        (normY - 1) * dv,
-      );
+      end.graphIn = end.position
+        .copy()
+        .set((clampedX - 1) * dt, (normY - 1) * dv);
     }
 
     // 対向ハンドルの同期処理

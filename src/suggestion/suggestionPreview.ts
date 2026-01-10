@@ -10,7 +10,10 @@ import {
 } from '../utils/keyframes';
 import { applyGraphModifiers, applySketchModifiers } from '../utils/modifier';
 import { slicePath } from '../utils/path';
-import { deserializeCurves, deserializeGraphCurves } from '../utils/serialization';
+import {
+  deserializeCurves,
+  deserializeGraphCurves,
+} from '../utils/serialization';
 
 // スケッチ提案のプレビュー描画パラメータ
 type SketchPreviewParams = {
@@ -95,10 +98,7 @@ export function getPreviewGraphCurves(
     targetPath.keyframes,
     baseSketchCurves,
   );
-  const baseGraphCurves = buildGraphCurves(
-    targetPath.keyframes,
-    baseProgress,
-  );
+  const baseGraphCurves = buildGraphCurves(targetPath.keyframes, baseProgress);
   const effectiveSketchCurves = applySketchModifiers(
     baseSketchCurves,
     targetPath.sketchModifiers,

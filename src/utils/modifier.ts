@@ -1,5 +1,11 @@
 import type p5 from 'p5';
-import type { GraphModifier, SelectionRange, SketchModifier, Vector } from '../types';
+import type {
+  GraphModifier,
+  Modifier,
+  SelectionRange,
+  SketchModifier,
+  Vector,
+} from '../types';
 
 // スケッチモディファイアを適用したカーブを計算
 export function applySketchModifiers(
@@ -167,9 +173,9 @@ export function createGraphModifier(
   };
 }
 
-// スケッチモディファイアの影響度を更新
-export function updateSketchModifierStrength(
-  modifiers: SketchModifier[] | undefined,
+// モディファイアの影響度を更新
+export function updateModifierStrength(
+  modifiers: Modifier[] | undefined,
   modifierId: string,
   strength: number,
 ): void {
@@ -178,31 +184,11 @@ export function updateSketchModifierStrength(
   if (modifier) modifier.strength = Math.max(0, Math.min(2, strength));
 }
 
-// グラフモディファイアの影響度を更新
-export function updateGraphModifierStrength(
-  modifiers: GraphModifier[] | undefined,
+// モディファイアを削除
+export function removeModifier(
+  modifiers: Modifier[] | undefined,
   modifierId: string,
-  strength: number,
-): void {
-  if (!modifiers) return;
-  const modifier = modifiers.find((m) => m.id === modifierId);
-  if (modifier) modifier.strength = Math.max(0, Math.min(2, strength));
-}
-
-// スケッチモディファイアを削除
-export function removeSketchModifier(
-  modifiers: SketchModifier[] | undefined,
-  modifierId: string,
-): SketchModifier[] {
-  if (!modifiers) return [];
-  return modifiers.filter((m) => m.id !== modifierId);
-}
-
-// グラフモディファイアを削除
-export function removeGraphModifier(
-  modifiers: GraphModifier[] | undefined,
-  modifierId: string,
-): GraphModifier[] {
+): Modifier[] {
   if (!modifiers) return [];
   return modifiers.filter((m) => m.id !== modifierId);
 }

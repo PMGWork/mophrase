@@ -104,9 +104,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
 
   Groq: {
     defaultModel: 'openai/gpt-oss-120b',
-    models: [
-      { id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' },
-    ],
+    models: [{ id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' }],
     generate: async (prompt, schema, model) => {
       const response = await getGroq().chat.completions.create({
         model,

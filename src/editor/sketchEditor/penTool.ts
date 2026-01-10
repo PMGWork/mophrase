@@ -89,8 +89,7 @@ export class PenTool {
     if (keyframes.length < 2) return;
 
     const timestamps = this.draftPath.timestamps;
-    const durationMs =
-      timestamps[timestamps.length - 1] - timestamps[0];
+    const durationMs = timestamps[timestamps.length - 1] - timestamps[0];
     const duration = Math.max(0.01, Math.round(durationMs) / 1000);
 
     const path: Path = {

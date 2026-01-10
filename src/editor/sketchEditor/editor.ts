@@ -5,7 +5,7 @@ import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import type { DomRefs } from '../../dom';
 import { SuggestionManager } from '../../suggestion/suggestion';
-import type { EditorTool, HandleSelection, Path } from '../../types';
+import type { HandleSelection, Path, ToolKind } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
 import { PenTool } from './penTool';
@@ -20,7 +20,7 @@ export class SketchEditor {
   private isPreviewing: boolean = false;
 
   // ツール
-  private currentTool: EditorTool = 'pen';
+  private currentTool: ToolKind = 'pen';
   private penTool: PenTool;
   private selectTool: SelectTool;
 
@@ -37,6 +37,7 @@ export class SketchEditor {
   // コールバック
   private onPathCreated: (path: Path) => void; // パスが作成されたときに呼び出される
   private onPathSelected: (path: Path | null) => void; // パスが選択されたときに呼び出される
+  private onToolChanged?: (tool: ToolKind) => void; // ツールが変更されたときに呼び出される
 
   // コンストラクタ
   constructor(
@@ -45,12 +46,14 @@ export class SketchEditor {
     colors: Colors,
     onPathCreated: (path: Path) => void,
     onPathSelected: (path: Path | null) => void,
+    onToolChanged?: (tool: ToolKind) => void,
   ) {
     this.dom = dom;
     this.config = config;
     this.colors = colors;
     this.onPathCreated = onPathCreated;
     this.onPathSelected = onPathSelected;
+    this.onToolChanged = onToolChanged;
 
     // ツール初期化
     this.penTool = new PenTool();
@@ -79,15 +82,6 @@ export class SketchEditor {
       },
     });
 
-    // ツールバーのクリックハンドラー
-    this.dom.selectToolButton.addEventListener('click', () => {
-      this.setTool('select');
-    });
-
-    this.dom.penToolButton.addEventListener('click', () => {
-      this.setTool('pen');
-    });
-
     // p5.jsの初期化
     this.init();
   }
@@ -95,9 +89,9 @@ export class SketchEditor {
   // #region メイン関数
 
   // ツールを設定
-  setTool(tool: EditorTool): void {
+  public setTool(tool: ToolKind): void {
     this.currentTool = tool;
-    this.updateToolbarUI();
+    this.onToolChanged?.(tool);
 
     // ペンツールに切り替わったら提案ウィンドウを閉じる
     if (tool === 'pen') {
@@ -112,24 +106,8 @@ export class SketchEditor {
 
   // #region DOM操作
 
-  // ツールバーのUI更新
-  private updateToolbarUI(): void {
-    const buttons = [
-      { el: this.dom.selectToolButton, active: this.currentTool === 'select' },
-      { el: this.dom.penToolButton, active: this.currentTool === 'pen' },
-    ];
-
-    for (const { el, active } of buttons) {
-      // アクティブ時のクラス
-      el.classList.toggle('bg-gray-50', active);
-      el.classList.toggle('text-gray-950', active);
-      el.classList.toggle('hover:bg-gray-200', active);
-      // 非アクティブ時のクラス
-      el.classList.toggle('bg-gray-800', !active);
-      el.classList.toggle('text-gray-400', !active);
-      el.classList.toggle('hover:bg-gray-700', !active);
-      el.classList.toggle('hover:text-gray-50', !active);
-    }
+  public getCurrentTool(): ToolKind {
+    return this.currentTool;
   }
 
   // ツールコンテキストを作成
@@ -242,7 +220,8 @@ export class SketchEditor {
 
     const ctx = this.getToolContext();
     const isPlaying = this.motionManager?.getIsPlaying() ?? false;
-    const shouldPreview = !isPlaying && this.isPreviewing && !!this.motionManager;
+    const shouldPreview =
+      !isPlaying && this.isPreviewing && !!this.motionManager;
 
     // 1. 非選択のパスの軌跡を描画（再生中はスキップ）
     if (!isPlaying) {
@@ -250,13 +229,7 @@ export class SketchEditor {
         const path = this.paths[pathIndex];
         if (this.activePath === path) continue;
 
-        drawSketchPath(
-          p,
-          path,
-          this.config,
-          this.colors,
-          false,
-        );
+        drawSketchPath(p, path, this.config, this.colors, false);
       }
     }
 
@@ -304,11 +277,7 @@ export class SketchEditor {
         true,
         (curveIndex, pointIndex) =>
           this.handleManager.isSelected(
-            this.mapCurvePointToHandle(
-              pathIndex,
-              curveIndex,
-              pointIndex,
-            ),
+            this.mapCurvePointToHandle(pathIndex, curveIndex, pointIndex),
           ),
       );
     }
@@ -397,7 +366,9 @@ export class SketchEditor {
 
     // 停止中なら全パスの再生開始
     if (this.paths.length > 0) {
-      const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+      const colors = this.paths.map(
+        (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
+      );
       const elapsed = this.motionManager.getElapsedTime();
       this.motionManager.startAll(this.paths, colors, elapsed);
       this.isPreviewing = false;
@@ -419,7 +390,9 @@ export class SketchEditor {
       return;
     }
 
-    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    const colors = this.paths.map(
+      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
+    );
     this.motionManager.prepareAll(this.paths, colors);
     this.motionManager.seekTo(0);
     this.isPreviewing = false;
@@ -438,7 +411,9 @@ export class SketchEditor {
       return;
     }
 
-    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    const colors = this.paths.map(
+      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
+    );
     this.motionManager.prepareAll(this.paths, colors);
     this.motionManager.seekTo(this.motionManager.getTotalDuration());
     this.isPreviewing = true;
@@ -475,14 +450,18 @@ export class SketchEditor {
       return;
     }
 
-    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    const colors = this.paths.map(
+      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
+    );
     this.motionManager.prepareAll(this.paths, colors);
   }
 
   public seekPlayback(progress: number): void {
     if (!this.motionManager || this.paths.length === 0) return;
 
-    const colors = this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    const colors = this.paths.map(
+      (_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length],
+    );
     this.motionManager.prepareAll(this.paths, colors);
 
     const totalDuration = this.motionManager.getTotalDuration();

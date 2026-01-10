@@ -69,9 +69,7 @@ export function drawBezierCurve(
     const start = curve[0];
     const end = curve[3];
     const connected =
-      prevEnd !== null &&
-      prevEnd.x === start.x &&
-      prevEnd.y === start.y;
+      prevEnd !== null && prevEnd.x === start.x && prevEnd.y === start.y;
 
     if (prevEnd === null || !connected) {
       if (prevEnd !== null) p.endShape();

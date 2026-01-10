@@ -208,7 +208,10 @@ export function positionUI({
   const originalCurves = buildSketchCurves(targetPath.keyframes);
   if (originalCurves.length === 0) return;
 
-  const effectiveCurves = applySketchModifiers(originalCurves, targetPath.sketchModifiers);
+  const effectiveCurves = applySketchModifiers(
+    originalCurves,
+    targetPath.sketchModifiers,
+  );
 
   // 終点のインデックスを計算
   const endCurveIndex = selectionRange

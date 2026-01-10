@@ -95,9 +95,7 @@ function serializeKeyframes(
     const outHandle = start.sketchOut
       ? startPos.copy().add(start.sketchOut)
       : startPos;
-    const inHandle = end.sketchIn
-      ? endPos.copy().add(end.sketchIn)
-      : endPos;
+    const inHandle = end.sketchIn ? endPos.copy().add(end.sketchIn) : endPos;
 
     startKeyframe.sketchOut = serializeHandle(outHandle, startPos, diag);
     endKeyframe.sketchIn = serializeHandle(inHandle, endPos, diag);
@@ -167,7 +165,9 @@ export function deserializeCurves(
 
     curves.push([
       start,
-      handleOut ? deserializeHandle(handleOut, start, diagonal, p) : start.copy(),
+      handleOut
+        ? deserializeHandle(handleOut, start, diagonal, p)
+        : start.copy(),
       handleIn ? deserializeHandle(handleIn, end, diagonal, p) : end.copy(),
       end,
     ]);
@@ -256,7 +256,6 @@ function deserializeGraphHandle(
   const y = Math.sin(angle) * dist;
   return p.createVector(x, y);
 }
-
 
 // #region ユーティリティ
 // バウンディングボックスを計算

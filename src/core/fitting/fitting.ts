@@ -40,7 +40,6 @@ export function fitSketchCurves(
   return { curves, ranges };
 }
 
-
 // イージングのフィッティング
 export function fitGraphCurves(
   points: Vector[],
@@ -69,7 +68,6 @@ export function fitGraphCurves(
 
   return { curves, ranges };
 }
-
 
 // #region プライベート関数
 
