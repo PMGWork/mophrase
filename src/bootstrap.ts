@@ -73,6 +73,15 @@ export const bootstrap = (
     config,
     colors,
   );
+
+  // パス選択時の共通処理
+  const handlePathSelection = (path: Path | null) => {
+    graphEditor.setPath(path);
+    callbacks.onPathSelected?.(path);
+    sketchEditor.refreshPlaybackTimeline();
+  };
+
+  // スケッチエディタ
   const sketchEditor = new SketchEditor(
     {
       canvasContainer,
@@ -85,15 +94,11 @@ export const bootstrap = (
     colors,
     (path) => {
       // パス作成時
-      graphEditor.setPath(path);
-      callbacks.onPathSelected?.(path);
-      sketchEditor.refreshPlaybackTimeline();
+      handlePathSelection(path);
     },
     (path) => {
       // パス選択時（作成時も呼ばれる）
-      graphEditor.setPath(path);
-      callbacks.onPathSelected?.(path);
-      sketchEditor.refreshPlaybackTimeline();
+      handlePathSelection(path);
     },
     (path) => {
       callbacks.onPathUpdated?.(path);

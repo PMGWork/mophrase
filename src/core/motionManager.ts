@@ -6,7 +6,7 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
+import { applyModifiers } from '../utils/modifier';
 
 // 個別パスのアニメーション状態
 type PathAnimationState = {
@@ -136,7 +136,7 @@ export class MotionManager {
     // 再生していない場合は、設定されたパスの開始位置を表示
     if (this.staticPath && this.staticPath.keyframes.length > 0) {
       const originalCurves = buildSketchCurves(this.staticPath.keyframes);
-      const effectiveCurves = applySketchModifiers(
+      const effectiveCurves = applyModifiers(
         originalCurves,
         this.staticPath.sketchModifiers,
         this.p,
@@ -185,7 +185,7 @@ export class MotionManager {
 
       // 空間カーブと進行度を計算
       const originalCurves = buildSketchCurves(path.keyframes);
-      const spatialCurves = applySketchModifiers(
+      const spatialCurves = applyModifiers(
         originalCurves,
         path.sketchModifiers,
         this.p,
@@ -200,7 +200,7 @@ export class MotionManager {
         path.keyframes,
         keyframeProgress,
       );
-      const graphCurves = applyGraphModifiers(
+      const graphCurves = applyModifiers(
         baseGraphCurves,
         path.graphModifiers,
         this.p,

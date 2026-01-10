@@ -1,6 +1,6 @@
 import type { Path, SelectionRange } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
-import { applySketchModifiers } from '../utils/modifier';
+import { applyModifiers } from '../utils/modifier';
 
 // ポップアップのオフセット値
 const POPUP_OFFSET = 20;
@@ -19,7 +19,7 @@ export function computeSuggestionPosition({
   const originalCurves = buildSketchCurves(targetPath.keyframes);
   if (originalCurves.length === 0) return null;
 
-  const effectiveCurves = applySketchModifiers(
+  const effectiveCurves = applyModifiers(
     originalCurves,
     targetPath.sketchModifiers,
   );

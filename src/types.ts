@@ -73,7 +73,6 @@ export interface Modifier {
   strength: number;
 }
 
-
 // #region 4. シリアライズ（LLM通信用）
 
 // シリアライズされたハンドル（スケッチ・グラフ共通・極座標）

@@ -1,5 +1,6 @@
 import { MousePointer, PenTool, Settings } from 'lucide-react';
 import type { ToolKind } from '../types';
+import { ToolButton } from './ToolButton';
 
 // Props
 type HeaderProps = {
@@ -18,41 +19,26 @@ export const Header = ({
     <h1 className="text-2xl font-medium">MoPhrase</h1>
 
     <div className="flex flex-wrap items-center gap-2">
-      <button
-        id="selectToolButton"
+      <ToolButton
         title="Select Tool"
-        className={`corner-md flex h-9 w-9 cursor-pointer items-center justify-center transition-colors ${
-          selectedTool === 'select'
-            ? 'bg-gray-50 text-gray-950 hover:bg-gray-200'
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-        }`}
+        icon={MousePointer}
+        isSelected={selectedTool === 'select'}
         onClick={() => onSelectTool('select')}
-      >
-        <MousePointer className="h-4 w-4" />
-      </button>
-      <button
-        id="penToolButton"
+      />
+      <ToolButton
         title="Pen Tool"
-        className={`corner-md flex h-9 w-9 cursor-pointer items-center justify-center transition-colors ${
-          selectedTool === 'pen'
-            ? 'bg-gray-50 text-gray-950 hover:bg-gray-200'
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-        }`}
+        icon={PenTool}
+        isSelected={selectedTool === 'pen'}
         onClick={() => onSelectTool('pen')}
-      >
-        <PenTool className="h-4 w-4" />
-      </button>
+      />
 
       <div className="mx-2 h-6 w-px bg-gray-800" />
 
-      <button
-        id="settingsButton"
+      <ToolButton
         title="Settings"
-        className="corner-md flex h-9 w-9 cursor-pointer items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700"
+        icon={Settings}
         onClick={onOpenSettings}
-      >
-        <Settings className="h-4 w-4" />
-      </button>
+      />
     </div>
   </header>
 );

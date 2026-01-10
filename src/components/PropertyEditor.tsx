@@ -57,10 +57,8 @@ export const PropertyEditor = ({
   ) => handlers?.onModifierChange?.(modifier.id, type, value);
 
   // モディファイア削除ハンドラ
-  const handleModifierRemove = (
-    modifier: Modifier,
-    type: ModifierKind,
-  ) => handlers?.onModifierRemove?.(modifier.id, type);
+  const handleModifierRemove = (modifier: Modifier, type: ModifierKind) =>
+    handlers?.onModifierRemove?.(modifier.id, type);
 
   return (
     <div

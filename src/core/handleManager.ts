@@ -8,7 +8,7 @@ import type {
   Vector,
 } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
-import { applySketchModifiers } from '../utils/modifier';
+import { applyModifiers } from '../utils/modifier';
 
 type Point = { x: number; y: number };
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
@@ -374,7 +374,7 @@ export class HandleManager {
     effective: Vector[][];
   } {
     const original = buildSketchCurves(path.keyframes);
-    const effective = applySketchModifiers(original, path.sketchModifiers);
+    const effective = applyModifiers(original, path.sketchModifiers);
     return { original, effective };
   }
 

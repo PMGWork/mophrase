@@ -1,7 +1,7 @@
 import type p5 from 'p5';
 import type { Modifier, SelectionRange, Vector } from '../types';
 
-function applyModifiers(
+export function applyModifiers(
   curves: Vector[][],
   modifiers: Modifier[] | undefined,
   p?: p5,
@@ -32,31 +32,19 @@ function applyModifiers(
   );
 }
 
-// スケッチモディファイアを適用したカーブを計算
-export function applySketchModifiers(
-  curves: Vector[][],
-  modifiers: Modifier[] | undefined,
-  p?: p5,
-): Vector[][] {
-  return applyModifiers(curves, modifiers, p);
-}
-
-// グラフモディファイアを適用したカーブを計算
-export function applyGraphModifiers(
-  curves: Vector[][],
-  modifiers: Modifier[] | undefined,
-  p?: p5,
-): Vector[][] {
-  return applyModifiers(curves, modifiers, p);
-}
-
 // LLMの出力からスケッチモディファイアを作成
-export function createSketchModifier(
+type CreateModifierOptions = {
+  selectionRange?: SelectionRange;
+  extendBoundary?: boolean;
+};
+
+export function createModifier(
   originalCurves: Vector[][],
   modifiedCurves: Vector[][],
   name: string,
-  selectionRange?: SelectionRange,
+  options: CreateModifierOptions = {},
 ): Modifier {
+  const { selectionRange, extendBoundary = false } = options;
   const startCurveIndex = selectionRange?.startCurveIndex ?? 0;
   const endCurveIndex =
     selectionRange?.endCurveIndex ?? originalCurves.length - 1;
@@ -77,7 +65,7 @@ export function createSketchModifier(
     },
   );
 
-  if (selectionRange) {
+  if (selectionRange && extendBoundary) {
     const localEndIndex = endCurveIndex - startCurveIndex;
 
     const startOriginal = originalCurves[startCurveIndex]?.[0];
@@ -117,6 +105,18 @@ export function createSketchModifier(
   };
 }
 
+export function createSketchModifier(
+  originalCurves: Vector[][],
+  modifiedCurves: Vector[][],
+  name: string,
+  selectionRange?: SelectionRange,
+): Modifier {
+  return createModifier(originalCurves, modifiedCurves, name, {
+    selectionRange,
+    extendBoundary: true,
+  });
+}
+
 // LLMの出力からグラフモディファイアを作成
 export function createGraphModifier(
   originalCurves: Vector[][],
@@ -124,32 +124,9 @@ export function createGraphModifier(
   name: string,
   selectionRange?: SelectionRange,
 ): Modifier {
-  const startCurveIndex = selectionRange?.startCurveIndex ?? 0;
-  const endCurveIndex =
-    selectionRange?.endCurveIndex ?? originalCurves.length - 1;
-
-  const offsets: Modifier['offsets'] = originalCurves.map(
-    (curve, curveIndex) => {
-      if (curveIndex < startCurveIndex || curveIndex > endCurveIndex) {
-        return curve.map(() => null);
-      }
-
-      const localIndex = curveIndex - startCurveIndex;
-      return curve.map((point, pointIndex) => {
-        const modifiedPoint = modifiedCurves[localIndex]?.[pointIndex];
-        if (!modifiedPoint) return null;
-
-        return { dx: modifiedPoint.x - point.x, dy: modifiedPoint.y - point.y };
-      });
-    },
-  );
-
-  return {
-    id: crypto.randomUUID(),
-    name,
-    offsets,
-    strength: 1.0,
-  };
+  return createModifier(originalCurves, modifiedCurves, name, {
+    selectionRange,
+  });
 }
 
 // モディファイアの影響度を更新
