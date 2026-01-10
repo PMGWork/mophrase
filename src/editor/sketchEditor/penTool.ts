@@ -31,8 +31,6 @@ export class PenTool {
       },
     };
 
-    // ユーザー指示入力欄をクリア
-    ctx.dom.sketchPromptInput.value = '';
   }
 
   // マウスドラッグ

@@ -1,8 +1,6 @@
 // グラフエディタのDOM参照
 export type GraphEditorDomRefs = {
   sidebarContainer: HTMLDivElement;
-  graphPlaceholder: HTMLDivElement;
-  graphEditorContent: HTMLDivElement;
   graphEditorCanvas: HTMLDivElement;
   getGraphCanvasSize: () => { width: number; height: number };
 };

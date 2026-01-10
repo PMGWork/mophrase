@@ -7,7 +7,6 @@ import type { Path } from '../../types';
 // スケッチエディタのDOM参照
 export type SketchDomRefs = {
   canvasContainer: HTMLElement;
-  sketchPromptInput: HTMLInputElement;
   getCanvasSize: () => { width: number; height: number };
 };
 

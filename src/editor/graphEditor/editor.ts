@@ -51,14 +51,10 @@ export class GraphEditor {
   public setPath(path: Path | null): void {
     if (!path || path.keyframes.length < 2) {
       this.activePath = null;
-      this.dom.graphPlaceholder.style.display = 'flex';
-      this.dom.graphEditorContent.style.display = 'none';
       return;
     }
 
     this.activePath = path;
-    this.dom.graphPlaceholder.style.display = 'none';
-    this.dom.graphEditorContent.style.display = 'flex';
 
     window.dispatchEvent(new Event('resize'));
   }

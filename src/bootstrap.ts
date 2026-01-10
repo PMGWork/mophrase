@@ -51,19 +51,11 @@ export const bootstrap = (
     getRequiredElement<HTMLDivElement>('graphEditorCanvas');
   const sidebarContainer =
     getRequiredElement<HTMLDivElement>('sidebarContainer');
-  const graphPlaceholder =
-    getRequiredElement<HTMLDivElement>('graphPlaceholder');
-  const graphEditorContent =
-    getRequiredElement<HTMLDivElement>('graphEditorContent');
-  const sketchPromptInput =
-    getRequiredElement<HTMLInputElement>('sketchPromptInput');
 
   // エディタ
   const graphEditor = new GraphEditor(
     {
       sidebarContainer,
-      graphPlaceholder,
-      graphEditorContent,
       graphEditorCanvas,
       getGraphCanvasSize: () => ({
         width: graphEditorCanvas.clientWidth,
@@ -76,7 +68,6 @@ export const bootstrap = (
   const sketchEditor = new SketchEditor(
     {
       canvasContainer,
-      sketchPromptInput,
       getCanvasSize: () => ({
         width: canvasContainer.clientWidth,
         height: canvasContainer.clientHeight,

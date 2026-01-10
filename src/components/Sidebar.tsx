@@ -7,16 +7,18 @@ import {
 
 // Props
 type SidebarProps = {
-  graphEditorCanvasRef: RefObject<HTMLDivElement | null>; // グラフエディタのキャンバス参照
+  graphCanvasRef: RefObject<HTMLDivElement | null>; // グラフエディタのキャンバス参照
   propertyEditorHandlers?: PropertyEditorHandlers; // プロパティ更新ハンドラ
   activePath: Path | null; // 編集中のアクティブなパス
+  hasGraphPath: boolean; // グラフ表示対象があるか
 };
 
 // コンポーネント
 export const Sidebar = ({
-  graphEditorCanvasRef,
+  graphCanvasRef,
   propertyEditorHandlers,
   activePath,
+  hasGraphPath,
 }: SidebarProps) => (
   <aside
     id="sidebarContainer"
@@ -32,19 +34,20 @@ export const Sidebar = ({
 
       <div
         id="graphPlaceholder"
-        className="flex aspect-square w-full items-center justify-center text-sm text-gray-500"
+        className={`flex aspect-square w-full items-center justify-center text-sm text-gray-500 ${
+          hasGraphPath ? 'hidden' : ''
+        }`}
       >
         Select a path to edit
       </div>
 
       <div
         id="graphEditorContent"
-        className="flex aspect-square w-full"
-        style={{ display: 'none' }}
+        className={`flex aspect-square w-full ${hasGraphPath ? '' : 'hidden'}`}
       >
         <div
           id="graphEditorCanvas"
-          ref={graphEditorCanvasRef}
+          ref={graphCanvasRef}
           className="relative h-full w-full border-gray-800"
         />
       </div>

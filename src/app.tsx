@@ -135,6 +135,14 @@ export const App = () => {
     );
   };
 
+  const hasGraphPath = (activePath?.keyframes?.length ?? 0) >= 2;
+
+  useEffect(() => {
+    if (hasGraphPath) {
+      window.dispatchEvent(new Event('resize'));
+    }
+  }, [hasGraphPath]);
+
   // 初期化
   useEffect(() => {
     const {
@@ -179,8 +187,9 @@ export const App = () => {
         </div>
 
         <Sidebar
-          graphEditorCanvasRef={graphCanvasRef}
+          graphCanvasRef={graphCanvasRef}
           activePath={activePath}
+          hasGraphPath={hasGraphPath}
           propertyEditorHandlers={{
             onTimeChange: handleTimeChange,
             onModifierChange: handleModifierChange,
