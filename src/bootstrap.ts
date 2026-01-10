@@ -18,6 +18,8 @@ export type BootstrapResult = {
   getSketchTool: () => ToolKind;
   setSuggestionHover: (id: string | null, strength: number) => void;
   selectSuggestion: (id: string, strength: number) => void;
+  applyActivePathUpdate: (updater: (path: Path) => void) => void;
+  getActivePath: () => Path | null;
 };
 
 // 引数
@@ -29,6 +31,7 @@ type BootstrapRefs = {
 // コールバック
 type BootstrapCallbacks = {
   onPathSelected?: (path: Path | null) => void;
+  onPathUpdated?: (path: Path) => void;
   onToolChanged?: (tool: ToolKind) => void;
   onSuggestionUIChange?: (state: SuggestionUIState) => void;
 };
@@ -91,6 +94,9 @@ export const bootstrap = (
       callbacks.onPathSelected?.(path);
       sketchEditor.refreshPlaybackTimeline();
     },
+    (path) => {
+      callbacks.onPathUpdated?.(path);
+    },
     (tool) => {
       callbacks.onToolChanged?.(tool);
     },
@@ -144,5 +150,9 @@ export const bootstrap = (
     selectSuggestion: (id, strength) => {
       sketchEditor.getSuggestionManager().selectSuggestion(id, strength);
     },
+    applyActivePathUpdate: (updater) => {
+      sketchEditor.applyActivePathUpdate(updater);
+    },
+    getActivePath: () => sketchEditor.getActivePath(),
   };
 };

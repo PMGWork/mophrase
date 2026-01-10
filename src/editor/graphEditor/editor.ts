@@ -109,6 +109,8 @@ export class GraphEditor {
     const graphW = width - margin * 2;
     const graphH = height - margin * 2;
 
+    if (graphW <= 0 || graphH <= 0) return;
+
     p.push();
     p.translate(margin, margin);
 

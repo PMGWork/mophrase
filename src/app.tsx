@@ -8,7 +8,7 @@ import {
   removeModifier,
   updateModifierStrength,
 } from './utils/modifier';
-import { CanvasArea } from './components/CanvasArea';
+import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';
 import { Settings } from './components/Settings';
@@ -26,7 +26,7 @@ export const App = () => {
   const [playbackController, setPlaybackController] =
     useState<PlaybackController | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
-  const [activePath, setActivePath] = useState<Path | null>(null);
+  const [, setActivePathVersion] = useState(0);
   const [suggestionUI, setSuggestionUI] = useState<SuggestionUIState>({
     status: 'idle',
     promptCount: 0,
@@ -45,20 +45,12 @@ export const App = () => {
   const selectSuggestionRef = useRef<
     ((id: string, strength: number) => void) | null
   >(null);
+  const applyActivePathUpdateRef = useRef<
+    ((updater: (path: Path) => void) => void) | null
+  >(null);
+  const getActivePathRef = useRef<(() => Path | null) | null>(null);
 
-  // パス更新ヘルパー
-  const handlePathSelected = (path: Path | null) => {
-    setActivePath(
-      path
-        ? {
-            ...path,
-            keyframes: [...path.keyframes],
-            sketchModifiers: [...(path.sketchModifiers ?? [])],
-            graphModifiers: [...(path.graphModifiers ?? [])],
-          }
-        : null,
-    );
-  };
+  const activePath = getActivePathRef.current?.() ?? null;
 
   // 値クランプヘルパー
   const clamp = (value: number, min: number, max: number) =>
@@ -66,17 +58,7 @@ export const App = () => {
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {
-    setActivePath((current) => {
-      if (!current) return current;
-      const next: Path = {
-        ...current,
-        keyframes: [...current.keyframes],
-        sketchModifiers: [...(current.sketchModifiers ?? [])],
-        graphModifiers: [...(current.graphModifiers ?? [])],
-      };
-      updater(next);
-      return next;
-    });
+    applyActivePathUpdateRef.current?.(updater);
     updateSuggestionUIRef.current?.();
   };
 
@@ -119,6 +101,13 @@ export const App = () => {
     type: 'sketch' | 'graph',
   ) => {
     applyPathUpdate((path) => {
+      const modifiers =
+        type === 'sketch' ? path.sketchModifiers : path.graphModifiers;
+      const target = modifiers?.find((modifier) => modifier.id === modifierId);
+      if (target) {
+        // 元のパスにも反映されるように強度を0にして影響を解除
+        target.strength = 0;
+      }
       const next = removeModifier(
         type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
         modifierId,
@@ -168,13 +157,20 @@ export const App = () => {
       getSketchTool,
       setSuggestionHover,
       selectSuggestion,
+      applyActivePathUpdate,
+      getActivePath,
     } = bootstrap(
       {
         canvasContainer: sketchCanvasRef.current,
         graphEditorCanvas: graphCanvasRef.current,
       },
       {
-        onPathSelected: handlePathSelected,
+        onPathSelected: () => {
+          setActivePathVersion((version) => version + 1);
+        },
+        onPathUpdated: () => {
+          setActivePathVersion((version) => version + 1);
+        },
         onToolChanged: (tool) => {
           setSelectedTool(tool);
         },
@@ -188,6 +184,8 @@ export const App = () => {
     setSketchToolRef.current = setSketchTool;
     setSuggestionHoverRef.current = setSuggestionHover;
     selectSuggestionRef.current = selectSuggestion;
+    applyActivePathUpdateRef.current = applyActivePathUpdate;
+    getActivePathRef.current = getActivePath;
     setSelectedTool(getSketchTool());
   }, []);
 
@@ -201,7 +199,7 @@ export const App = () => {
 
       <div className="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-          <CanvasArea canvasRef={sketchCanvasRef} />
+          <Canvas canvasRef={sketchCanvasRef} />
           <Playback controller={playbackController} />
         </div>
 

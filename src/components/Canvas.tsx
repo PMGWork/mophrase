@@ -1,12 +1,12 @@
 import type { RefObject } from 'react';
 
 // Props
-type CanvasAreaProps = {
+type CanvasProps = {
   canvasRef: RefObject<HTMLElement | null>;
 };
 
 // コンポーネント
-export const CanvasArea = ({ canvasRef }: CanvasAreaProps) => (
+export const Canvas = ({ canvasRef }: CanvasProps) => (
   <main
     id="canvasContainer"
     ref={canvasRef}

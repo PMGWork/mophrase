@@ -39,6 +39,7 @@ export class SketchEditor {
   // コールバック
   private onPathCreated: (path: Path) => void; // パスが作成されたときに呼び出される
   private onPathSelected: (path: Path | null) => void; // パスが選択されたときに呼び出される
+  private onPathUpdated?: (path: Path) => void; // パスが更新されたときに呼び出される
   private onToolChanged?: (tool: ToolKind) => void; // ツールが変更されたときに呼び出される
 
   // コンストラクタ
@@ -48,6 +49,7 @@ export class SketchEditor {
     colors: Colors,
     onPathCreated: (path: Path) => void,
     onPathSelected: (path: Path | null) => void,
+    onPathUpdated?: (path: Path) => void,
     onToolChanged?: (tool: ToolKind) => void,
     onSuggestionUIChange?: (state: SuggestionUIState) => void,
   ) {
@@ -56,6 +58,7 @@ export class SketchEditor {
     this.colors = colors;
     this.onPathCreated = onPathCreated;
     this.onPathSelected = onPathSelected;
+    this.onPathUpdated = onPathUpdated;
     this.onToolChanged = onToolChanged;
 
     // ツール初期化
@@ -442,6 +445,19 @@ export class SketchEditor {
 
   public hasPaths(): boolean {
     return this.paths.length > 0;
+  }
+
+  // アクティブなパスを安全に更新
+  public applyActivePathUpdate(updater: (path: Path) => void): void {
+    if (!this.activePath) return;
+    updater(this.activePath);
+    this.refreshPlaybackTimeline();
+    this.onPathUpdated?.(this.activePath);
+  }
+
+  // アクティブなパスを取得
+  public getActivePath(): Path | null {
+    return this.activePath ?? null;
   }
 
   public refreshPlaybackTimeline(): void {

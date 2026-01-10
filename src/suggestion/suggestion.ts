@@ -132,7 +132,7 @@ export class SuggestionManager {
   public getPreviewGraphCurves(
     p: p5,
   ): { curves: p5.Vector[][]; strength: number } | null {
-    if (!this.hoveredId || !this.targetPath || !this.pInstance) return null;
+    if (!this.hoveredId || !this.targetPath) return null;
 
     const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
     if (!suggestion) return null;
