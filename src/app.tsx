@@ -46,6 +46,10 @@ export const App = () => {
     );
   };
 
+  // 値クランプヘルパー
+  const clamp = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, value));
+
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {
     setActivePath((current) => {
@@ -62,6 +66,76 @@ export const App = () => {
     updateSuggestionUIRef.current?.();
   };
 
+  // ツール選択ハンドラ
+  const handleToolSelect = (tool: ToolKind) => {
+    setSelectedTool(tool);
+    setSketchToolRef.current?.(tool);
+  };
+
+  // 時間変更ハンドラ
+  const handleTimeChange = (field: 'startTime' | 'duration', value: number) => {
+    applyPathUpdate((path) => {
+      if (field === 'startTime') {
+        path.startTime = value;
+      } else {
+        path.duration = value;
+      }
+    });
+  };
+
+  // モディファイア変更ハンドラ
+  const handleModifierChange = (
+    modifierId: string,
+    type: 'sketch' | 'graph',
+    value: number,
+  ) => {
+    applyPathUpdate((path) => {
+      const strength = clamp(value / 100, 0, 2);
+      updateModifierStrength(
+        type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
+        modifierId,
+        strength,
+      );
+    });
+  };
+
+  // モディファイア削除ハンドラ
+  const handleModifierRemove = (
+    modifierId: string,
+    type: 'sketch' | 'graph',
+  ) => {
+    applyPathUpdate((path) => {
+      const next = removeModifier(
+        type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
+        modifierId,
+      );
+      if (type === 'sketch') {
+        path.sketchModifiers = next;
+      } else {
+        path.graphModifiers = next;
+      }
+    });
+  };
+
+  // 設定変更ハンドラ
+  const handleConfigChange = (next: {
+    llmProvider: Config['llmProvider'];
+    llmModel: Config['llmModel'];
+    sketchFitTolerance: Config['sketchFitTolerance'];
+  }) => {
+    setConfig((current) =>
+      current
+        ? {
+            ...current,
+            llmProvider: next.llmProvider,
+            llmModel: next.llmModel,
+            sketchFitTolerance: next.sketchFitTolerance,
+          }
+        : current,
+    );
+  };
+
+  // 初期化
   useEffect(() => {
     const {
       playbackController: controller,
@@ -94,10 +168,7 @@ export const App = () => {
     <div className="flex h-screen flex-col">
       <Header
         selectedTool={selectedTool}
-        onSelectTool={(tool) => {
-          setSelectedTool(tool);
-          setSketchToolRef.current?.(tool);
-        }}
+        onSelectTool={handleToolSelect}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
@@ -111,45 +182,9 @@ export const App = () => {
           graphEditorCanvasRef={graphCanvasRef}
           activePath={activePath}
           propertyEditorHandlers={{
-            onTimeChange: (field, value) =>
-              applyPathUpdate((path) => {
-                if (field === 'startTime') {
-                  path.startTime = value;
-                } else {
-                  path.duration = value;
-                }
-              }),
-            onModifierChange: (modifierId, type, value) =>
-              applyPathUpdate((path) => {
-                const strength = Math.max(0, Math.min(2, value / 100));
-                if (type === 'sketch') {
-                  updateModifierStrength(
-                    path.sketchModifiers,
-                    modifierId,
-                    strength,
-                  );
-                } else {
-                  updateModifierStrength(
-                    path.graphModifiers,
-                    modifierId,
-                    strength,
-                  );
-                }
-              }),
-            onModifierRemove: (modifierId, type) =>
-              applyPathUpdate((path) => {
-                if (type === 'sketch') {
-                  path.sketchModifiers = removeModifier(
-                    path.sketchModifiers,
-                    modifierId,
-                  );
-                } else {
-                  path.graphModifiers = removeModifier(
-                    path.graphModifiers,
-                    modifierId,
-                  );
-                }
-              }),
+            onTimeChange: handleTimeChange,
+            onModifierChange: handleModifierChange,
+            onModifierRemove: handleModifierRemove,
           }}
         />
       </div>
@@ -161,18 +196,7 @@ export const App = () => {
         isOpen={isSettingsOpen}
         config={config}
         onClose={() => setIsSettingsOpen(false)}
-        onConfigChange={(next) => {
-          setConfig((current) =>
-            current
-              ? {
-                  ...current,
-                  llmProvider: next.llmProvider,
-                  llmModel: next.llmModel,
-                  sketchFitTolerance: next.sketchFitTolerance,
-                }
-              : current,
-          );
-        }}
+        onChange={handleConfigChange}
       />
     </div>
   );

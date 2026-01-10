@@ -14,7 +14,7 @@ type SettingsModalProps = {
   isOpen: boolean;
   config: Config | null;
   onClose: () => void;
-  onConfigChange: (next: {
+  onChange: (next: {
     llmProvider: LLMProvider;
     llmModel: string;
     sketchFitTolerance: number;
@@ -25,7 +25,7 @@ export const SettingsModal = ({
   isOpen,
   config,
   onClose,
-  onConfigChange,
+  onChange,
 }: SettingsModalProps) => {
   const models = useMemo<ModelOption[]>(() => getModels(), []);
 
@@ -90,7 +90,7 @@ export const SettingsModal = ({
                         provider: LLMProvider;
                         modelId: string;
                       };
-                      onConfigChange({
+                      onChange({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
                         sketchFitTolerance: tolerance,
@@ -148,7 +148,7 @@ export const SettingsModal = ({
                 onChange={(event) => {
                   const next = Number(event.target.value);
                   if (!Number.isFinite(next)) return;
-                  onConfigChange({
+                  onChange({
                     llmProvider: selectedProvider,
                     llmModel: selectedModel,
                     sketchFitTolerance: next,
