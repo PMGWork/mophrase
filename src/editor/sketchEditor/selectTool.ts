@@ -85,11 +85,11 @@ export class SelectTool {
     if (this.marqueeRect) {
       const targetPathIndex = ctx.activePath
         ? ctx.paths.indexOf(ctx.activePath)
-        : undefined;
+        : -1;
 
       const selected = ctx.handleManager.selectAnchorsInRect(
         this.marqueeRect,
-        targetPathIndex !== -1 ? targetPathIndex : undefined,
+        targetPathIndex >= 0 ? targetPathIndex : undefined,
       );
       this.marqueeRect = null;
 

@@ -161,7 +161,6 @@ export class SketchEditor {
       p.mousePressed = () => this.mousePressed(p);
       p.mouseReleased = () => this.mouseReleased(p);
       p.keyPressed = () => this.keyPressed(p);
-      p.keyTyped = () => this.keyTyped(p);
     };
 
     this.p = new p5(sketch);
@@ -176,12 +175,6 @@ export class SketchEditor {
     p.textFont('Geist');
 
     this.motionManager = new MotionManager(p, OBJECT_SIZE);
-  }
-
-  // p5.js キー入力（文字入力）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private keyTyped(_: p5): void {
-    // 文字入力固有の処理があればここに記述
   }
 
   // p5.js キー押下（ショートカット用）

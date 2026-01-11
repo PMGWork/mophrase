@@ -10,7 +10,7 @@ import type {
 import { buildSketchCurves } from '../utils/keyframes';
 import { applyModifiers } from '../utils/modifier';
 
-type Point = { x: number; y: number };
+// ハンドル位置情報（曲線インデックスと制御点インデックス）
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
 
 // ハンドルの制御クラス
@@ -19,14 +19,14 @@ export class HandleManager {
   private selectedHandles: HandleSelection[] = []; // 選択中のハンドル
 
   private getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[]; // パスの取得関数
-  private pixelToNorm: (x: number, y: number) => Point; // ピクセル座標を正規化座標に変換
-  private normToPixel: (x: number, y: number) => Point; // 正規化座標をピクセル座標に変換
+  private pixelToNorm: (x: number, y: number) => Vector; // ピクセル座標を正規化座標に変換
+  private normToPixel: (x: number, y: number) => Vector; // 正規化座標をピクセル座標に変換
 
   // コンストラクタ
   constructor(
     getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[],
-    pixelToNorm: (x: number, y: number) => Point = (x, y) => ({ x, y }),
-    normToPixel: (x: number, y: number) => Point = (x, y) => ({ x, y }),
+    pixelToNorm: (x: number, y: number) => Vector = (x, y) => ({ x, y }) as Vector,
+    normToPixel: (x: number, y: number) => Vector = (x, y) => ({ x, y }) as Vector,
   ) {
     this.getPaths = getPaths;
     this.pixelToNorm = pixelToNorm;
@@ -461,10 +461,10 @@ export class HandleManager {
   private getHandleVector(
     keyframe: Path['keyframes'][number],
     type: HandleType,
-  ) {
+  ): Vector | undefined {
     if (type === 'SKETCH_IN') return keyframe.sketchIn;
     if (type === 'SKETCH_OUT') return keyframe.sketchOut;
-    return null;
+    return undefined;
   }
 
   // ハンドルベクトルを設定

@@ -62,14 +62,11 @@ export interface Path {
   graphModifiers?: Modifier[];
 }
 
-// オフセット配列の型
-type OffsetArray = ({ dx: number; dy: number } | null)[][];
-
 // モディファイアの共通型
 export interface Modifier {
   id: string;
   name: string;
-  offsets: OffsetArray;
+  offsets: ({ dx: number; dy: number } | null)[][];
   strength: number;
 }
 
