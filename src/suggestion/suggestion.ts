@@ -33,6 +33,7 @@ type SuggestionManagerOptions = {
   onUIStateChange?: (state: SuggestionUIState) => void;
 };
 
+// 提案UIの状態
 export type SuggestionUIState = {
   status: SuggestionState;
   promptCount: number;

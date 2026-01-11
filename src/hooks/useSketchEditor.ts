@@ -57,29 +57,16 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   // リファレンス
   const canvasRef = useRef<HTMLElement | null>(null);
   const editorRef = useRef<SketchEditor | null>(null);
-  const configRef = useRef<Config>({ ...DEFAULT_CONFIG });
 
   // 状態管理
-  const [config, setConfig] = useState<Config>({ ...configRef.current });
+  const [config, setConfig] = useState<Config>({ ...DEFAULT_CONFIG });
   const [selectedTool, setSelectedTool] = useState<ToolKind>('pen');
   const [activePath, setActivePath] = useState<Path | null>(null);
   const [suggestionUI, setSuggestionUI] =
     useState<SuggestionUIState>(initialSuggestionUI);
   const [isReady, setIsReady] = useState(false);
 
-  // 設定を更新
-  const updateConfig = useCallback((next: SketchConfigUpdate) => {
-    Object.assign(configRef.current, next);
-    setConfig({ ...configRef.current });
-    editorRef.current?.getSuggestionManager().updateConfig(configRef.current);
-  }, []);
-
-  // ツールを変更
-  const handleToolChanged = useCallback((tool: ToolKind) => {
-    setSelectedTool(tool);
-  }, []);
-
-  // スケッチエディタを初期化
+  // 初期化
   useEffect(() => {
     if (editorRef.current || !canvasRef.current) return;
 
@@ -91,7 +78,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
           height: canvasRef.current?.clientHeight ?? 0,
         }),
       },
-      configRef.current,
+      DEFAULT_CONFIG,
       DEFAULT_COLORS,
       // onPathCreated: 新規パス作成時
       (path) => {
@@ -108,7 +95,9 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         setActivePath(path);
       },
       // onToolChanged: ツール変更時
-      handleToolChanged,
+      (tool) => {
+        setSelectedTool(tool);
+      },
       // onSuggestionUIChange: 提案UI状態変更時
       setSuggestionUI,
     );
@@ -116,7 +105,60 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     editorRef.current = editor;
     setSelectedTool(editor.getCurrentTool());
     setIsReady(true);
-  }, [handleToolChanged]);
+  }, []);
+
+  // ツールを設定
+  const setTool = useCallback((tool: ToolKind) => {
+    setSelectedTool(tool);
+    editorRef.current?.setTool(tool);
+  }, []);
+
+  // 現在のパスを更新
+  const updateActivePath = useCallback((updater: (path: Path) => void) => {
+    editorRef.current?.updateActivePath(updater);
+  }, []);
+
+  // 提案UIを更新
+  const updateSuggestionUI = useCallback(() => {
+    editorRef.current?.updateSuggestionUI();
+  }, []);
+
+  // 提案を生成
+  const submitPrompt = useCallback((prompt: string) => {
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    editorRef.current?.generateSuggestion(trimmed);
+  }, []);
+
+  // 提案の影響度を設定
+  const setSuggestionHover = useCallback(
+    (id: string | null, strength: number) => {
+      editorRef.current?.getSuggestionManager().setHover(id, strength);
+    },
+    [],
+  );
+
+  // 提案選択
+  const selectSuggestion = useCallback((id: string, strength: number) => {
+    editorRef.current?.getSuggestionManager().selectSuggestion(id, strength);
+  }, []);
+
+  // 提案のグラフ曲線を取得
+  const getPreviewGraphCurves = useCallback(
+    (p: p5) =>
+      editorRef.current?.getSuggestionManager().getPreviewGraphCurves(p) ??
+      null,
+    [],
+  );
+
+  // 設定更新
+  const updateConfig = useCallback((next: SketchConfigUpdate) => {
+    setConfig((prev) => {
+      const updated = { ...prev, ...next };
+      editorRef.current?.getSuggestionManager().updateConfig(updated);
+      return updated;
+    });
+  }, []);
 
   // プレイバックコントローラー
   const playbackController = useMemo<PlaybackController>(
@@ -145,50 +187,6 @@ export const useSketchEditor = (): UseSketchEditorResult => {
       seekPlayback: (progress: number) =>
         editorRef.current?.seekPlayback(progress),
     }),
-    [],
-  );
-
-  // ツールを変更
-  const setTool = useCallback((tool: ToolKind) => {
-    setSelectedTool(tool);
-    editorRef.current?.setTool(tool);
-  }, []);
-
-  // 提案UIを更新
-  const updateSuggestionUI = useCallback(() => {
-    editorRef.current?.updateSuggestionUI();
-  }, []);
-
-  // 提案を生成
-  const submitPrompt = useCallback((prompt: string) => {
-    const trimmed = prompt.trim();
-    if (!trimmed) return;
-    editorRef.current?.generateSuggestion(trimmed);
-  }, []);
-
-  // 提案をホバー
-  const setSuggestionHover = useCallback(
-    (id: string | null, strength: number) => {
-      editorRef.current?.getSuggestionManager().setHover(id, strength);
-    },
-    [],
-  );
-
-  // 提案を選択
-  const selectSuggestion = useCallback((id: string, strength: number) => {
-    editorRef.current?.getSuggestionManager().selectSuggestion(id, strength);
-  }, []);
-
-  // 現在編集しているパスを更新
-  const updateActivePath = useCallback((updater: (path: Path) => void) => {
-    editorRef.current?.updateActivePath(updater);
-  }, []);
-
-  // プレビュー用のグラフ曲線を取得
-  const getPreviewGraphCurves = useCallback(
-    (p: p5) =>
-      editorRef.current?.getSuggestionManager().getPreviewGraphCurves(p) ??
-      null,
     [],
   );
 
