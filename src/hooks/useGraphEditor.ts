@@ -34,7 +34,7 @@ export const useGraphEditor = ({
   // グラフエディタを初期化
   useEffect(() => {
     if (editorRef.current || !graphCanvasRef.current) return;
-    
+
     const editor = new GraphEditor(
       {
         graphEditorCanvas: graphCanvasRef.current,

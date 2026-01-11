@@ -53,8 +53,6 @@ export class GraphEditor {
     }
 
     this.activePath = path;
-
-    window.dispatchEvent(new Event('resize'));
   }
 
   // プレビュープロバイダーを設定
