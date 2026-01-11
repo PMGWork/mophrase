@@ -60,12 +60,19 @@ export const useGraphEditor = ({
     editorRef.current?.setPreviewProvider(previewProvider);
   }, [previewProvider]);
 
-  // グラフパスが有効になったらリサイズイベントを発火
-  const hasGraphPath = (activePath?.keyframes?.length ?? 0) >= 2;
+  // コンテナのリサイズを監視
   useEffect(() => {
-    if (!hasGraphPath) return;
-    window.dispatchEvent(new Event('resize'));
-  }, [hasGraphPath]);
+    const container = graphCanvasRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      editorRef.current?.resize();
+    });
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   return { graphCanvasRef };
 };

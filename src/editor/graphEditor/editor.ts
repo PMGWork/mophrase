@@ -43,6 +43,9 @@ export class GraphEditor {
     this.init();
   }
 
+  // p5.js インスタンス
+  private p: p5 | null = null;
+
   // #region メイン関数
 
   // パスの設定
@@ -62,20 +65,27 @@ export class GraphEditor {
     this.previewProvider = provider;
   }
 
+  // リサイズ
+  public resize(): void {
+    if (!this.p) return;
+    const { width, height } = this.dom.getGraphCanvasSize();
+    const size = Math.min(width, height);
+    this.p.resizeCanvas(size, size);
+  }
+
   // #region p5.js
 
   // p5.js 初期化
   private init(): void {
     const sketch = (p: p5) => {
       p.setup = () => this.setup(p);
-      p.windowResized = () => this.windowResized(p);
       p.draw = () => this.draw(p);
       p.mouseDragged = () => this.mouseDragged(p);
       p.mousePressed = () => this.mousePressed(p);
       p.mouseReleased = () => this.mouseReleased();
     };
 
-    new p5(sketch);
+    this.p = new p5(sketch);
   }
 
   // p5.js セットアップ
@@ -84,13 +94,6 @@ export class GraphEditor {
     const size = Math.min(width, height);
     p.createCanvas(size, size).parent(this.dom.graphEditorCanvas);
     p.textFont('Geist');
-  }
-
-  // p5.js リサイズ
-  private windowResized(p: p5): void {
-    const { width, height } = this.dom.getGraphCanvasSize();
-    const size = Math.min(width, height);
-    p.resizeCanvas(size, size);
   }
 
   // p5.js 描画

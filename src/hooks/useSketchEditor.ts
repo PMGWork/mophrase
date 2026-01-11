@@ -107,6 +107,20 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     setIsReady(true);
   }, []);
 
+  // コンテナのリサイズを監視
+  useEffect(() => {
+    const container = canvasRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      editorRef.current?.resize();
+    });
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
   // ツールを設定
   const setTool = useCallback((tool: ToolKind) => {
     setSelectedTool(tool);

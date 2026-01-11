@@ -93,6 +93,9 @@ export class SketchEditor {
     this.init();
   }
 
+  // p5.js インスタンス
+  private p: p5 | null = null;
+
   // #region メイン関数
 
   // ツールを設定
@@ -109,6 +112,13 @@ export class SketchEditor {
     if (tool === 'select' && this.activePath) {
       this.suggestionManager.open(this.activePath);
     }
+  }
+
+  // リサイズ
+  public resize(): void {
+    if (!this.p) return;
+    const { width, height } = this.dom.getCanvasSize();
+    this.p.resizeCanvas(width, height);
   }
 
   // #region DOM操作
@@ -145,7 +155,7 @@ export class SketchEditor {
   private init(): void {
     const sketch = (p: p5) => {
       p.setup = () => this.setup(p);
-      p.windowResized = () => this.windowResized(p);
+      // p.windowResized is removed to avoid global window resize dependency
       p.draw = () => this.draw(p);
       p.mouseDragged = () => this.mouseDragged(p);
       p.mousePressed = () => this.mousePressed(p);
@@ -154,7 +164,7 @@ export class SketchEditor {
       p.keyTyped = () => this.keyTyped(p);
     };
 
-    new p5(sketch);
+    this.p = new p5(sketch);
   }
 
   // p5.js セットアップ
@@ -166,12 +176,6 @@ export class SketchEditor {
     p.textFont('Geist');
 
     this.motionManager = new MotionManager(p, OBJECT_SIZE);
-  }
-
-  // p5.js リサイズ
-  private windowResized(p: p5): void {
-    const { width, height } = this.dom.getCanvasSize();
-    p.resizeCanvas(width, height);
   }
 
   // p5.js キー入力（文字入力）

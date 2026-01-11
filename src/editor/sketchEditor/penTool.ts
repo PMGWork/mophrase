@@ -78,8 +78,8 @@ export class PenTool {
     const keyframes = generateKeyframes(
       this.draftPath.points,
       this.draftPath.timestamps,
-      ctx.config.sketchFitTolerance,
-      ctx.config.sketchFitTolerance * ctx.config.coarseErrorWeight,
+      ctx.config.fitTolerance,
+      ctx.config.fitTolerance * ctx.config.coarseErrorWeight,
       this.draftPath.fitError,
     );
 
