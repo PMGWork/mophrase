@@ -30,10 +30,8 @@ export class GraphEditor {
   private config: Config;
   private colors: Colors;
 
-  // マージンを取得
-  private getMargin(): number {
-    return this.dom.sidebarContainer.clientWidth / 15;
-  }
+  // グラフ領域のマージン
+  private static readonly GRAPH_MARGIN = 24;
 
   // コンストラクタ
   constructor(dom: GraphEditorDomRefs, config: Config, colors: Colors) {
@@ -105,7 +103,7 @@ export class GraphEditor {
     const height = p.height;
 
     // グラフ領域の計算
-    const margin = this.getMargin();
+    const margin = GraphEditor.GRAPH_MARGIN;
     const graphW = width - margin * 2;
     const graphH = height - margin * 2;
 
@@ -252,7 +250,7 @@ export class GraphEditor {
   private pixelToNorm(x: number, y: number): { x: number; y: number } {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
-    const margin = this.getMargin();
+    const margin = GraphEditor.GRAPH_MARGIN;
 
     const mouseX = x - margin;
     const mouseY = y - margin;
@@ -269,7 +267,7 @@ export class GraphEditor {
   private normToPixel(normX: number, normY: number): { x: number; y: number } {
     const { width, height } = this.dom.getGraphCanvasSize();
     const size = Math.min(width, height);
-    const margin = this.getMargin();
+    const margin = GraphEditor.GRAPH_MARGIN;
 
     const graphW = size - margin * 2;
     const graphH = size - margin * 2;

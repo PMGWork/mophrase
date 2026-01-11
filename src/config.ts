@@ -3,7 +3,7 @@ import type { LLMProvider } from './types';
 
 // スキーマ定義
 export interface Config {
-  sketchFitTolerance: number; // ビュー許容誤差(ピクセル)
+  fitTolerance: number; // ビュー許容誤差(ピクセル)
   coarseErrorWeight: number; // 粗い誤差の倍数
   defaultDragMode: number; // デフォルトのドラッグモード
   lineWeight: number; // 線の太さ
@@ -25,7 +25,7 @@ export interface Colors {
 
 // デフォルト設定
 export const DEFAULT_CONFIG: Config = {
-  sketchFitTolerance: 20,
+  fitTolerance: 20,
   coarseErrorWeight: 2.0,
   defaultDragMode: 1,
   lineWeight: 1,

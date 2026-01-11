@@ -17,7 +17,7 @@ type SettingsProps = {
   onChange: (next: {
     llmProvider: LLMProvider;
     llmModel: string;
-    sketchFitTolerance: number;
+    fitTolerance: number;
   }) => void;
 };
 
@@ -31,7 +31,7 @@ export const Settings = ({
 
   const selectedProvider = config?.llmProvider ?? 'OpenAI';
   const selectedModel = config?.llmModel ?? '';
-  const tolerance = config?.sketchFitTolerance ?? 20;
+  const tolerance = config?.fitTolerance ?? 20;
 
   const currentValue = JSON.stringify({
     provider: selectedProvider,
@@ -93,7 +93,7 @@ export const Settings = ({
                       onChange({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
-                        sketchFitTolerance: tolerance,
+                        fitTolerance: tolerance,
                       });
                     } catch {
                       // ignore invalid value
@@ -151,7 +151,7 @@ export const Settings = ({
                   onChange({
                     llmProvider: selectedProvider,
                     llmModel: selectedModel,
-                    sketchFitTolerance: next,
+                    fitTolerance: next,
                   });
                 }}
                 className="corner-md h-1.5 w-full cursor-pointer appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"

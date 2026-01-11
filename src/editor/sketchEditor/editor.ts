@@ -428,7 +428,7 @@ export class SketchEditor {
   }
 
   // アクティブなパスを安全に更新
-  public applyActivePathUpdate(updater: (path: Path) => void): void {
+  public updateActivePath(updater: (path: Path) => void): void {
     if (!this.activePath) return;
     updater(this.activePath);
     this.refreshPlaybackTimeline();
