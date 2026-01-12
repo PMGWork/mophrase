@@ -1,51 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
-import { Groq } from 'groq-sdk';
-import { OpenAI } from 'openai';
-import { zodTextFormat } from 'openai/helpers/zod';
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { LLMProvider } from '../types';
 
-// インスタンス
-let genai: GoogleGenAI | null = null;
-let openai: OpenAI | null = null;
-let groq: Groq | null = null;
-
-function getGenAI(): GoogleGenAI {
-  if (!genai) {
-    genai = new GoogleGenAI({
-      apiKey: import.meta.env.VITE_GEMINI_API_KEY,
-      httpOptions: {
-        baseUrl: `${window.location.origin}/api/gemini`,
-      },
-    });
-  }
-  return genai;
-}
-
-function getOpenAI(): OpenAI {
-  if (!openai) {
-    openai = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      baseURL: `${window.location.origin}/api/openai/v1`,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-  return openai;
-}
-
-function getGroq(): Groq {
-  if (!groq) {
-    groq = new Groq({
-      apiKey: import.meta.env.VITE_GROQ_API_KEY,
-      baseURL: `${window.location.origin}/api/groq/openai/v1`,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-  return groq;
-}
-
-// 型定義
+// LLMプロバイダの設定
 type ProviderConfig = {
   defaultModel: string;
   models: { id: string; name?: string }[];
@@ -56,30 +13,49 @@ type ProviderConfig = {
   ) => Promise<T>;
 };
 
+// プロバイダとモデルのオプション型
 type ProviderModelOption = {
   provider: LLMProvider;
   modelId: string;
   name: string;
 };
 
-// プロバイダ設定
+// サーバーにリクエストを送信して構造化データを取得
+async function requestServer<T>(
+  provider: LLMProvider,
+  model: string,
+  prompt: string,
+  schema: z.ZodType<T>,
+): Promise<T> {
+  const response = await fetch(`${window.location.origin}/api/llm/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider,
+      model,
+      prompt,
+      schema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    throw new Error(
+      `LLM server error (${provider}): ${response.status} ${JSON.stringify(errorBody)}`,
+    );
+  }
+
+  const data = (await response.json()) as T;
+  return schema.parse(data);
+}
+
+// 各LLMプロバイダの設定
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
     defaultModel: 'gpt-5.2',
     models: [{ id: 'gpt-5.2', name: 'GPT-5.2' }],
-    generate: async (prompt, schema, model) => {
-      const response = await getOpenAI().responses.parse({
-        model,
-        input: [{ role: 'user', content: prompt }],
-        reasoning: { effort: 'none' },
-        text: {
-          format: zodTextFormat(schema, 'schema'),
-          verbosity: 'low',
-        },
-      });
-
-      return parseJsonResponse(response.output_text, schema, 'OpenAI');
-    },
+    generate: (prompt, schema, model) =>
+      requestServer('OpenAI', model, prompt, schema),
   },
 
   Gemini: {
@@ -88,62 +64,19 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro' },
       { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash' },
     ],
-    generate: async (prompt, schema, model) => {
-      const response = await getGenAI().models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: zodToJsonSchema(schema),
-        },
-      });
-
-      return parseJsonResponse(response.text, schema, 'Gemini');
-    },
+    generate: (prompt, schema, model) =>
+      requestServer('Gemini', model, prompt, schema),
   },
 
   Groq: {
     defaultModel: 'openai/gpt-oss-120b',
     models: [{ id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' }],
-    generate: async (prompt, schema, model) => {
-      const response = await getGroq().chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'schema',
-            schema: zodToJsonSchema(schema),
-          },
-        },
-      });
-
-      return parseJsonResponse(
-        response.choices[0].message.content,
-        schema,
-        'Groq',
-      );
-    },
+    generate: (prompt, schema, model) =>
+      requestServer('Groq', model, prompt, schema),
   },
 };
 
-// #region ヘルパー関数
-
-// JSONレスポンスをパース
-function parseJsonResponse<T>(
-  content: string | null | undefined,
-  schema: z.ZodType<T>,
-  providerName: string,
-): T {
-  if (!content) {
-    throw new Error(`${providerName} のレスポンスが空です`);
-  }
-  return schema.parse(JSON.parse(content));
-}
-
-// #region エクスポート関数
-
-// LLMを使って構造化データを生成
+// 構造化データを生成する関数
 export async function generateStructured<T>(
   prompt: string,
   schema: z.ZodType<T>,
@@ -151,14 +84,15 @@ export async function generateStructured<T>(
   model?: string,
 ): Promise<T> {
   const config = PROVIDERS[provider];
-  if (!config)
+  if (!config) {
     throw new Error(`サポートされていないLLMプロバイダ: ${provider}`);
+  }
 
   const actualModel = model ?? config.defaultModel;
   return config.generate(prompt, schema, actualModel);
 }
 
-// 全プロバイダのモデル一覧を取得
+// 利用可能なモデルのリストを取得
 export function getModels(): ProviderModelOption[] {
   return (Object.entries(PROVIDERS) as [LLMProvider, ProviderConfig][]).flatMap(
     ([provider, config]) =>
