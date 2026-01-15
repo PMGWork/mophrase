@@ -59,25 +59,30 @@ const generateWithOpenAI = async (
   }
 
   const t0 = nowMs();
+  // o1系列とGPT-5.2のモデルでreasoning effortを送信
+  const supportsReasoningEffort = model.startsWith('o1') || model.startsWith('gpt-5.2');
+  const requestBody: Record<string, unknown> = {
+    model,
+    input: prompt,
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'structured_output',
+        strict: true,
+        schema,
+      },
+    },
+  };
+  if (supportsReasoningEffort) {
+    requestBody.reasoning = { effort: 'none' };
+  }
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      input: prompt,
-      reasoning: { effort: 'none' },
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'structured_output',
-          strict: true,
-          schema,
-        },
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
   const t1 = nowMs();
   const data = await response.json();

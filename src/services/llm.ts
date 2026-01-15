@@ -76,7 +76,8 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     defaultModel: 'gpt-5.2',
     models: [
       { id: 'gpt-5.2', name: 'GPT-5.2' },
-      { id: 'gpt5-mini', name: 'GPT-5 Mini' },
+      { id: 'gpt-4.1', name: 'GPT-4.1' },
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
     ],
     generate: (prompt, schema, model) =>
       requestServer('OpenAI', model, prompt, schema),
