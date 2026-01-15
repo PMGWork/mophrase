@@ -5,11 +5,11 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 type Env = {
   OPENAI_API_KEY?: string;
   GEMINI_API_KEY?: string;
-  GROQ_API_KEY?: string;
+  CEREBRAS_API_KEY?: string;
 };
 
 // サポートするLLMプロバイダの型定義
-type Provider = 'OpenAI' | 'Gemini' | 'Groq';
+type Provider = 'OpenAI' | 'Gemini' | 'Cerebras';
 
 // LLM生成リクエストの型定義
 type LlmGenerateRequest = {
@@ -87,20 +87,44 @@ const generateWithOpenAI = async (
   return { status: 200, body: JSON.parse(outputText) };
 };
 
-// Groqによる生成
-const generateWithGroq = async (
+// Cerebras用にスキーマから非対応フィールドを削除
+const sanitizeSchemaForCerebras = (
+  schema: Record<string, unknown>,
+): Record<string, unknown> => {
+  const sanitize = (obj: unknown): unknown => {
+    if (Array.isArray(obj)) {
+      return obj.map(sanitize);
+    }
+    if (obj && typeof obj === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // minItems, maxItems を除外
+        if (key === 'minItems' || key === 'maxItems') continue;
+        result[key] = sanitize(value);
+      }
+      return result;
+    }
+    return obj;
+  };
+  return sanitize(schema) as Record<string, unknown>;
+};
+
+// Cerebrasによる生成
+const generateWithCerebras = async (
   env: Env,
   model: string,
   prompt: string,
   schema: Record<string, unknown>,
 ): Promise<ProviderResult> => {
-  const apiKey = env.GROQ_API_KEY;
+  const apiKey = env.CEREBRAS_API_KEY;
   if (!apiKey) {
-    return { status: 500, body: { error: 'GROQ_API_KEY is not set.' } };
+    return { status: 500, body: { error: 'CEREBRAS_API_KEY is not set.' } };
   }
 
+  const sanitizedSchema = sanitizeSchemaForCerebras(schema);
+
   const response = await fetch(
-    'https://api.groq.com/openai/v1/chat/completions',
+    'https://api.cerebras.ai/v1/chat/completions',
     {
       method: 'POST',
       headers: {
@@ -110,12 +134,14 @@ const generateWithGroq = async (
       body: JSON.stringify({
         model,
         messages: [{ role: 'user', content: prompt }],
+        temperature: 1.0,
+        top_p: 0.95,
         response_format: {
           type: 'json_schema',
           json_schema: {
             name: 'schema',
             strict: true,
-            schema,
+            schema: sanitizedSchema,
           },
         },
       }),
@@ -134,7 +160,7 @@ const generateWithGroq = async (
   if (!outputText) {
     return {
       status: 500,
-      body: { error: 'Groq response has no output text.' },
+      body: { error: 'Cerebras response has no output text.' },
     };
   }
 
@@ -205,8 +231,8 @@ app.post('/api/llm/generate', async (c) => {
       return c.json(result.body, result.status);
     }
 
-    if (provider === 'Groq') {
-      const result = await generateWithGroq(c.env, model, prompt, schema);
+    if (provider === 'Cerebras') {
+      const result = await generateWithCerebras(c.env, model, prompt, schema);
       return c.json(result.body, result.status);
     }
 

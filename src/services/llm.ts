@@ -68,11 +68,14 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
       requestServer('Gemini', model, prompt, schema),
   },
 
-  Groq: {
-    defaultModel: 'openai/gpt-oss-120b',
-    models: [{ id: 'openai/gpt-oss-120b', name: 'GPT OSS 120B' }],
+  Cerebras: {
+    defaultModel: 'zai-glm-4.7',
+    models: [
+      { id: 'zai-glm-4.7', name: 'GLM 4.7' },
+      { id: 'gpt-oss', name: 'GPT OSS' },
+    ],
     generate: (prompt, schema, model) =>
-      requestServer('Groq', model, prompt, schema),
+      requestServer('Cerebras', model, prompt, schema),
   },
 };
 

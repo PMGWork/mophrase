@@ -106,7 +106,7 @@ export interface SerializedPath {
 // #region 5. 提案/LLM関連
 
 // LLMプロバイダの種類
-export type LLMProvider = 'Gemini' | 'OpenAI' | 'Groq';
+export type LLMProvider = 'Gemini' | 'OpenAI' | 'Cerebras';
 
 // 提案情報
 export interface Suggestion {
