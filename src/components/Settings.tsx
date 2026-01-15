@@ -18,6 +18,7 @@ type SettingsProps = {
     llmProvider: LLMProvider;
     llmModel: string;
     fitTolerance: number;
+    testMode: boolean;
   }) => void;
 };
 
@@ -32,6 +33,7 @@ export const Settings = ({
   const selectedProvider = config?.llmProvider ?? 'OpenAI';
   const selectedModel = config?.llmModel ?? '';
   const tolerance = config?.fitTolerance ?? 20;
+  const testMode = config?.testMode ?? false;
 
   const currentValue = JSON.stringify({
     provider: selectedProvider,
@@ -94,6 +96,7 @@ export const Settings = ({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
                         fitTolerance: tolerance,
+                        testMode,
                       });
                     } catch {
                       // ignore invalid value
@@ -114,6 +117,33 @@ export const Settings = ({
                 </select>
                 <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
               </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/60 px-3 py-2">
+              <div>
+                <div className="text-sm text-gray-200">Test Mode</div>
+                <div className="text-xs text-gray-500">
+                  Generate 5 times for benchmarking (no UI update)
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-pressed={testMode}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${testMode ? 'bg-emerald-500/80' : 'bg-gray-700'
+                  }`}
+                onClick={() =>
+                  onChange({
+                    llmProvider: selectedProvider,
+                    llmModel: selectedModel,
+                    fitTolerance: tolerance,
+                    testMode: !testMode,
+                  })
+                }
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${testMode ? 'translate-x-5' : 'translate-x-0.5'
+                    }`}
+                />
+              </button>
             </div>
           </div>
 
@@ -152,6 +182,7 @@ export const Settings = ({
                     llmProvider: selectedProvider,
                     llmModel: selectedModel,
                     fitTolerance: next,
+                    testMode,
                   });
                 }}
                 className="corner-md h-1.5 w-full cursor-pointer appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"

@@ -10,6 +10,7 @@ export interface Config {
   pointSize: number; // 制御点のサイズ
   llmProvider: LLMProvider; // LLMプロバイダ名
   llmModel: string; // LLMモデル名
+  testMode: boolean; // テストモード（5回生成してベンチマーク）
   keyframePrompt: string; // キーフレーム補正プロンプト
 }
 
@@ -32,6 +33,7 @@ export const DEFAULT_CONFIG: Config = {
   pointSize: 6,
   llmProvider: 'OpenAI',
   llmModel: 'gpt-5.2',
+  testMode: false,
   keyframePrompt: keyframePrompt,
 };
 

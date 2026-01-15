@@ -10,6 +10,7 @@ type SketchSuggestionProps = {
   status: SuggestionState;
   suggestions: Suggestion[];
   position: { left: number; top: number } | null;
+  testMode: boolean;
   onSubmit: (prompt: string) => void;
   onHoverChange: (id: string | null, strength: number) => void;
   onSuggestionClick: (id: string, strength: number) => void;
@@ -22,6 +23,7 @@ export const SketchSuggestion = ({
   status,
   suggestions,
   position,
+  testMode,
   onSubmit,
   onHoverChange,
   onSuggestionClick,
@@ -141,7 +143,7 @@ export const SketchSuggestion = ({
         {/* ローディング表示 */}
         {showLoading && (
           <div className="suggestion-loading px-3 py-2 text-sm text-gray-400">
-            Generating...
+            {testMode ? 'Testing...' : 'Generating...'}
           </div>
         )}
 

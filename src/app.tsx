@@ -159,6 +159,7 @@ export const App = () => {
         status={suggestionUI.status}
         suggestions={suggestionUI.suggestions}
         position={suggestionUI.position}
+        testMode={config.testMode}
         onHoverChange={setSuggestionHover}
         onSuggestionClick={selectSuggestion}
       />

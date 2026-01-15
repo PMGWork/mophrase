@@ -17,16 +17,33 @@ export async function fetchSuggestions(
   promptHistory: string[],
 ): Promise<SuggestionItem[]> {
   const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
-  const result = await generateStructured<SuggestionResponse>(
-    prompt,
-    suggestionResponseSchema,
-    config.llmProvider,
-    config.llmModel,
-  );
+  const runs = config.testMode ? 5 : 1;
+  const results: SuggestionResponse[] = [];
 
-  console.log('LLM Result:', result);
+  for (let i = 0; i < runs; i += 1) {
+    const result = await generateStructured<SuggestionResponse>(
+      prompt,
+      suggestionResponseSchema,
+      config.llmProvider,
+      config.llmModel,
+    );
 
-  return result.suggestions.map(
+    results.push(result);
+  }
+
+  // テストモードの場合は結果を返さない（UIに反映しない）
+  if (config.testMode) {
+    return [];
+  }
+
+  const lastResult = results[results.length - 1];
+  if (!lastResult) {
+    return [];
+  }
+
+  console.log('[llm] result:', lastResult);
+
+  return lastResult.suggestions.map(
     (suggestion): SuggestionItem => ({
       title: suggestion.title,
       keyframes: suggestion.keyframes,

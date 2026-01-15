@@ -14,6 +14,7 @@ type SketchConfigUpdate = {
   llmProvider: Config['llmProvider'];
   llmModel: Config['llmModel'];
   fitTolerance: Config['fitTolerance'];
+  testMode: Config['testMode'];
 };
 
 // エディタの結果
