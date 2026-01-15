@@ -7,6 +7,7 @@ import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
 import type { Path, ToolKind } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
+import { loadConfig, saveConfig } from '../services/configStorage';
 
 // 設定更新用のパラメータ
 type SketchConfigUpdate = {
@@ -59,7 +60,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const editorRef = useRef<SketchEditor | null>(null);
 
   // 状態管理
-  const [config, setConfig] = useState<Config>({ ...DEFAULT_CONFIG });
+  const [config, setConfig] = useState<Config>(loadConfig);
   const [selectedTool, setSelectedTool] = useState<ToolKind>('pen');
   const [activePath, setActivePath] = useState<Path | null>(null);
   const [suggestionUI, setSuggestionUI] =
@@ -170,6 +171,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     setConfig((prev) => {
       const updated = { ...prev, ...next };
       editorRef.current?.getSuggestionManager().updateConfig(updated);
+      saveConfig(updated);
       return updated;
     });
   }, []);
