@@ -74,19 +74,12 @@ async function requestServer<T>(
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
     defaultModel: 'gpt-5.2',
-    models: [{ id: 'gpt-5.2', name: 'GPT-5.2' }],
-    generate: (prompt, schema, model) =>
-      requestServer('OpenAI', model, prompt, schema),
-  },
-
-  Gemini: {
-    defaultModel: 'gemini-3-flash-preview',
     models: [
-      { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro' },
-      { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash' },
+      { id: 'gpt-5.2', name: 'GPT-5.2' },
+      { id: 'gpt5-mini', name: 'GPT-5 Mini' },
     ],
     generate: (prompt, schema, model) =>
-      requestServer('Gemini', model, prompt, schema),
+      requestServer('OpenAI', model, prompt, schema),
   },
 
   Cerebras: {

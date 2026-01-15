@@ -5,5 +5,4 @@ compatibility_date = "2026-01-12"
 [vars]
 # 本番では `wrangler secret put` を使って設定してください
 # OPENAI_API_KEY = ""
-# GEMINI_API_KEY = ""
-# GROQ_API_KEY = ""
+# CEREBRAS_API_KEY = ""

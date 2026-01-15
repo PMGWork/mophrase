@@ -4,12 +4,11 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 // 環境変数の型定義
 type Env = {
   OPENAI_API_KEY?: string;
-  GEMINI_API_KEY?: string;
   CEREBRAS_API_KEY?: string;
 };
 
 // サポートするLLMプロバイダの型定義
-type Provider = 'OpenAI' | 'Gemini' | 'Cerebras';
+type Provider = 'OpenAI' | 'Cerebras';
 
 // LLM生成リクエストの型定義
 type LlmGenerateRequest = {
@@ -219,70 +218,6 @@ const generateWithCerebras = async (
   };
 };
 
-// Geminiによる生成
-const generateWithGemini = async (
-  env: Env,
-  model: string,
-  prompt: string,
-  schema: Record<string, unknown>,
-): Promise<ProviderResult> => {
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return { status: 500, body: { error: 'GEMINI_API_KEY is not set.' } };
-  }
-
-  const t0 = nowMs();
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: schema,
-        },
-      }),
-    },
-  );
-  const t1 = nowMs();
-  const data = await response.json();
-  const t2 = nowMs();
-  if (!response.ok) {
-    return {
-      status: toContentfulStatus(response.status),
-      body: { error: data },
-    };
-  }
-
-  const outputText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!outputText) {
-    return {
-      status: 500,
-      body: { error: 'Gemini response has no output text.' },
-    };
-  }
-
-  const t3 = nowMs();
-  const parsed = JSON.parse(outputText);
-  const t4 = nowMs();
-
-  return {
-    status: 200,
-    body: parsed,
-    meta: {
-      provider: 'Gemini',
-      model,
-      upstreamMs: t1 - t0,
-      jsonDecodeMs: t2 - t1,
-      outputParseMs: t4 - t3,
-      totalMs: t4 - t0,
-      outputChars: outputText.length,
-    },
-  };
-};
-
 // Honoアプリケーションの作成
 const app = new Hono<{ Bindings: Env }>();
 
@@ -321,25 +256,6 @@ app.post('/api/llm/generate', async (c) => {
 
     if (provider === 'Cerebras') {
       const result = await generateWithCerebras(c.env, model, prompt, schema);
-      const totalMs = nowMs() - requestStart;
-      if (result.meta) {
-        c.header('x-llm-provider', result.meta.provider);
-        c.header('x-llm-model', result.meta.model);
-        c.header('x-llm-upstream-ms', result.meta.upstreamMs.toFixed(2));
-        c.header('x-llm-json-decode-ms', result.meta.jsonDecodeMs.toFixed(2));
-        c.header('x-llm-output-parse-ms', result.meta.outputParseMs.toFixed(2));
-        c.header('x-llm-total-ms', totalMs.toFixed(2));
-        c.header('x-llm-schema-bytes', String(schemaBytes));
-        c.header('x-llm-prompt-chars', String(promptChars));
-        if (result.meta.outputChars !== undefined) {
-          c.header('x-llm-output-chars', String(result.meta.outputChars));
-        }
-      }
-      return c.json(result.body, result.status);
-    }
-
-    if (provider === 'Gemini') {
-      const result = await generateWithGemini(c.env, model, prompt, schema);
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
         c.header('x-llm-provider', result.meta.provider);
