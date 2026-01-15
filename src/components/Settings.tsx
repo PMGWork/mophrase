@@ -118,32 +118,34 @@ export const Settings = ({
                 <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-900/60 px-3 py-2">
+            <div
+              className="group flex cursor-pointer items-center justify-between rounded-lg border border-gray-800 bg-gray-900/60 px-3 py-2 transition-colors hover:bg-gray-800/80"
+              onClick={() =>
+                onChange({
+                  llmProvider: selectedProvider,
+                  llmModel: selectedModel,
+                  fitTolerance: tolerance,
+                  testMode: !testMode,
+                })
+              }
+            >
               <div>
                 <div className="text-sm text-gray-200">Test Mode</div>
                 <div className="text-xs text-gray-500">
-                  Generate 5 times for benchmarking (no UI update)
+                  Generate 5 times for benchmarking
                 </div>
               </div>
-              <button
-                type="button"
-                aria-pressed={testMode}
+              <div
+                role="switch"
+                aria-checked={testMode}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${testMode ? 'bg-emerald-500/80' : 'bg-gray-700'
                   }`}
-                onClick={() =>
-                  onChange({
-                    llmProvider: selectedProvider,
-                    llmModel: selectedModel,
-                    fitTolerance: tolerance,
-                    testMode: !testMode,
-                  })
-                }
               >
                 <span
                   className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${testMode ? 'translate-x-5' : 'translate-x-0.5'
                     }`}
                 />
-              </button>
+              </div>
             </div>
           </div>
 

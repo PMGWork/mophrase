@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type p5 from 'p5';
-import { DEFAULT_COLORS, DEFAULT_CONFIG } from '../config';
+import { DEFAULT_COLORS } from '../config';
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
@@ -80,7 +80,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
           height: canvasRef.current?.clientHeight ?? 0,
         }),
       },
-      DEFAULT_CONFIG,
+      config,
       DEFAULT_COLORS,
       // onPathCreated: 新規パス作成時
       (path) => {
@@ -107,7 +107,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     editorRef.current = editor;
     setSelectedTool(editor.getCurrentTool());
     setIsReady(true);
-  }, []);
+  }, [config]);
 
   // コンテナのリサイズを監視
   useEffect(() => {
