@@ -300,11 +300,6 @@ export class SuggestionManager {
       graphModifier.strength = strength;
     }
 
-    console.log('Applied SketchModifier:', sketchModifier);
-    if (graphModifier) {
-      console.log('Applied GraphModifier:', graphModifier);
-    }
-
     // パスにmodifierを追加
     this.addModifiersToPath(this.targetPath, sketchModifier, graphModifier);
 

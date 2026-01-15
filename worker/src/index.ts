@@ -23,7 +23,23 @@ type LlmGenerateRequest = {
 type ProviderResult = {
   status: ContentfulStatusCode;
   body: unknown;
+  meta?: ProviderMeta;
 };
+
+// プロバイダのメタデータ型定義
+type ProviderMeta = {
+  provider: Provider;
+  model: string;
+  upstreamMs: number;
+  jsonDecodeMs: number;
+  outputParseMs: number;
+  totalMs: number;
+  outputChars?: number;
+};
+
+// 現在時刻をミリ秒単位で取得するユーティリティ関数
+const nowMs = (): number =>
+  typeof performance !== 'undefined' ? performance.now() : Date.now();
 
 // ステータスコードをContentfulStatusCodeに変換するユーティリティ関数
 const toContentfulStatus = (status: number): ContentfulStatusCode =>
@@ -43,6 +59,7 @@ const generateWithOpenAI = async (
     return { status: 500, body: { error: 'OPENAI_API_KEY is not set.' } };
   }
 
+  const t0 = nowMs();
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
@@ -63,8 +80,9 @@ const generateWithOpenAI = async (
       },
     }),
   });
-
+  const t1 = nowMs();
   const data = await response.json();
+  const t2 = nowMs();
   if (!response.ok) {
     return {
       status: toContentfulStatus(response.status),
@@ -84,7 +102,23 @@ const generateWithOpenAI = async (
     };
   }
 
-  return { status: 200, body: JSON.parse(outputText) };
+  const t3 = nowMs();
+  const parsed = JSON.parse(outputText);
+  const t4 = nowMs();
+
+  return {
+    status: 200,
+    body: parsed,
+    meta: {
+      provider: 'OpenAI',
+      model,
+      upstreamMs: t1 - t0,
+      jsonDecodeMs: t2 - t1,
+      outputParseMs: t4 - t3,
+      totalMs: t4 - t0,
+      outputChars: outputText.length,
+    },
+  };
 };
 
 // Cerebras用にスキーマから非対応フィールドを削除
@@ -123,6 +157,7 @@ const generateWithCerebras = async (
 
   const sanitizedSchema = sanitizeSchemaForCerebras(schema);
 
+  const t0 = nowMs();
   const response = await fetch(
     'https://api.cerebras.ai/v1/chat/completions',
     {
@@ -147,8 +182,9 @@ const generateWithCerebras = async (
       }),
     },
   );
-
+  const t1 = nowMs();
   const data = await response.json();
+  const t2 = nowMs();
   if (!response.ok) {
     return {
       status: toContentfulStatus(response.status),
@@ -164,7 +200,23 @@ const generateWithCerebras = async (
     };
   }
 
-  return { status: 200, body: JSON.parse(outputText) };
+  const t3 = nowMs();
+  const parsed = JSON.parse(outputText);
+  const t4 = nowMs();
+
+  return {
+    status: 200,
+    body: parsed,
+    meta: {
+      provider: 'Cerebras',
+      model,
+      upstreamMs: t1 - t0,
+      jsonDecodeMs: t2 - t1,
+      outputParseMs: t4 - t3,
+      totalMs: t4 - t0,
+      outputChars: outputText.length,
+    },
+  };
 };
 
 // Geminiによる生成
@@ -179,6 +231,7 @@ const generateWithGemini = async (
     return { status: 500, body: { error: 'GEMINI_API_KEY is not set.' } };
   }
 
+  const t0 = nowMs();
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
@@ -193,8 +246,9 @@ const generateWithGemini = async (
       }),
     },
   );
-
+  const t1 = nowMs();
   const data = await response.json();
+  const t2 = nowMs();
   if (!response.ok) {
     return {
       status: toContentfulStatus(response.status),
@@ -210,7 +264,23 @@ const generateWithGemini = async (
     };
   }
 
-  return { status: 200, body: JSON.parse(outputText) };
+  const t3 = nowMs();
+  const parsed = JSON.parse(outputText);
+  const t4 = nowMs();
+
+  return {
+    status: 200,
+    body: parsed,
+    meta: {
+      provider: 'Gemini',
+      model,
+      upstreamMs: t1 - t0,
+      jsonDecodeMs: t2 - t1,
+      outputParseMs: t4 - t3,
+      totalMs: t4 - t0,
+      outputChars: outputText.length,
+    },
+  };
 };
 
 // Honoアプリケーションの作成
@@ -218,6 +288,7 @@ const app = new Hono<{ Bindings: Env }>();
 
 // LLM生成エンドポイント
 app.post('/api/llm/generate', async (c) => {
+  const requestStart = nowMs();
   const body = await c.req.json<LlmGenerateRequest>();
   const { provider, model, prompt, schema } = body;
 
@@ -225,19 +296,64 @@ app.post('/api/llm/generate', async (c) => {
     return c.json({ error: 'Invalid request body.' }, 400);
   }
 
+  const schemaBytes = JSON.stringify(schema).length;
+  const promptChars = prompt.length;
+
   try {
     if (provider === 'OpenAI') {
       const result = await generateWithOpenAI(c.env, model, prompt, schema);
+      const totalMs = nowMs() - requestStart;
+      if (result.meta) {
+        c.header('x-llm-provider', result.meta.provider);
+        c.header('x-llm-model', result.meta.model);
+        c.header('x-llm-upstream-ms', result.meta.upstreamMs.toFixed(2));
+        c.header('x-llm-json-decode-ms', result.meta.jsonDecodeMs.toFixed(2));
+        c.header('x-llm-output-parse-ms', result.meta.outputParseMs.toFixed(2));
+        c.header('x-llm-total-ms', totalMs.toFixed(2));
+        c.header('x-llm-schema-bytes', String(schemaBytes));
+        c.header('x-llm-prompt-chars', String(promptChars));
+        if (result.meta.outputChars !== undefined) {
+          c.header('x-llm-output-chars', String(result.meta.outputChars));
+        }
+      }
       return c.json(result.body, result.status);
     }
 
     if (provider === 'Cerebras') {
       const result = await generateWithCerebras(c.env, model, prompt, schema);
+      const totalMs = nowMs() - requestStart;
+      if (result.meta) {
+        c.header('x-llm-provider', result.meta.provider);
+        c.header('x-llm-model', result.meta.model);
+        c.header('x-llm-upstream-ms', result.meta.upstreamMs.toFixed(2));
+        c.header('x-llm-json-decode-ms', result.meta.jsonDecodeMs.toFixed(2));
+        c.header('x-llm-output-parse-ms', result.meta.outputParseMs.toFixed(2));
+        c.header('x-llm-total-ms', totalMs.toFixed(2));
+        c.header('x-llm-schema-bytes', String(schemaBytes));
+        c.header('x-llm-prompt-chars', String(promptChars));
+        if (result.meta.outputChars !== undefined) {
+          c.header('x-llm-output-chars', String(result.meta.outputChars));
+        }
+      }
       return c.json(result.body, result.status);
     }
 
     if (provider === 'Gemini') {
       const result = await generateWithGemini(c.env, model, prompt, schema);
+      const totalMs = nowMs() - requestStart;
+      if (result.meta) {
+        c.header('x-llm-provider', result.meta.provider);
+        c.header('x-llm-model', result.meta.model);
+        c.header('x-llm-upstream-ms', result.meta.upstreamMs.toFixed(2));
+        c.header('x-llm-json-decode-ms', result.meta.jsonDecodeMs.toFixed(2));
+        c.header('x-llm-output-parse-ms', result.meta.outputParseMs.toFixed(2));
+        c.header('x-llm-total-ms', totalMs.toFixed(2));
+        c.header('x-llm-schema-bytes', String(schemaBytes));
+        c.header('x-llm-prompt-chars', String(promptChars));
+        if (result.meta.outputChars !== undefined) {
+          c.header('x-llm-output-chars', String(result.meta.outputChars));
+        }
+      }
       return c.json(result.body, result.status);
     }
 

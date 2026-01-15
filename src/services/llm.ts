@@ -45,6 +45,27 @@ async function requestServer<T>(
     );
   }
 
+  const totalMs = response.headers.get('x-llm-total-ms');
+  const upstreamMs = response.headers.get('x-llm-upstream-ms');
+  const jsonDecodeMs = response.headers.get('x-llm-json-decode-ms');
+  const outputParseMs = response.headers.get('x-llm-output-parse-ms');
+  const schemaBytes = response.headers.get('x-llm-schema-bytes');
+  const promptChars = response.headers.get('x-llm-prompt-chars');
+  const outputChars = response.headers.get('x-llm-output-chars');
+  if (totalMs || upstreamMs || schemaBytes) {
+    console.log('[llm] latency', {
+      provider,
+      model,
+      totalMs: totalMs ? Number(totalMs) : undefined,
+      upstreamMs: upstreamMs ? Number(upstreamMs) : undefined,
+      jsonDecodeMs: jsonDecodeMs ? Number(jsonDecodeMs) : undefined,
+      outputParseMs: outputParseMs ? Number(outputParseMs) : undefined,
+      schemaBytes: schemaBytes ? Number(schemaBytes) : undefined,
+      promptChars: promptChars ? Number(promptChars) : undefined,
+      outputChars: outputChars ? Number(outputChars) : undefined,
+    });
+  }
+
   const data = (await response.json()) as T;
   return schema.parse(data);
 }
@@ -72,7 +93,7 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     defaultModel: 'zai-glm-4.7',
     models: [
       { id: 'zai-glm-4.7', name: 'GLM 4.7' },
-      { id: 'gpt-oss', name: 'GPT OSS' },
+      { id: 'gpt-oss-120b', name: 'GPT OSS 120B' },
     ],
     generate: (prompt, schema, model) =>
       requestServer('Cerebras', model, prompt, schema),
