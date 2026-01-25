@@ -63,15 +63,15 @@ export const PropertyEditor = ({
   return (
     <div
       id="propertyEditorContainer"
-      className="corner-xl flex min-h-0 flex-1 flex-col overflow-y-auto border border-gray-800 bg-gray-950"
+      className="corner-xl border-border bg-background flex min-h-0 flex-1 flex-col overflow-y-auto border"
     >
-      <div className="flex items-center border-b border-gray-800 bg-gray-900/50 px-4 py-2.5">
-        <h2 className="text-sm font-medium text-gray-200">Properties</h2>
+      <div className="border-border bg-panel/50 flex items-center border-b px-4 py-2.5">
+        <h2 className="text text-sm font-medium">Properties</h2>
       </div>
 
       <div
         id="propertyPlaceholder"
-        className="flex h-full items-center justify-center text-sm text-gray-500"
+        className="text-text-subtle flex h-full items-center justify-center text-sm"
         style={{ display: hasEditablePath ? 'none' : 'flex' }}
       >
         Select a path to edit

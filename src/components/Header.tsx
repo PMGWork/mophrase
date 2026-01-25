@@ -16,7 +16,7 @@ export const Header = ({
   onOpenSettings,
 }: HeaderProps) => (
   <header className="flex w-full flex-col gap-4 px-5 py-3 md:flex-row md:items-center md:justify-between">
-    <h1 className="text-2xl font-medium">MoPhrase</h1>
+    <h1 className="text-text text-2xl font-medium">MoPhrase</h1>
 
     <div className="flex flex-wrap items-center gap-2">
       <ToolButton
@@ -32,7 +32,7 @@ export const Header = ({
         onClick={() => onSelectTool('pen')}
       />
 
-      <div className="mx-2 h-6 w-px bg-gray-800" />
+      <div className="bg-border mx-2 h-6 w-px" />
 
       <ToolButton title="Settings" icon={Settings} onClick={onOpenSettings} />
     </div>

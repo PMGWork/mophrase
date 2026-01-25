@@ -23,15 +23,15 @@ export const Sidebar = ({
   >
     <div
       id="graphEditorContainer"
-      className="corner-xl flex flex-none flex-col overflow-hidden border border-gray-800 bg-gray-950"
+      className="corner-xl border-border bg-background flex flex-none flex-col overflow-hidden border"
     >
-      <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900/50 px-4 py-2.5">
-        <h2 className="text-sm font-medium text-gray-200">Graph Editor</h2>
+      <div className="border-border bg-panel/50 flex items-center justify-between border-b px-4 py-2.5">
+        <h2 className="text text-sm font-medium">Graph Editor</h2>
       </div>
 
       <div
         id="graphPlaceholder"
-        className={`flex aspect-square w-full items-center justify-center text-sm text-gray-500 ${
+        className={`text-text-subtle flex aspect-square w-full items-center justify-center text-sm ${
           hasGraphPath ? 'hidden' : ''
         }`}
       >
@@ -45,7 +45,7 @@ export const Sidebar = ({
         <div
           id="graphEditorCanvas"
           ref={graphCanvasRef}
-          className="relative h-full w-full border-gray-800"
+          className="border-border relative h-full w-full"
         />
       </div>
     </div>

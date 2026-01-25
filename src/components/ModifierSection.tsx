@@ -19,10 +19,10 @@ export const ModifierSection = ({
   onRemove,
 }: ModifierSectionProps) => (
   <div
-    className="flex flex-col gap-2 border-t border-gray-800 p-3"
+    className="border-border flex flex-col gap-2 border-t p-3"
     style={{ display: modifiers.length ? 'flex' : 'none' }}
   >
-    <span className="text-xs font-medium text-gray-400">{title}</span>
+    <span className="text-text-muted text-xs font-medium">{title}</span>
     <div className="flex flex-col gap-1 overflow-y-auto">
       {modifiers.map((modifier) => (
         <ModifierItem

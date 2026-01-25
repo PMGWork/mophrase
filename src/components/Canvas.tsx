@@ -11,9 +11,9 @@ export const Canvas = ({ canvasRef }: CanvasProps) => (
   <main
     id="canvasContainer"
     ref={canvasRef}
-    className="corner-xl relative min-h-0 min-w-0 flex-1 overflow-hidden border border-gray-800"
+    className="corner-xl border-border relative min-h-0 min-w-0 flex-1 overflow-hidden border"
   >
-    <div className="pointer-events-none absolute bottom-3 left-3 flex gap-3 text-[10px] text-gray-500">
+    <div className="text-text-subtle pointer-events-none absolute bottom-3 left-3 flex gap-3 text-[10px]">
       <KeyboardHint keys="V" label="Select" />
       <KeyboardHint keys="G" label="Pen" />
       <KeyboardHint keys="Alt+X" label="Delete" />

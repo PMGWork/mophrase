@@ -1,6 +1,6 @@
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
-import { OBJECT_COLORS, OBJECT_SIZE } from '../../constants';
+import { OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import {
@@ -35,6 +35,7 @@ export class SketchEditor {
   // 設定
   private config: Config;
   private colors: Colors;
+  private objectColors: string[];
 
   // コールバック
   private onPathCreated: (path: Path) => void; // パスが作成されたときに呼び出される
@@ -47,6 +48,7 @@ export class SketchEditor {
     dom: SketchDomRefs,
     config: Config,
     colors: Colors,
+    objectColors: string[],
     onPathCreated: (path: Path) => void,
     onPathSelected: (path: Path | null) => void,
     onPathUpdated?: (path: Path) => void,
@@ -56,6 +58,7 @@ export class SketchEditor {
     this.dom = dom;
     this.config = config;
     this.colors = colors;
+    this.objectColors = objectColors;
     this.onPathCreated = onPathCreated;
     this.onPathSelected = onPathSelected;
     this.onPathUpdated = onPathUpdated;
@@ -249,7 +252,7 @@ export class SketchEditor {
       for (let i = 0; i < this.paths.length; i++) {
         const path = this.paths[i];
         const isLatest = i === this.paths.length - 1;
-        const color = OBJECT_COLORS[i % OBJECT_COLORS.length];
+        const color = this.objectColors[i % this.objectColors.length];
 
         if (isLatest) {
           // 最後のパスはMotionManagerで描画（静的表示）
@@ -456,7 +459,9 @@ export class SketchEditor {
   }
 
   private getPathColors(): string[] {
-    return this.paths.map((_, i) => OBJECT_COLORS[i % OBJECT_COLORS.length]);
+    return this.paths.map(
+      (_, i) => this.objectColors[i % this.objectColors.length],
+    );
   }
 
   private prepareAllPaths(): boolean {

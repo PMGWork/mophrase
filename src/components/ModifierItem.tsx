@@ -28,18 +28,18 @@ export const ModifierItem = ({
 
   return (
     <div className="flex items-center gap-2">
-      <div className="corner-md relative flex flex-1 items-center overflow-hidden bg-gray-800 px-3 py-1.5">
+      <div className="corner-md bg-panel-elevated relative flex flex-1 items-center overflow-hidden px-3 py-1.5">
         <div
           className="pointer-events-none absolute inset-0"
           style={{ width: indicatorWidth, background: 'rgba(255,255,255,0.1)' }}
         />
         <span
-          className="relative flex-1 truncate text-xs text-gray-50"
+          className="text-text relative flex-1 truncate text-xs"
           title={modifier.name}
         >
           {modifier.name}
         </span>
-        <span className="relative ml-2 text-xs text-gray-500">
+        <span className="text-text-subtle relative ml-2 text-xs">
           {strengthValue}%
         </span>
         <input
@@ -56,7 +56,7 @@ export const ModifierItem = ({
       <button
         type="button"
         onClick={() => onRemove(modifier, type)}
-        className="shrink-0 p-1 text-gray-500 transition-colors hover:text-red-400"
+        className="text-text-subtle hover:text-danger shrink-0 p-1 transition-colors"
         aria-label="Remove modifier"
       >
         <Minus className="h-4 w-4" />

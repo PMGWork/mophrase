@@ -26,7 +26,7 @@ export const SuggestionItem = ({
   return (
     <button
       type="button"
-      className="suggestion-item px-3 py-2 text-left text-sm text-gray-50 transition-colors hover:bg-gray-900"
+      className="suggestion-item text-text hover:bg-panel px-3 py-2 text-left text-sm transition-colors"
       style={{ position: 'relative', overflow: 'hidden' }}
       onMouseEnter={onMouseEnter}
       onMouseMove={onMouseMove}

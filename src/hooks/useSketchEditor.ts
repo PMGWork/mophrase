@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type p5 from 'p5';
 import { DEFAULT_COLORS } from '../config';
+import { OBJECT_COLORS } from '../constants';
+import {
+  resolveCssColorList,
+  resolveCssColors,
+} from '../theme/resolveCssColor';
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
@@ -68,6 +73,12 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     useState<SuggestionUIState>(initialSuggestionUI);
   const [isReady, setIsReady] = useState(false);
 
+  const resolvedColors = useMemo(() => resolveCssColors(DEFAULT_COLORS), []);
+  const resolvedObjectColors = useMemo(
+    () => resolveCssColorList(OBJECT_COLORS),
+    [],
+  );
+
   // 初期化
   useEffect(() => {
     if (editorRef.current || !canvasRef.current) return;
@@ -81,7 +92,8 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         }),
       },
       config,
-      DEFAULT_COLORS,
+      resolvedColors,
+      resolvedObjectColors,
       // onPathCreated: 新規パス作成時
       (path) => {
         setActivePath(path);
@@ -107,7 +119,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     editorRef.current = editor;
     setSelectedTool(editor.getCurrentTool());
     setIsReady(true);
-  }, [config]);
+  }, [config, resolvedColors, resolvedObjectColors]);
 
   // コンテナのリサイズを監視
   useEffect(() => {
@@ -228,7 +240,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
 
     // 設定
     config,
-    colors: DEFAULT_COLORS,
+    colors: resolvedColors,
     updateConfig,
   };
 };

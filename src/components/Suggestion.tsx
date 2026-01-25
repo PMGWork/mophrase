@@ -113,7 +113,7 @@ export const SketchSuggestion = ({
   return (
     <div
       id="sketchSuggestionContainer"
-      className="corner-lg fixed z-50 flex min-w-60 flex-col overflow-hidden border border-gray-800 bg-gray-900 shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+      className="corner-lg border-border bg-panel fixed z-50 flex min-w-60 flex-col overflow-hidden border shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
       style={{
         display: isVisible ? 'flex' : 'none',
         left: position?.left,
@@ -130,19 +130,22 @@ export const SketchSuggestion = ({
           type="text"
           placeholder={placeholder}
           autoComplete="off"
-          className="flex-1 p-3 text-sm text-gray-50 placeholder:text-gray-500 focus:outline-none"
+          className="text-text placeholder:text-text-subtle flex-1 p-3 text-sm focus:outline-none"
         />
-        <button type="submit" className="cursor-pointer p-3">
+        <button
+          type="submit"
+          className="text-text-muted hover:text-text cursor-pointer p-3"
+        >
           <Send className="h-4 w-4" />
         </button>
       </form>
       <div
         id="sketchSuggestionList"
-        className="flex max-h-60 flex-col overflow-y-auto *:border-t *:border-gray-800 empty:hidden"
+        className="*:border-border flex max-h-60 flex-col overflow-y-auto *:border-t empty:hidden"
       >
         {/* ローディング表示 */}
         {showLoading && (
-          <div className="suggestion-loading px-3 py-2 text-sm text-gray-400">
+          <div className="suggestion-loading text-text-muted px-3 py-2 text-sm">
             {testMode ? 'Testing...' : 'Generating...'}
           </div>
         )}

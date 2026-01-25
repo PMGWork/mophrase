@@ -139,14 +139,14 @@ export const Playback = ({ controller }: PlaybackProps) => {
   return (
     <section
       id="playbackBar"
-      className="corner-lg flex items-center gap-3 border border-gray-800 bg-gray-950/80 p-2.5"
+      className="corner-lg border-border bg-background/80 flex items-center gap-3 border p-2.5"
     >
       <div className="flex items-center gap-1">
         <button
           id="playbackResetButton"
-          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+          className={`corner-md bg-panel-elevated text-text-muted flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
             hasPaths
-              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-50'
+              ? 'hover:bg-panel hover:text-text cursor-pointer'
               : 'cursor-not-allowed opacity-40'
           }`}
           title={hasPaths ? 'First Frame' : 'No objects to reset'}
@@ -160,9 +160,9 @@ export const Playback = ({ controller }: PlaybackProps) => {
         </button>
         <button
           id="playbackPlayButton"
-          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+          className={`corner-md bg-panel-elevated text-text-muted flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
             hasPaths
-              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-50'
+              ? 'hover:bg-panel hover:text-text cursor-pointer'
               : 'cursor-not-allowed opacity-40'
           }`}
           title={
@@ -179,9 +179,9 @@ export const Playback = ({ controller }: PlaybackProps) => {
         </button>
         <button
           id="playbackEndButton"
-          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+          className={`corner-md bg-panel-elevated text-text-muted flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
             hasPaths
-              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-50'
+              ? 'hover:bg-panel hover:text-text cursor-pointer'
               : 'cursor-not-allowed opacity-40'
           }`}
           title={hasPaths ? 'Last Frame' : 'No objects to seek'}
@@ -205,22 +205,22 @@ export const Playback = ({ controller }: PlaybackProps) => {
         onPointerCancel={handlePointerUp}
       >
         <div className="relative h-1">
-          <div className="absolute inset-0 rounded-full bg-gray-800" />
+          <div className="bg-panel-elevated absolute inset-0 rounded-full" />
           <div
             id="playbackPlayhead"
-            className="absolute top-1/2 left-0 h-2.5 w-0.5 -translate-y-1/2 rounded-full bg-gray-400"
+            className="bg-text-muted absolute top-1/2 left-0 h-2.5 w-0.5 -translate-y-1/2 rounded-full"
             style={playheadStyle}
           />
         </div>
       </div>
       <span
         id="playbackTime"
-        className="flex shrink-0 items-center gap-0.5 font-mono text-xs text-gray-500"
+        className="text-text-subtle flex shrink-0 items-center gap-0.5 font-mono text-xs"
       >
         <span id="playbackTimeCurrent">
           {formatPlaybackTime(state.elapsedMs)}
         </span>
-        <span className="text-gray-700">/</span>
+        <span className="text-text-subtle">/</span>
         <span id="playbackTimeTotal">{formatPlaybackTime(state.totalMs)}</span>
       </span>
     </section>

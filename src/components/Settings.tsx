@@ -51,40 +51,40 @@ export const Settings = ({
     >
       <div
         id="settingsPanel"
-        className="corner-xl w-full max-w-md border border-gray-800 bg-gray-900 shadow-2xl"
+        className="corner-xl border-border bg-panel w-full max-w-md border shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-gray-800 px-5 py-4">
+        <div className="border-border flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <SettingsIcon className="h-5 w-5 text-gray-400" />
-            <h2 className="text-lg font-medium text-gray-50">Settings</h2>
+            <SettingsIcon className="text-text-muted h-5 w-5" />
+            <h2 className="text-text text-lg font-medium">Settings</h2>
           </div>
           <button
             id="closeSettingsButton"
-            className="corner-md cursor-pointer p-1.5 text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+            className="corner-md text-text-muted hover:bg-panel-elevated hover:text-text cursor-pointer p-1.5 transition-colors"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex flex-col divide-y divide-gray-800">
+        <div className="divide-border flex flex-col divide-y">
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <span className="text-text-subtle text-xs font-medium tracking-wider uppercase">
                 AI
               </span>
             </div>
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="settingsLlmModelSelect"
-                className="text-sm text-gray-400"
+                className="text-text-muted text-sm"
               >
                 LLM Model
               </label>
               <div className="relative">
                 <select
                   id="settingsLlmModelSelect"
-                  className="corner-md h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-50 transition-colors hover:bg-gray-700 focus:ring-1 focus:ring-gray-700 focus:outline-none"
+                  className="corner-md bg-panel-elevated text-text hover:bg-panel focus:ring-border h-10 w-full cursor-pointer appearance-none py-2 pr-10 pl-4 text-sm transition-colors focus:ring-1 focus:outline-none"
                   value={currentValue}
                   onChange={(event) => {
                     try {
@@ -115,11 +115,11 @@ export const Settings = ({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <ChevronDown className="text-text-muted pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
               </div>
             </div>
             <div
-              className="group flex cursor-pointer items-center justify-between rounded-lg border border-gray-800 bg-gray-900/60 px-3 py-2 transition-colors hover:bg-gray-800/80"
+              className="group border-border bg-panel/60 hover:bg-panel-elevated/80 flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 transition-colors"
               onClick={() =>
                 onChange({
                   llmProvider: selectedProvider,
@@ -130,20 +130,22 @@ export const Settings = ({
               }
             >
               <div>
-                <div className="text-sm text-gray-200">Test Mode</div>
-                <div className="text-xs text-gray-500">
+                <div className="text-text text-sm">Test Mode</div>
+                <div className="text-text-subtle text-xs">
                   Generate 5 times for benchmarking
                 </div>
               </div>
               <div
                 role="switch"
                 aria-checked={testMode}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${testMode ? 'bg-emerald-500/80' : 'bg-gray-700'
-                  }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  testMode ? 'bg-success/80' : 'bg-panel-elevated'
+                }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${testMode ? 'translate-x-5' : 'translate-x-0.5'
-                    }`}
+                  className={`bg-text inline-block h-5 w-5 rounded-full shadow transition-transform ${
+                    testMode ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
                 />
               </div>
             </div>
@@ -151,7 +153,7 @@ export const Settings = ({
 
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <span className="text-text-subtle text-xs font-medium tracking-wider uppercase">
                 Sketch
               </span>
             </div>
@@ -159,13 +161,13 @@ export const Settings = ({
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="settingsSketchTolerance"
-                  className="text-sm text-gray-400"
+                  className="text-text-muted text-sm"
                 >
                   Tolerance
                 </label>
                 <span
                   id="settingsSketchToleranceLabel"
-                  className="rounded bg-gray-800 px-2 py-0.5 font-mono text-xs text-gray-50"
+                  className="bg-panel-elevated text-text rounded px-2 py-0.5 font-mono text-xs"
                 >
                   {tolerance}px
                 </span>
@@ -187,7 +189,7 @@ export const Settings = ({
                     testMode,
                   });
                 }}
-                className="corner-md h-1.5 w-full cursor-pointer appearance-none bg-gray-700 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50"
+                className="corner-md bg-panel-elevated [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-full cursor-pointer appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
               />
             </div>
           </div>
