@@ -19,6 +19,8 @@
   },
   "devDependencies": {
     "@types/p5": "^1.7.7",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
