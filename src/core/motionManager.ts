@@ -27,6 +27,9 @@ export class MotionManager {
   private elapsedTime: number = 0;
   private totalDuration: number = 0;
 
+  // プロジェクト設定からの上書き
+  private durationOverrideMs: number = 0; // 0=未設定(自動計算)
+
   // 全パスのアニメーション状態
   private animationStates: PathAnimationState[] = [];
 
@@ -56,6 +59,11 @@ export class MotionManager {
     return this.totalDuration;
   }
 
+  // 総再生時間の上書きを設定（ミリ秒、0=未設定で自動計算）
+  public setDurationOverride(durationMs: number): void {
+    this.durationOverrideMs = durationMs;
+  }
+
   // 全パスのタイムライン再生を開始
   public startAll(
     paths: Path[],
@@ -66,7 +74,8 @@ export class MotionManager {
 
     const { states, totalDuration } = this.buildAnimationStates(paths, colors);
     this.animationStates = states;
-    this.totalDuration = totalDuration;
+    this.totalDuration =
+      this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
 
     const clamped = Math.max(0, Math.min(this.totalDuration, startAtMs));
     this.elapsedTime = clamped;
@@ -83,7 +92,8 @@ export class MotionManager {
 
     const { states, totalDuration } = this.buildAnimationStates(paths, colors);
     this.animationStates = states;
-    this.totalDuration = totalDuration;
+    this.totalDuration =
+      this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
 
     if (this.elapsedTime > this.totalDuration) {
       this.elapsedTime = this.totalDuration;

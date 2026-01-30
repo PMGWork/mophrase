@@ -14,22 +14,38 @@ export const App = () => {
   // UI状態
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const {
+    // キャンバスと再生コントローラ
     canvasRef: sketchCanvasRef,
-    activePath,
-    suggestionUI,
     playbackController,
+
+    // アクティブパスと更新ハンドラ
+    activePath,
+    updateActivePath,
+
+    // ツール関連
     selectedTool,
     setTool: setSketchTool,
+
+    // 提案関連
+    suggestionUI,
     updateSuggestionUI,
     submitPrompt,
     setSuggestionHover,
     selectSuggestion,
-    updateActivePath,
+
+    // 設定
     config,
     updateConfig,
 
+    // 色設定
     colors,
     getPreviewGraphCurves,
+
+    // プロジェクト関連
+    projectSettings,
+    updateProjectSettings,
+    saveProject,
+    loadProject,
   } = useSketchEditor();
 
   const { graphCanvasRef } = useGraphEditor({
@@ -128,12 +144,18 @@ export const App = () => {
         selectedTool={selectedTool}
         onSelectTool={handleToolSelect}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onSave={saveProject}
+        onLoad={loadProject}
       />
 
       <div className="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <Canvas canvasRef={sketchCanvasRef} />
-          <Playback controller={playbackController} />
+          <Playback
+            controller={playbackController}
+            projectSettings={projectSettings}
+            onProjectSettingsChange={updateProjectSettings}
+          />
         </div>
 
         <Sidebar

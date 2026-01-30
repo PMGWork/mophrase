@@ -118,7 +118,28 @@ export interface Suggestion {
 // 提案の状態
 export type SuggestionState = 'idle' | 'generating' | 'error' | 'input';
 
-// #region 6. フィッティング関連
+// #region 6. プロジェクト関連
+
+// プロジェクト設定
+export interface ProjectSettings {
+  playbackDuration: number; // 再生時間（秒）、0=自動
+  playbackFrameRate: number; // フレームレート（fps）、0=自動
+}
+
+// プロジェクトデータ
+export interface ProjectData {
+  version: number;
+  settings: ProjectSettings;
+  paths: SerializedPath[];
+}
+
+// デフォルトのプロジェクト設定
+export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
+  playbackDuration: 5,
+  playbackFrameRate: 60,
+};
+
+// #region 7. フィッティング関連
 
 // フィッティングエラーの結果
 export interface FitErrorResult {
@@ -126,7 +147,7 @@ export interface FitErrorResult {
   index: number;
 }
 
-// #region 7. Zodスキーマ定義
+// #region 8. Zodスキーマ定義
 
 // ハンドルスキーマ
 const handleSchema = z.object({

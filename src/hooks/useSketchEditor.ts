@@ -10,9 +10,11 @@ import {
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
-import type { Path, ToolKind } from '../types';
+import type { Path, ProjectSettings, ToolKind } from '../types';
+import { DEFAULT_PROJECT_SETTINGS } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
 import { loadConfig, saveConfig } from '../services/configStorage';
+import { serializeProject, deserializeProject } from '../utils/serialization';
 
 // 設定更新用のパラメータ
 type SketchConfigUpdate = {
@@ -48,6 +50,12 @@ type UseSketchEditorResult = {
   config: Config;
   colors: Colors;
   updateConfig: (next: SketchConfigUpdate) => void;
+
+  // プロジェクト
+  projectSettings: ProjectSettings;
+  updateProjectSettings: (next: ProjectSettings) => void;
+  saveProject: () => void;
+  loadProject: () => void;
 };
 
 // 初期の提案UI状態
@@ -72,6 +80,12 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const [suggestionUI, setSuggestionUI] =
     useState<SuggestionUIState>(initialSuggestionUI);
   const [isReady, setIsReady] = useState(false);
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings>(
+    () => ({ ...DEFAULT_PROJECT_SETTINGS }),
+  );
+
+  // ファイル入力用のref
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const resolvedColors = useMemo(() => resolveCssColors(DEFAULT_COLORS), []);
   const resolvedObjectColors = useMemo(
@@ -189,6 +203,92 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     });
   }, []);
 
+  // プロジェクト設定を更新
+  const updateProjectSettings = useCallback((next: ProjectSettings) => {
+    setProjectSettings(next);
+    editorRef.current?.setProjectSettings(next);
+  }, []);
+
+  // プロジェクトを保存
+  const saveProject = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // prompt() でファイル名を入力させる
+    const filename = prompt('Enter project name:');
+    if (!filename || filename.trim() === '') return;
+
+    // ファイル名を整形（.json がなければ追加）
+    const safeName = filename.trim().endsWith('.json')
+      ? filename.trim()
+      : `${filename.trim()}.json`;
+
+    // プロジェクトデータを生成
+    const paths = editor.getPaths();
+    const settings = editor.getProjectSettings();
+    const projectData = serializeProject(paths, settings);
+
+    // JSON をダウンロード
+    const blob = new Blob([JSON.stringify(projectData, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = safeName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  // プロジェクトを読み込み
+  const loadProject = useCallback(() => {
+    // 隠しファイル入力を作成
+    if (!fileInputRef.current) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      fileInputRef.current = input;
+
+      input.addEventListener('change', () => {
+        const file = input.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const text = reader.result as string;
+            const data = JSON.parse(text);
+            const { settings, paths: serializedPaths } =
+              deserializeProject(data);
+
+            // パスをデシリアライズ（p5.Vectorに復元）
+            // 注: 現在の実装ではシリアライズされたパスをそのまま持っている
+            // 将来的にエディタ側でデシリアライズが必要
+            // ひとまずsettingsだけ適用し、pathsは空で開始
+            // TODO: paths のデシリアライズを実装
+            setProjectSettings(settings);
+            editorRef.current?.setProjectSettings(settings);
+
+            // シリアライズされたpathsがある場合は警告
+            if (serializedPaths.length > 0) {
+              console.warn(
+                '[loadProject] Paths deserialization not yet implemented. Settings loaded.',
+              );
+            }
+          } catch (error) {
+            console.error('[loadProject] Failed to parse project file:', error);
+          }
+        };
+        reader.readAsText(file);
+        input.value = ''; // リセット
+      });
+    }
+
+    fileInputRef.current.click();
+  }, []);
+
   // プレイバックコントローラー
   const playbackController = useMemo<PlaybackController>(
     () => ({
@@ -242,5 +342,11 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     config,
     colors: resolvedColors,
     updateConfig,
+
+    // プロジェクト
+    projectSettings,
+    updateProjectSettings,
+    saveProject,
+    loadProject,
   };
 };
