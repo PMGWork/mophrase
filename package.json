@@ -3,25 +3,24 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": [
-    "worker"
-  ],
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "bun run dev:app & bun run dev:worker",
+    "dev": "concurrently -n app,worker -c blue,green --kill-others \"pnpm run dev:app\" \"pnpm run dev:worker\"",
     "dev:app": "vite",
-    "dev:worker": "bun --cwd worker dev",
+    "dev:worker": "pnpm -C worker dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "eslint . && prettier --check .",
-    "fix": "eslint . --fix && prettier --write ."
+    "check": "concurrently -n lint,format -c yellow,red \"eslint .\" \"prettier --check .\"",
+    "fix": "concurrently -n lint,format -c yellow,red \"eslint . --fix\" \"prettier --write .\""
   },
   "devDependencies": {
     "@types/p5": "^1.7.7",
     "@vitejs/plugin-react": "^5.0.2",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
