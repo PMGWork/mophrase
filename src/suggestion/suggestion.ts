@@ -6,7 +6,7 @@ import type {
   Path,
   SelectionRange,
   Suggestion,
-  SuggestionState,
+  SuggestionStatus,
 } from '../types';
 import {
   buildSketchCurves,
@@ -19,7 +19,7 @@ import {
   deserializeCurves,
   deserializeGraphCurves,
   serializePaths,
-} from '../utils/serialization';
+} from '../utils/serialization/curves';
 import { fetchSuggestions } from './suggestionService';
 import {
   drawSketchPreview,
@@ -35,7 +35,7 @@ type SuggestionManagerOptions = {
 
 // 提案UIの状態
 export type SuggestionUIState = {
-  status: SuggestionState;
+  status: SuggestionStatus;
   promptCount: number;
   isVisible: boolean;
   suggestions: Suggestion[];
@@ -45,7 +45,7 @@ export type SuggestionUIState = {
 // 提案マネージャー
 export class SuggestionManager {
   private config: Config;
-  private status: SuggestionState = 'idle';
+  private status: SuggestionStatus = 'idle';
   private suggestions: Suggestion[] = [];
   private hoveredId: string | null = null;
   private hoveredStrength: number = 1;
@@ -159,7 +159,7 @@ export class SuggestionManager {
   }
 
   // 状態を更新
-  private setState(state: SuggestionState): void {
+  private setState(state: SuggestionStatus): void {
     this.status = state;
   }
 

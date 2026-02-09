@@ -1,6 +1,5 @@
 import { HANDLE_RADIUS } from '../constants';
-import type {
-  HandleSelection,
+import type {  HandleDragMode,  HandleSelection,
   MarqueeRect,
   SelectionRange,
   HandleType,
@@ -25,8 +24,10 @@ export class HandleManager {
   // コンストラクタ
   constructor(
     getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[],
-    pixelToNorm: (x: number, y: number) => Vector = (x, y) => ({ x, y }) as Vector,
-    normToPixel: (x: number, y: number) => Vector = (x, y) => ({ x, y }) as Vector,
+    pixelToNorm: (x: number, y: number) => Vector = (x, y) =>
+      ({ x, y }) as Vector,
+    normToPixel: (x: number, y: number) => Vector = (x, y) =>
+      ({ x, y }) as Vector,
   ) {
     this.getPaths = getPaths;
     this.pixelToNorm = pixelToNorm;
@@ -75,12 +76,12 @@ export class HandleManager {
   }
 
   // ドラッグ中の位置更新
-  updateDrag(x: number, y: number, mode: number): void {
+  updateDrag(x: number, y: number, dragMode: HandleDragMode): void {
     if (!this.draggedHandle) return;
     const localPos = this.pixelToNorm(x, y);
 
     // ハンドルをドラッグ
-    this.applyDrag(this.draggedHandle, localPos.x, localPos.y, mode);
+    this.applyDrag(this.draggedHandle, localPos.x, localPos.y, dragMode);
   }
 
   // #region 選択管理
@@ -268,7 +269,7 @@ export class HandleManager {
     dragged: HandleSelection,
     targetX: number,
     targetY: number,
-    mode: number,
+    dragMode: HandleDragMode,
   ): void {
     const path = this.getPaths()[dragged.pathIndex];
     if (!path) return;
@@ -282,7 +283,7 @@ export class HandleManager {
 
     // 複数選択されている場合、選択されている全てのアンカーポイントを移動
     if (this.selectedHandles.length > 1 && this.isSelected(dragged)) {
-      this.applyMultiDrag(dx, dy, mode);
+      this.applyMultiDrag(dx, dy, dragMode);
       return;
     }
 
@@ -291,7 +292,7 @@ export class HandleManager {
       dragged,
       targetX,
       targetY,
-      mode,
+      dragMode,
       path,
       original,
       effective,
@@ -299,7 +300,7 @@ export class HandleManager {
   }
 
   // 複数選択時のドラッグ処理
-  private applyMultiDrag(dx: number, dy: number, mode: number): void {
+  private applyMultiDrag(dx: number, dy: number, dragMode: HandleDragMode): void {
     const paths = this.getPaths();
     const anchorKeys = new Set<string>();
     for (const selection of this.selectedHandles) {
@@ -329,8 +330,8 @@ export class HandleManager {
       );
     }
 
-    // mode === 0（通常モード）の場合、制御点の反対側をミラーリング
-    if (mode === 0) {
+    // ミラーモードの場合、制御点の反対側をミラーリング
+    if (dragMode === 'mirror') {
       for (const selection of this.selectedHandles) {
         if (selection.handleType === 'ANCHOR') continue;
         const path = this.getPaths()[selection.pathIndex];
@@ -346,7 +347,7 @@ export class HandleManager {
     selection: HandleSelection,
     targetX: number,
     targetY: number,
-    mode: number,
+    dragMode: HandleDragMode,
     path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
     originalCurves: Vector[][],
     effectiveCurves: Vector[][],
@@ -360,7 +361,7 @@ export class HandleManager {
       effectiveCurves,
     );
 
-    if (mode === 0 && selection.handleType !== 'ANCHOR') {
+    if (dragMode === 'mirror' && selection.handleType !== 'ANCHOR') {
       const keyframe = path.keyframes[selection.keyframeIndex];
       if (keyframe) this.mirrorOppositeControl(keyframe, selection.handleType);
     }

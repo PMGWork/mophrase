@@ -42,10 +42,10 @@ export function computeEndTangents(points: Vector[]): [Vector, Vector] {
 
 // 点列に対応する曲線のパラメータの位置を計算する
 export function parametrizeRange(points: Vector[], range: Range): number[] {
-  const _params: number[] = [0];
+  const params: number[] = [0];
 
   // 分割点が1つの場合はパラメータを計算しない
-  if (range.end - range.start < 1) return _params;
+  if (range.end - range.start < 1) return params;
 
   // 分割点間の距離を計算
   let totalDist = 0;
@@ -58,10 +58,10 @@ export function parametrizeRange(points: Vector[], range: Range): number[] {
   for (let i = range.start + 1; i <= range.end; i++) {
     cumulativeDist += points[i].dist(points[i - 1]);
     const u_i = totalDist > 0 ? cumulativeDist / totalDist : 0;
-    _params.push(u_i);
+    params.push(u_i);
   }
 
-  return _params;
+  return params;
 }
 
 // 3次ベジェ曲線の始点と終点を定める

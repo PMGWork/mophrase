@@ -56,7 +56,7 @@ export class SelectTool {
 
   // マウスドラッグ
   mouseDragged(p: p5, ctx: ToolContext): void {
-    const dragMode = p.keyIsDown(p.ALT) ? 1 : 0;
+    const dragMode = p.keyIsDown(p.ALT) ? 'free' : 'mirror';
     ctx.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
     if (ctx.handleManager.isDragging()) {
       const selectionRange = ctx.handleManager.getSelectionRange();

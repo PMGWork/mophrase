@@ -12,13 +12,15 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "check": "concurrently -n lint,format -c yellow,red \"eslint .\" \"prettier --check .\"",
-    "fix": "concurrently -n lint,format -c yellow,red \"eslint . --fix\" \"prettier --write .\""
+    "format": "prettier --log-level warn --write .",
+    "format:check": "prettier --log-level warn --check .",
+    "check": "concurrently -n lint,format -c yellow,red \"eslint .\" \"prettier --log-level warn --check .\"",
+    "fix": "concurrently -n lint,format -c yellow,red \"eslint . --fix\" \"prettier --log-level warn --write .\""
   },
   "devDependencies": {
     "@types/p5": "^1.7.7",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",

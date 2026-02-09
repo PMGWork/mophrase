@@ -2,14 +2,14 @@ import type p5 from 'p5';
 import type {
   Keyframe,
   Path,
-  SerializedKeyframe,
   SerializedBoundingBox,
   SerializedHandle,
+  SerializedKeyframe,
   SerializedPath,
   Vector,
-} from '../types';
-import { roundNormalizedValue } from './math';
-import { buildSketchCurves, computeKeyframeProgress } from './keyframes';
+} from '../../types';
+import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
+import { roundNormalizedValue } from '../math';
 
 // p5.Vector -> キーフレーム座標（正規化）
 function serializePosition(
@@ -131,7 +131,6 @@ export function serializePaths(paths: Path[]): SerializedPath[] {
   });
 }
 
-// #region デシリアライズ
 // シリアライズされたパス -> p5.Vector[][]
 export function deserializeCurves(
   serializedPath: SerializedPath,
@@ -177,7 +176,7 @@ export function deserializeCurves(
 }
 
 // 極座標のハンドル -> p5.Vector
-function deserializeHandle(
+export function deserializeHandle(
   handle: SerializedHandle,
   anchor: p5.Vector,
   diag: number,
@@ -245,7 +244,7 @@ export function deserializeGraphCurves(
 }
 
 // 極座標のグラフハンドル -> p5.Vector
-function deserializeGraphHandle(
+export function deserializeGraphHandle(
   handle: SerializedHandle,
   segmentDiag: number,
   p: p5,
@@ -257,7 +256,6 @@ function deserializeGraphHandle(
   return p.createVector(x, y);
 }
 
-// #region ユーティリティ
 // バウンディングボックスを計算
 function computeBbox(curves: p5.Vector[][]): SerializedBoundingBox {
   if (!curves.length) {

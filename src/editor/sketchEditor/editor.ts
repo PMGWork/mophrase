@@ -7,9 +7,17 @@ import {
   SuggestionManager,
   type SuggestionUIState,
 } from '../../suggestion/suggestion';
-import type { HandleSelection, Path, ToolKind } from '../../types';
+import type {
+  HandleSelection,
+  Path,
+  ProjectSettings,
+  SerializedProjectPath,
+  ToolKind,
+} from '../../types';
+import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
+import { deserializePaths } from '../../utils/serialization/project';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
 import type { SketchDomRefs, ToolContext } from './types';
@@ -20,6 +28,9 @@ export class SketchEditor {
   private paths: Path[] = [];
   private activePath: Path | null = null;
   private isPreviewing: boolean = false;
+
+  // プロジェクト設定
+  private projectSettings: ProjectSettings = { ...DEFAULT_PROJECT_SETTINGS };
 
   // ツール
   private currentTool: ToolKind = 'pen';
@@ -178,6 +189,9 @@ export class SketchEditor {
     p.textFont('Geist');
 
     this.motionManager = new MotionManager(p, OBJECT_SIZE);
+
+    // 初期化後、プロジェクト設定を適用してフレームレートと再生時間を反映
+    this.setProjectSettings(this.projectSettings);
   }
 
   // p5.js キー押下（ショートカット用）
@@ -372,14 +386,11 @@ export class SketchEditor {
     }
 
     // 停止中なら全パスの再生開始
-    if (this.paths.length > 0) {
-      const colors = this.getPathColors();
-      const elapsed = this.motionManager.getElapsedTime();
-      this.motionManager.startAll(this.paths, colors, elapsed);
-      this.isPreviewing = false;
-      return true;
-    }
-    return false;
+    const colors = this.getPathColors();
+    const elapsed = this.motionManager.getElapsedTime();
+    this.motionManager.startAll(this.paths, colors, elapsed);
+    this.isPreviewing = false;
+    return this.motionManager.getIsPlaying();
   }
 
   public resetPlayback(): void {
@@ -424,7 +435,7 @@ export class SketchEditor {
   }
 
   public hasPaths(): boolean {
-    return this.paths.length > 0;
+    return (this.motionManager?.getTotalDuration() ?? 0) > 0;
   }
 
   // アクティブなパスを安全に更新
@@ -470,7 +481,7 @@ export class SketchEditor {
     if (this.paths.length === 0) {
       this.motionManager.prepareAll([], []);
       this.isPreviewing = false;
-      return false;
+      return this.motionManager.getTotalDuration() > 0;
     }
 
     this.motionManager.prepareAll(this.paths, this.getPathColors());
@@ -506,6 +517,75 @@ export class SketchEditor {
     this.suggestionManager.updateSelectionRange(
       this.handleManager.getSelectionRange() ?? undefined,
     );
+  }
+
+  // #region プロジェクト設定
+
+  // プロジェクト設定を取得
+  public getProjectSettings(): ProjectSettings {
+    return { ...this.projectSettings };
+  }
+
+  // プロジェクト設定を更新（フレームレート/再生時間）
+  public setProjectSettings(settings: ProjectSettings): void {
+    this.projectSettings = { ...settings };
+
+    // フレームレートを即時反映
+    if (this.p) {
+      const fps =
+        settings.playbackFrameRate > 0 ? settings.playbackFrameRate : 60;
+      this.p.frameRate(fps);
+    }
+
+    // 総再生時間の上書きを設定（秒→ミリ秒）
+    if (this.motionManager) {
+      this.motionManager.setDurationOverride(settings.playbackDuration * 1000);
+    }
+
+    // タイムラインを更新
+    this.refreshPlaybackTimeline();
+  }
+
+  // 全パスを取得（シリアライズ用）
+  public getPaths(): Path[] {
+    return [...this.paths];
+  }
+
+  // プロジェクトを適用（Load時）
+  public applyProject(paths: Path[], settings: ProjectSettings): void {
+    // 既存のパスを全て置換
+    this.paths = paths;
+    this.activePath = null;
+    this.isPreviewing = false;
+
+    // プロジェクト設定を適用
+    this.setProjectSettings(settings);
+
+    // 提案マネージャーを閉じる
+    this.suggestionManager.close();
+
+    // ハンドル選択をクリア
+    this.handleManager.clearSelection();
+
+    // コールバックを呼び出す
+    this.onPathSelected(null);
+  }
+
+  // シリアライズ済みプロジェクトを復元して適用
+  public applySerializedProject(
+    serializedPaths: SerializedProjectPath[],
+    settings: ProjectSettings,
+  ): void {
+    if (!this.p) {
+      console.warn('[SketchEditor] Cannot apply project: p5 instance is not initialized.');
+      return;
+    }
+    try {
+      const paths = deserializePaths(serializedPaths, this.p);
+      this.applyProject(paths, settings);
+    } catch (error) {
+      console.error('[SketchEditor] Failed to deserialize project.', error);
+    }
   }
 
   // キーフレームをハンドルにマッピング

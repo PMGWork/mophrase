@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
-import type { Suggestion, SuggestionState } from '../types';
+import type { Suggestion, SuggestionStatus } from '../types';
 import { SuggestionItem } from './SuggestionItem';
 
 // Props
 type SketchSuggestionProps = {
   isVisible: boolean;
   placeholder: string;
-  status: SuggestionState;
+  status: SuggestionStatus;
   suggestions: Suggestion[];
   position: { left: number; top: number } | null;
   testMode: boolean;
