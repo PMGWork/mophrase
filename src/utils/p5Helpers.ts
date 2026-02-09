@@ -1,5 +1,5 @@
 // p5.jsのmouseButtonの型
-type MouseButtonState = {
+export type MouseButtonState = {
   left?: boolean;
   center?: boolean;
   right?: boolean;

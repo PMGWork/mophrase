@@ -11,7 +11,6 @@ node_modules
 dist
 dist-ssr
 *.local
-*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -19,25 +18,13 @@ dist-ssr
 !.vscode/settings.json
 .idea
 .DS_Store
-Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# Environment files (keep example templates)
 .env
-.env.*
-!.env.example
-.dev.vars
+.env.local
 
 .vite
-.wrangler
-
-# Test coverage
-coverage
-.nyc_output
-
-# Cache
-.eslintcache

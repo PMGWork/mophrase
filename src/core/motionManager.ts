@@ -1,293 +1,114 @@
 import type p5 from 'p5';
+import { CURVE_POINT } from '../constants';
 import type { Path, Vector } from '../types';
-import { bezierCurve } from '../utils/math';
-import {
-  buildGraphCurves,
-  buildSketchCurves,
-  computeKeyframeProgress,
-} from '../utils/keyframes';
-import { applyModifiers } from '../utils/modifier';
+import { bezierCurve, curveLength } from '../utils/math';
+import { fitCurve } from './fitting';
 
-// 個別パスのアニメーション状態
-type PathAnimationState = {
-  path: Path;
-  color: string;
-  spatialCurves: Vector[][];
-  graphCurves: Vector[][];
-  keyframeProgress: number[];
-  startTime: number; // ミリ秒
-  duration: number; // ミリ秒
-};
+// 定数
+const DEFAULT_DURATION = 2000;
+const BISECTION_ITERATIONS = 10;
+const MARKER_SIZE = 10;
 
 // モーション管理クラス
 export class MotionManager {
   private p: p5;
-  private objectSize: number;
+  private markerColor: string;
   private isPlaying: boolean = false;
-  private elapsedTime: number = 0;
-  private totalDuration: number = 0;
+  private currentPath: Path | null = null;
+  private time: number = 0;
+  private duration: number = 0;
+  private curveLengths: number[] = [];
+  private totalLength: number = 0;
 
-  // プロジェクト設定からの上書き
-  private durationOverrideMs: number = 0; // 0=未設定(自動計算)
-
-  // 全パスのアニメーション状態
-  private animationStates: PathAnimationState[] = [];
-
-  // 静的表示用
-  private staticPath: Path | null = null;
-  private staticColor: string = '#ffffff';
-
-  constructor(p: p5, objectSize: number) {
+  constructor(p: p5, markerColor: string) {
     this.p = p;
-    this.objectSize = objectSize;
+    this.markerColor = markerColor;
   }
 
   // #region メイン関数
 
-  // 再生中かどうかを取得
-  public getIsPlaying(): boolean {
-    return this.isPlaying;
-  }
+  // モーション再生を開始
+  public start(path: Path): void {
+    if (path.timeCurve.length === 0) return;
 
-  // 経過時間を取得（ミリ秒）
-  public getElapsedTime(): number {
-    return this.elapsedTime;
-  }
+    // パスを設定
+    this.currentPath = path;
+    this.isPlaying = true;
+    this.time = 0;
 
-  // 総再生時間を取得（ミリ秒）
-  public getTotalDuration(): number {
-    return this.totalDuration;
-  }
+    // カーブの長さを事前計算してキャッシュ
+    this.curveLengths = path.curves.map((c) => curveLength(c));
+    this.totalLength = this.curveLengths.reduce((a, b) => a + b, 0);
 
-  // 総再生時間の上書きを設定（ミリ秒、0=未設定で自動計算）
-  public setDurationOverride(durationMs: number): void {
-    this.durationOverrideMs = durationMs;
-  }
-
-  // 全パスのタイムライン再生を開始
-  public startAll(
-    paths: Path[],
-    colors: string[],
-    startAtMs: number = 0,
-  ): void {
-    const { states, totalDuration } = this.buildAnimationStates(paths, colors);
-    this.animationStates = states;
-    this.totalDuration =
-      this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
-
-    const clamped = Math.max(0, Math.min(this.totalDuration, startAtMs));
-    this.elapsedTime = clamped;
-    this.isPlaying = this.totalDuration > 0;
-  }
-
-  // 再生前にアニメーション情報を準備
-  public prepareAll(paths: Path[], colors: string[]): void {
-    if (paths.length === 0) {
-      this.animationStates = [];
-      this.totalDuration =
-        this.durationOverrideMs > 0 ? this.durationOverrideMs : 0;
-      if (this.elapsedTime > this.totalDuration) {
-        this.elapsedTime = this.totalDuration;
-      }
-      return;
-    }
-
-    const { states, totalDuration } = this.buildAnimationStates(paths, colors);
-    this.animationStates = states;
-    this.totalDuration =
-      this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
-
-    if (this.elapsedTime > this.totalDuration) {
-      this.elapsedTime = this.totalDuration;
-    }
-  }
-
-  // 再生位置を移動
-  public seekTo(elapsedMs: number): void {
-    if (this.totalDuration <= 0) {
-      this.elapsedTime = 0;
-      return;
-    }
-    this.elapsedTime = Math.max(0, Math.min(this.totalDuration, elapsedMs));
+    // 持続時間を設定
+    this.duration =
+      path.times && path.times.length > 0
+        ? path.times[path.times.length - 1] - path.times[0]
+        : DEFAULT_DURATION;
   }
 
   // モーション再生を停止
   public stop(): void {
     this.isPlaying = false;
+    this.time = 0;
+    this.currentPath = null;
   }
 
-  // 静的表示対象のパスを設定（非再生時用）
-  public setPath(path: Path | null): void {
-    this.staticPath = path;
-  }
-
-  // オブジェクトの色を設定（非再生時用）
-  public setColor(color: string): void {
-    this.staticColor = color;
-  }
-
-  // モーションを更新・描画
+  // モーションを更新
   public draw(): void {
-    // 再生中の場合
-    if (this.isPlaying) {
-      this.elapsedTime += this.p.deltaTime;
+    if (!this.isPlaying || !this.currentPath) return;
 
-      // 全アニメーション終了したらループ
-      if (this.elapsedTime >= this.totalDuration) {
-        this.elapsedTime = 0;
-      }
+    this.time += this.p.deltaTime / this.duration;
 
-      // 各パスのオブジェクトを描画
-      for (const state of this.animationStates) {
-        const position = this.evaluatePathPosition(state, this.elapsedTime);
-        this.drawObject(position, state.color);
-      }
-      return;
+    if (this.time >= 1.0) {
+      this.time = 1.0;
+      this.isPlaying = false;
     }
 
-    // 再生していない場合は、設定されたパスの開始位置を表示
-    if (this.staticPath && this.staticPath.keyframes.length > 0) {
-      const originalCurves = buildSketchCurves(this.staticPath.keyframes);
-      const effectiveCurves = applyModifiers(
-        originalCurves,
-        this.staticPath.sketchModifiers,
-        this.p,
-      );
-      const startPosition =
-        effectiveCurves[0]?.[0] ?? this.staticPath.keyframes[0].position;
-      this.drawObject(startPosition, this.staticColor);
-    }
-  }
+    const progress = this.evaluateTiming(this.currentPath.timeCurve, this.time);
+    const position = this.evaluatePosition(this.currentPath.curves, progress);
 
-  // 再生前プレビュー（現在時間で描画）
-  public drawPreview(): void {
-    if (this.animationStates.length === 0) return;
-
-    const previewTime = Math.max(
-      0,
-      Math.min(this.totalDuration, this.elapsedTime),
-    );
-    for (const state of this.animationStates) {
-      const position = this.evaluatePathPosition(state, previewTime);
-      this.drawObject(position, state.color);
-    }
+    this.drawMarker(position);
   }
 
   // #region プライベート関数
-  private buildAnimationStates(
-    paths: Path[],
-    colors: string[],
-  ): { states: PathAnimationState[]; totalDuration: number } {
-    const states: PathAnimationState[] = [];
-    let totalDuration = 0;
 
-    // 各パスのアニメーション状態を準備
-    for (let i = 0; i < paths.length; i++) {
-      const path = paths[i];
-      if (path.keyframes.length < 2) continue;
-
-      const startTime = path.startTime * 1000;
-      const duration = Math.max(1, path.duration * 1000);
-      const endTime = startTime + duration;
-
-      // タイムライン全体の終了時間を更新
-      if (endTime > totalDuration) {
-        totalDuration = endTime;
-      }
-
-      // 空間カーブと進行度を計算
-      const originalCurves = buildSketchCurves(path.keyframes);
-      const spatialCurves = applyModifiers(
-        originalCurves,
-        path.sketchModifiers,
-        this.p,
-      );
-      const keyframeProgress = computeKeyframeProgress(
-        path.keyframes,
-        spatialCurves,
-      );
-
-      // 時間カーブを生成
-      const baseGraphCurves = buildGraphCurves(
-        path.keyframes,
-        keyframeProgress,
-      );
-      const graphCurves = applyModifiers(
-        baseGraphCurves,
-        path.graphModifiers,
-        this.p,
-      );
-
-      states.push({
-        path,
-        color: colors[i % colors.length],
-        spatialCurves,
-        graphCurves,
-        keyframeProgress,
-        startTime,
-        duration,
-      });
-    }
-
-    return { states, totalDuration };
-  }
-
-  // 指定パスの現在位置を評価
-  private evaluatePathPosition(
-    state: PathAnimationState,
-    elapsedTime: number,
-  ): Vector {
-    const {
-      path,
-      spatialCurves,
-      graphCurves,
-      keyframeProgress,
-      startTime,
-      duration,
-    } = state;
-
-    // 開始時間前は開始位置
-    if (elapsedTime < startTime) {
-      return spatialCurves[0]?.[0] ?? path.keyframes[0].position;
-    }
-
-    // アニメーション進行度を計算
-    const localTime = (elapsedTime - startTime) / duration;
-    const time = Math.min(1, Math.max(0, localTime));
-
-    // 終了後は終点位置
-    if (time >= 1) {
-      const lastCurve = spatialCurves[spatialCurves.length - 1];
-      return (
-        lastCurve?.[3] ?? path.keyframes[path.keyframes.length - 1].position
-      );
-    }
-
-    return this.evaluatePosition(
-      time,
-      path.keyframes,
-      spatialCurves,
-      graphCurves,
-      keyframeProgress,
-    );
-  }
-
-  // オブジェクトを描画
-  private drawObject(position: Vector, color: string): void {
+  // マーカーを描画
+  private drawMarker(position: Vector): void {
     this.p.push();
-    this.p.fill(color);
+    this.p.fill(this.markerColor);
     this.p.noStroke();
-    this.p.circle(position.x, position.y, this.objectSize);
+    this.p.circle(position.x, position.y, MARKER_SIZE);
     this.p.pop();
+  }
+
+  // タイミング曲線から進行度を求める
+  private evaluateTiming(curves: Vector[][], time: number): number {
+    for (let i = 0; i < curves.length; i++) {
+      const curve = curves[i];
+      const startX = curve[CURVE_POINT.START_ANCHOR].x;
+      const endX = curve[CURVE_POINT.END_ANCHOR].x;
+
+      if (time >= startX && time <= endX) {
+        const u = this.solveBezierX(curve, time);
+        return bezierCurve(curve[0], curve[1], curve[2], curve[3], u).y;
+      }
+    }
+
+    if (time < curves[0][CURVE_POINT.START_ANCHOR].x) return 0;
+    if (time > curves[curves.length - 1][CURVE_POINT.END_ANCHOR].x) return 1;
+
+    return time;
   }
 
   // X(u) = targetX となる u を求める
   private solveBezierX(curve: Vector[], targetX: number): number {
+    // 二分探索で近似
     let low = 0;
     let high = 1;
     let u = 0;
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < BISECTION_ITERATIONS; i++) {
       u = (low + high) / 2;
       const point = bezierCurve(curve[0], curve[1], curve[2], curve[3], u);
       if (point.x < targetX) {
@@ -299,74 +120,91 @@ export class MotionManager {
     return u;
   }
 
-  // 時間に対応する位置を取得
-  private evaluatePosition(
-    time: number,
-    keyframes: Path['keyframes'],
-    spatialCurves: Vector[][],
-    graphCurves: Vector[][],
-    keyframeProgress: number[],
-  ): Vector {
-    if (keyframes.length === 0) {
-      return this.p.createVector(0, 0);
+  // 空間曲線から、進行度 p (0-1) に対応する座標を取得
+  private evaluatePosition(curves: Vector[][], p: number): Vector {
+    if (this.totalLength === 0) return curves[0][CURVE_POINT.START_ANCHOR];
+
+    const targetDist = p * this.totalLength;
+    let currentDist = 0;
+
+    for (let i = 0; i < curves.length; i++) {
+      const len = this.curveLengths[i];
+      if (currentDist + len >= targetDist) {
+        const localDist = targetDist - currentDist;
+        const u = localDist / len;
+        return bezierCurve(
+          curves[i][0],
+          curves[i][1],
+          curves[i][2],
+          curves[i][3],
+          u,
+        );
+      }
+      currentDist += len;
     }
 
-    if (keyframes.length === 1) return keyframes[0].position;
-
-    if (time <= keyframes[0].time)
-      return spatialCurves[0]?.[0] ?? keyframes[0].position;
-    if (time >= keyframes[keyframes.length - 1].time) {
-      const lastCurve = spatialCurves[spatialCurves.length - 1];
-      return lastCurve?.[3] ?? keyframes[keyframes.length - 1].position;
-    }
-
-    const segmentIndex = this.findSegmentIndex(time, keyframes);
-    const graphCurve = graphCurves[segmentIndex];
-    const spatialCurve = spatialCurves[segmentIndex];
-    if (!graphCurve || !spatialCurve) return keyframes[segmentIndex].position;
-
-    const u = this.solveBezierX(graphCurve, time);
-    const progress = bezierCurve(
-      graphCurve[0],
-      graphCurve[1],
-      graphCurve[2],
-      graphCurve[3],
-      u,
-    ).y;
-
-    const v0 = keyframeProgress[segmentIndex] ?? 0;
-    const v1 = keyframeProgress[segmentIndex + 1] ?? v0;
-    const denom = v1 - v0;
-    const localU = Math.abs(denom) > 1e-6 ? (progress - v0) / denom : 0;
-    const clamped = Math.max(0, Math.min(1, localU));
-
-    return bezierCurve(
-      spatialCurve[0],
-      spatialCurve[1],
-      spatialCurve[2],
-      spatialCurve[3],
-      clamped,
-    );
+    // 最後の点
+    const lastCurve = curves[curves.length - 1];
+    return lastCurve[CURVE_POINT.END_ANCHOR];
   }
 
-  // timeが含まれるセグメントを二分探索で取得
-  private findSegmentIndex(time: number, keyframes: Path['keyframes']): number {
-    let low = 0;
-    let high = Math.max(0, keyframes.length - 2);
+  // タイミング曲線を生成
+  public fitTiming(path: Path, p: p5, fitTolerance: number = 0.01): void {
+    if (path.points.length < 2 || path.times.length < 2) return;
 
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      const t0 = keyframes[mid].time;
-      const t1 = keyframes[mid + 1].time;
-      if (time < t0) {
-        high = mid - 1;
-      } else if (time > t1) {
-        low = mid + 1;
-      } else {
-        return mid;
-      }
+    const totalTime = path.times[path.times.length - 1] - path.times[0];
+    if (totalTime <= 0) return;
+
+    const timingPoints = this.createTimingPoints(
+      path.points,
+      path.times,
+      p,
+      totalTime,
+    );
+
+    // タイミング曲線をフィッティング
+    const timingCurves: Vector[][] = [];
+    const fitError = { current: { maxError: Number.MAX_VALUE, index: -1 } };
+    fitCurve(
+      timingPoints,
+      timingCurves,
+      fitTolerance,
+      fitTolerance * 5,
+      fitError,
+    );
+    path.timeCurve = timingCurves;
+  }
+
+  // タイミングポイントを生成
+  private createTimingPoints(
+    points: Vector[],
+    times: number[],
+    p: p5,
+    totalTime: number,
+  ): Vector[] {
+    const { distances, totalDistance } =
+      this.calculateCumulativeDistances(points);
+
+    return points.map((_, i) => {
+      const time = (times[i] - times[0]) / totalTime;
+      const d = totalDistance > 0 ? distances[i] / totalDistance : 0;
+      return p.createVector(time, d);
+    });
+  }
+
+  // 累積距離を計算
+  private calculateCumulativeDistances(points: Vector[]): {
+    distances: number[];
+    totalDistance: number;
+  } {
+    const distances = [0];
+    let totalDistance = 0;
+
+    for (let i = 1; i < points.length; i++) {
+      totalDistance += points[i].dist(points[i - 1]);
+      distances.push(totalDistance);
     }
 
-    return Math.max(0, Math.min(keyframes.length - 2, low));
+    return { distances, totalDistance };
   }
 }
