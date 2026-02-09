@@ -12,3 +12,8 @@ command = '''
 pnpm install
 pnpm run
 '''
+
+[[actions]]
+name = "Fix"
+icon = "tool"
+command = "pnpm fix"
