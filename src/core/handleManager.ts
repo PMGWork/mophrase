@@ -25,8 +25,10 @@ export class HandleManager {
   // コンストラクタ
   constructor(
     getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[],
-    pixelToNorm: (x: number, y: number) => Vector = (x, y) => ({ x, y }) as Vector,
-    normToPixel: (x: number, y: number) => Vector = (x, y) => ({ x, y }) as Vector,
+    pixelToNorm: (x: number, y: number) => Vector = (x, y) =>
+      ({ x, y }) as Vector,
+    normToPixel: (x: number, y: number) => Vector = (x, y) =>
+      ({ x, y }) as Vector,
   ) {
     this.getPaths = getPaths;
     this.pixelToNorm = pixelToNorm;

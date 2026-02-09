@@ -176,7 +176,7 @@ export function deserializeCurves(
 }
 
 // 極座標のハンドル -> p5.Vector
-function deserializeHandle(
+export function deserializeHandle(
   handle: SerializedHandle,
   anchor: p5.Vector,
   diag: number,
@@ -244,7 +244,7 @@ export function deserializeGraphCurves(
 }
 
 // 極座標のグラフハンドル -> p5.Vector
-function deserializeGraphHandle(
+export function deserializeGraphHandle(
   handle: SerializedHandle,
   segmentDiag: number,
   p: p5,

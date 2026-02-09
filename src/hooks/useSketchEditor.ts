@@ -266,13 +266,13 @@ export const useSketchEditor = (): UseSketchEditorResult => {
             const { settings, paths: serializedPaths } =
               deserializeProject(data);
 
-            editorRef.current?.applySerializedProject(serializedPaths, settings);
+            editorRef.current?.applySerializedProject(
+              serializedPaths,
+              settings,
+            );
             setProjectSettings(settings);
           } catch (error) {
-            console.error(
-              '[loadProject] Failed to load project JSON.',
-              error,
-            );
+            console.error('[loadProject] Failed to load project JSON.', error);
           }
         };
         reader.readAsText(file);

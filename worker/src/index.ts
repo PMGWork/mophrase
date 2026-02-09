@@ -60,7 +60,8 @@ const generateWithOpenAI = async (
 
   const t0 = nowMs();
   // o1系列とGPT-5.2のモデルでreasoning effortを送信
-  const supportsReasoningEffort = model.startsWith('o1') || model.startsWith('gpt-5.2');
+  const supportsReasoningEffort =
+    model.startsWith('o1') || model.startsWith('gpt-5.2');
   const requestBody: Record<string, unknown> = {
     model,
     input: prompt,
@@ -162,30 +163,27 @@ const generateWithCerebras = async (
   const sanitizedSchema = sanitizeSchemaForCerebras(schema);
 
   const t0 = nowMs();
-  const response = await fetch(
-    'https://api.cerebras.ai/v1/chat/completions',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 1.0,
-        top_p: 0.95,
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'schema',
-            strict: true,
-            schema: sanitizedSchema,
-          },
-        },
-      }),
+  const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 1.0,
+      top_p: 0.95,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'schema',
+          strict: true,
+          schema: sanitizedSchema,
+        },
+      },
+    }),
+  });
   const t1 = nowMs();
   const data = await response.json();
   const t2 = nowMs();

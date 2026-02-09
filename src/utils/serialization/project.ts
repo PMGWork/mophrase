@@ -7,13 +7,15 @@ import type {
   ProjectSettings,
   SerializedKeyframe,
   SerializedPath,
-  SerializedHandle,
   SerializedProjectPath,
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
-import { serializePaths } from './curves';
-
+import {
+  deserializeGraphHandle,
+  deserializeHandle,
+  serializePaths,
+} from './curves';
 
 // #region ヘルパー関数
 
@@ -27,51 +29,49 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-// シリアライズされたハンドルかどうかをチェック
-function isSerializedHandle(value: unknown): value is SerializedHandle {
+// オプショナルなハンドルかどうかをチェック
+function isOptionalHandle(value: unknown): boolean {
   return (
-    isRecord(value) && isFiniteNumber(value.angle) && isFiniteNumber(value.dist)
+    value == null ||
+    (isRecord(value) &&
+      isFiniteNumber(value.angle) &&
+      isFiniteNumber(value.dist))
   );
 }
 
-// オプショナルなシリアライズされたハンドルかどうかをチェック
-function isOptionalSerializedHandle(value: unknown): boolean {
-  return value === undefined || value === null || isSerializedHandle(value);
+// Record の指定キーがすべて有限数かどうかをチェック
+function hasFiniteKeys(obj: Record<string, unknown>, keys: string[]): boolean {
+  return keys.every((key) => isFiniteNumber(obj[key]));
 }
 
 // シリアライズされたキーフレームかどうかをチェック
 function isSerializedKeyframe(value: unknown): value is SerializedKeyframe {
   if (!isRecord(value)) return false;
-  return (
-    isFiniteNumber(value.x) &&
-    isFiniteNumber(value.y) &&
-    (value.time === undefined || isFiniteNumber(value.time)) &&
-    isOptionalSerializedHandle(value.sketchIn) &&
-    isOptionalSerializedHandle(value.sketchOut) &&
-    isOptionalSerializedHandle(value.graphIn) &&
-    isOptionalSerializedHandle(value.graphOut)
+  if (!isFiniteNumber(value.x) || !isFiniteNumber(value.y)) return false;
+  if (value.time !== undefined && !isFiniteNumber(value.time)) return false;
+  return (['sketchIn', 'sketchOut', 'graphIn', 'graphOut'] as const).every(
+    (key) => isOptionalHandle(value[key]),
   );
 }
 
 // シリアライズされたパスかどうかをチェック
 function isSerializedPath(value: unknown): value is SerializedPath {
   if (!isRecord(value)) return false;
-  if (!Array.isArray(value.keyframes) || value.keyframes.length < 2) return false;
+  if (!Array.isArray(value.keyframes) || value.keyframes.length < 2)
+    return false;
   if (!value.keyframes.every(isSerializedKeyframe)) return false;
-  if (!isRecord(value.bbox)) return false;
+  const bbox = value.bbox;
+  if (!isRecord(bbox) || !hasFiniteKeys(bbox, ['x', 'y', 'width', 'height']))
+    return false;
   return (
-    isFiniteNumber(value.bbox.x) &&
-    isFiniteNumber(value.bbox.y) &&
-    isFiniteNumber(value.bbox.width) &&
-    isFiniteNumber(value.bbox.height) &&
-    Math.abs(value.bbox.width) > 1e-6 &&
-    Math.abs(value.bbox.height) > 1e-6
+    Math.abs(bbox.width as number) > 1e-6 &&
+    Math.abs(bbox.height as number) > 1e-6
   );
 }
 
 // #region シリアライズ
 
-// モディファイアをパース
+// プライベート関数
 function parseModifier(value: unknown): Modifier | null {
   if (!isRecord(value)) return null;
   if (!Array.isArray(value.offsets)) return null;
@@ -130,39 +130,11 @@ function toSerializedProjectPath(value: unknown): SerializedProjectPath {
     bbox: value.bbox,
     id: typeof obj.id === 'string' ? obj.id : '',
     startTime: isFiniteNumber(obj.startTime) ? obj.startTime : 0,
-    duration: isFiniteNumber(obj.duration) && obj.duration > 0 ? obj.duration : 1,
+    duration:
+      isFiniteNumber(obj.duration) && obj.duration > 0 ? obj.duration : 1,
     sketchModifiers: sanitizeModifiers(obj.sketchModifiers),
     graphModifiers: sanitizeModifiers(obj.graphModifiers),
   };
-}
-
-//#region デシリアライズ
-
-// 極座標のハンドル -> p5.Vector
-function deserializeHandle(
-  handle: SerializedHandle,
-  anchor: p5.Vector,
-  diag: number,
-  p: p5,
-): p5.Vector {
-  const angle = handle.angle * (Math.PI / 180);
-  const dist = handle.dist * diag;
-  const x = anchor.x + Math.cos(angle) * dist;
-  const y = anchor.y + Math.sin(angle) * dist;
-  return p.createVector(x, y);
-}
-
-// 極座標のグラフハンドル -> p5.Vector
-function deserializeGraphHandle(
-  handle: SerializedHandle,
-  segmentDiag: number,
-  p: p5,
-): p5.Vector {
-  const angle = handle.angle * (Math.PI / 180);
-  const dist = handle.dist * segmentDiag;
-  const x = Math.cos(angle) * dist;
-  const y = Math.sin(angle) * dist;
-  return p.createVector(x, y);
 }
 
 // シリアライズされたパス群 -> Path[]
@@ -179,7 +151,9 @@ export function deserializePaths(
 
     const keyframes: Keyframe[] = serializedKeyframes.map((keyframe, index) => {
       const fallbackTime = index / Math.max(1, serializedKeyframes.length - 1);
-      const rawTime = isFiniteNumber(keyframe.time) ? keyframe.time : fallbackTime;
+      const rawTime = isFiniteNumber(keyframe.time)
+        ? keyframe.time
+        : fallbackTime;
       const time = Math.max(0, Math.min(1, rawTime));
 
       return {
@@ -259,28 +233,18 @@ export function deserializePaths(
       }
     }
 
-    const duration =
-      isFiniteNumber(serializedPath.duration) && serializedPath.duration > 0
-        ? serializedPath.duration
-        : 1;
-    const startTime =
-      isFiniteNumber(serializedPath.startTime) && serializedPath.startTime >= 0
-        ? serializedPath.startTime
-        : 0;
-
     return {
-      id:
-        typeof serializedPath.id === 'string' && serializedPath.id.trim() !== ''
-          ? serializedPath.id
-          : crypto.randomUUID(),
+      id: serializedPath.id || crypto.randomUUID(),
       keyframes,
-      startTime,
-      duration,
+      startTime: serializedPath.startTime,
+      duration: serializedPath.duration,
       sketchModifiers: serializedPath.sketchModifiers,
       graphModifiers: serializedPath.graphModifiers,
     };
   });
 }
+
+// #region エクスポート関数
 
 // プロジェクトをシリアライズ
 export function serializeProject(
@@ -292,7 +256,9 @@ export function serializeProject(
     const duration =
       isFiniteNumber(path.duration) && path.duration > 0 ? path.duration : 1;
     const startTime =
-      isFiniteNumber(path.startTime) && path.startTime >= 0 ? path.startTime : 0;
+      isFiniteNumber(path.startTime) && path.startTime >= 0
+        ? path.startTime
+        : 0;
 
     return {
       ...serializedPath,
@@ -315,19 +281,19 @@ export function deserializeProject(data: unknown): {
   settings: ProjectSettings;
   paths: SerializedProjectPath[];
 } {
-  if (!isRecord(data)) throw new Error('Invalid project format: root object is required.');
-  if (!Array.isArray(data.paths)) throw new Error('Invalid project format: paths must be an array.');
+  if (!isRecord(data))
+    throw new Error('Invalid project format: root object is required.');
+  if (!Array.isArray(data.paths))
+    throw new Error('Invalid project format: paths must be an array.');
 
   const rawSettings = isRecord(data.settings) ? data.settings : undefined;
   const settings: ProjectSettings = {
-    playbackDuration:
-      isFiniteNumber(rawSettings?.playbackDuration)
-        ? rawSettings.playbackDuration
-        : DEFAULT_PROJECT_SETTINGS.playbackDuration,
-    playbackFrameRate:
-      isFiniteNumber(rawSettings?.playbackFrameRate)
-        ? rawSettings.playbackFrameRate
-        : DEFAULT_PROJECT_SETTINGS.playbackFrameRate,
+    playbackDuration: isFiniteNumber(rawSettings?.playbackDuration)
+      ? rawSettings.playbackDuration
+      : DEFAULT_PROJECT_SETTINGS.playbackDuration,
+    playbackFrameRate: isFiniteNumber(rawSettings?.playbackFrameRate)
+      ? rawSettings.playbackFrameRate
+      : DEFAULT_PROJECT_SETTINGS.playbackFrameRate,
   };
 
   const paths = data.paths.map((path) => toSerializedProjectPath(path));
