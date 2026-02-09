@@ -17,61 +17,66 @@ import {
   serializePaths,
 } from './curves';
 
-// #region ヘルパー関数
+// #region エクスポート関数
 
-// 型ガード関数
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+// プロジェクトをシリアライズ
+export function serializeProject(
+  paths: Path[],
+  settings: ProjectSettings,
+): ProjectData {
+  const serializedPaths = serializePaths(paths).map((serializedPath, index) => {
+    const path = paths[index];
+    const duration =
+      isFiniteNumber(path.duration) && path.duration > 0 ? path.duration : 1;
+    const startTime =
+      isFiniteNumber(path.startTime) && path.startTime >= 0
+        ? path.startTime
+        : 0;
+
+    return {
+      ...serializedPath,
+      id: path.id,
+      startTime,
+      duration,
+      sketchModifiers: sanitizeModifiers(path.sketchModifiers),
+      graphModifiers: sanitizeModifiers(path.graphModifiers),
+    };
+  });
+
+  return {
+    settings,
+    paths: serializedPaths,
+  };
 }
 
-// 有限な数値かどうかをチェック
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+// プロジェクトをデシリアライズ
+export function deserializeProject(data: unknown): {
+  settings: ProjectSettings;
+  paths: SerializedProjectPath[];
+} {
+  if (!isRecord(data))
+    throw new Error('Invalid project format: root object is required.');
+  if (!Array.isArray(data.paths))
+    throw new Error('Invalid project format: paths must be an array.');
+
+  const rawSettings = isRecord(data.settings) ? data.settings : undefined;
+  const settings: ProjectSettings = {
+    playbackDuration: isFiniteNumber(rawSettings?.playbackDuration)
+      ? rawSettings.playbackDuration
+      : DEFAULT_PROJECT_SETTINGS.playbackDuration,
+    playbackFrameRate: isFiniteNumber(rawSettings?.playbackFrameRate)
+      ? rawSettings.playbackFrameRate
+      : DEFAULT_PROJECT_SETTINGS.playbackFrameRate,
+  };
+
+  const paths = data.paths.map((path) => toSerializedProjectPath(path));
+
+  return { settings, paths };
 }
 
-// オプショナルなハンドルかどうかをチェック
-function isOptionalHandle(value: unknown): boolean {
-  return (
-    value == null ||
-    (isRecord(value) &&
-      isFiniteNumber(value.angle) &&
-      isFiniteNumber(value.dist))
-  );
-}
+// #region プライベート関数
 
-// Record の指定キーがすべて有限数かどうかをチェック
-function hasFiniteKeys(obj: Record<string, unknown>, keys: string[]): boolean {
-  return keys.every((key) => isFiniteNumber(obj[key]));
-}
-
-// シリアライズされたキーフレームかどうかをチェック
-function isSerializedKeyframe(value: unknown): value is SerializedKeyframe {
-  if (!isRecord(value)) return false;
-  if (!isFiniteNumber(value.x) || !isFiniteNumber(value.y)) return false;
-  if (value.time !== undefined && !isFiniteNumber(value.time)) return false;
-  return (['sketchIn', 'sketchOut', 'graphIn', 'graphOut'] as const).every(
-    (key) => isOptionalHandle(value[key]),
-  );
-}
-
-// シリアライズされたパスかどうかをチェック
-function isSerializedPath(value: unknown): value is SerializedPath {
-  if (!isRecord(value)) return false;
-  if (!Array.isArray(value.keyframes) || value.keyframes.length < 2)
-    return false;
-  if (!value.keyframes.every(isSerializedKeyframe)) return false;
-  const bbox = value.bbox;
-  if (!isRecord(bbox) || !hasFiniteKeys(bbox, ['x', 'y', 'width', 'height']))
-    return false;
-  return (
-    Math.abs(bbox.width as number) > 1e-6 &&
-    Math.abs(bbox.height as number) > 1e-6
-  );
-}
-
-// #region シリアライズ
-
-// プライベート関数
+// unknown -> Modifier | null
 function parseModifier(value: unknown): Modifier | null {
   if (!isRecord(value)) return null;
   if (!Array.isArray(value.offsets)) return null;
@@ -109,7 +114,7 @@ function parseModifier(value: unknown): Modifier | null {
   };
 }
 
-// モディファイアの配列をサニタイズ
+// Modifier[] | undefined をサニタイズ
 function sanitizeModifiers(value: unknown): Modifier[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const modifiers = value
@@ -137,7 +142,7 @@ function toSerializedProjectPath(value: unknown): SerializedProjectPath {
   };
 }
 
-// シリアライズされたパス群 -> Path[]
+// プロジェクトのパスをデシリアライズ
 export function deserializePaths(
   serializedPaths: SerializedProjectPath[],
   p: p5,
@@ -244,59 +249,54 @@ export function deserializePaths(
   });
 }
 
-// #region エクスポート関数
+// #region ヘルパー関数
 
-// プロジェクトをシリアライズ
-export function serializeProject(
-  paths: Path[],
-  settings: ProjectSettings,
-): ProjectData {
-  const serializedPaths = serializePaths(paths).map((serializedPath, index) => {
-    const path = paths[index];
-    const duration =
-      isFiniteNumber(path.duration) && path.duration > 0 ? path.duration : 1;
-    const startTime =
-      isFiniteNumber(path.startTime) && path.startTime >= 0
-        ? path.startTime
-        : 0;
-
-    return {
-      ...serializedPath,
-      id: path.id,
-      startTime,
-      duration,
-      sketchModifiers: sanitizeModifiers(path.sketchModifiers),
-      graphModifiers: sanitizeModifiers(path.graphModifiers),
-    };
-  });
-
-  return {
-    settings,
-    paths: serializedPaths,
-  };
+// 値がRecordかどうかをチェック
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
-// プロジェクトをデシリアライズ
-export function deserializeProject(data: unknown): {
-  settings: ProjectSettings;
-  paths: SerializedProjectPath[];
-} {
-  if (!isRecord(data))
-    throw new Error('Invalid project format: root object is required.');
-  if (!Array.isArray(data.paths))
-    throw new Error('Invalid project format: paths must be an array.');
+// 有限な数値かどうかをチェック
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
-  const rawSettings = isRecord(data.settings) ? data.settings : undefined;
-  const settings: ProjectSettings = {
-    playbackDuration: isFiniteNumber(rawSettings?.playbackDuration)
-      ? rawSettings.playbackDuration
-      : DEFAULT_PROJECT_SETTINGS.playbackDuration,
-    playbackFrameRate: isFiniteNumber(rawSettings?.playbackFrameRate)
-      ? rawSettings.playbackFrameRate
-      : DEFAULT_PROJECT_SETTINGS.playbackFrameRate,
-  };
+// オプショナルなハンドルかどうかをチェック
+function isOptionalHandle(value: unknown): boolean {
+  return (
+    value == null ||
+    (isRecord(value) &&
+      isFiniteNumber(value.angle) &&
+      isFiniteNumber(value.dist))
+  );
+}
 
-  const paths = data.paths.map((path) => toSerializedProjectPath(path));
+// 指定したキーがすべて有限な数値かどうかをチェック
+function hasFiniteKeys(obj: Record<string, unknown>, keys: string[]): boolean {
+  return keys.every((key) => isFiniteNumber(obj[key]));
+}
 
-  return { settings, paths };
+// シリアライズされたキーフレームかどうかをチェック
+function isSerializedKeyframe(value: unknown): value is SerializedKeyframe {
+  if (!isRecord(value)) return false;
+  if (!isFiniteNumber(value.x) || !isFiniteNumber(value.y)) return false;
+  if (value.time !== undefined && !isFiniteNumber(value.time)) return false;
+  return (['sketchIn', 'sketchOut', 'graphIn', 'graphOut'] as const).every(
+    (key) => isOptionalHandle(value[key]),
+  );
+}
+
+// シリアライズされたパスかどうかをチェック
+function isSerializedPath(value: unknown): value is SerializedPath {
+  if (!isRecord(value)) return false;
+  if (!Array.isArray(value.keyframes) || value.keyframes.length < 2)
+    return false;
+  if (!value.keyframes.every(isSerializedKeyframe)) return false;
+  const bbox = value.bbox;
+  if (!isRecord(bbox) || !hasFiniteKeys(bbox, ['x', 'y', 'width', 'height']))
+    return false;
+  return (
+    Math.abs(bbox.width as number) > 1e-6 &&
+    Math.abs(bbox.height as number) > 1e-6
+  );
 }
