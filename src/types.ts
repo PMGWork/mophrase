@@ -40,6 +40,9 @@ export interface HandleSelection {
 // ハンドル種別
 export type HandleType = 'ANCHOR' | 'SKETCH_IN' | 'SKETCH_OUT';
 
+// ハンドルドラッグモード
+export type HandleDragMode = 'mirror' | 'free';
+
 // #region 3. コアデータモデル
 
 // キーフレーム
@@ -124,8 +127,8 @@ export interface Suggestion {
   path: SerializedPath;
 }
 
-// 提案の状態
-export type SuggestionState = 'idle' | 'generating' | 'error' | 'input';
+// 提案のステータス
+export type SuggestionStatus = 'idle' | 'generating' | 'error' | 'input';
 
 // #region 6. プロジェクト関連
 

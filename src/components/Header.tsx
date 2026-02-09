@@ -11,7 +11,7 @@ import { ToolButton } from './ToolButton';
 // Props
 type HeaderProps = {
   projectName: string | null;
-  isProjectDirty: boolean;
+  hasUnsavedChanges: boolean;
   selectedTool: ToolKind; // 選択されているツール
   onSelectTool: (tool: ToolKind) => void; // ツールを選択する関数
   onOpenSettings: () => void; // 設定モーダルを開く
@@ -22,7 +22,7 @@ type HeaderProps = {
 // コンポーネント
 export const Header = ({
   projectName,
-  isProjectDirty,
+  hasUnsavedChanges,
   selectedTool,
   onSelectTool,
   onOpenSettings,
@@ -40,7 +40,7 @@ export const Header = ({
           title={displayProjectName}
         >
           {displayProjectName}
-          {isProjectDirty ? '*' : ''}
+          {hasUnsavedChanges ? '*' : ''}
         </span>
       </div>
 

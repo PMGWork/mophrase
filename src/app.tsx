@@ -36,7 +36,7 @@ export const App = () => {
     // 設定
     config,
     updateConfig,
-    isProjectDirty,
+    hasUnsavedChanges,
 
     // 色設定
     colors,
@@ -144,7 +144,7 @@ export const App = () => {
     <div className="flex h-screen flex-col">
       <Header
         projectName={projectName}
-        isProjectDirty={isProjectDirty}
+        hasUnsavedChanges={hasUnsavedChanges}
         selectedTool={selectedTool}
         onSelectTool={handleToolSelect}
         onOpenSettings={() => setIsSettingsOpen(true)}

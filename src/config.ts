@@ -5,7 +5,6 @@ import type { LLMProvider } from './types';
 export interface Config {
   fitTolerance: number; // ビュー許容誤差(ピクセル)
   coarseErrorWeight: number; // 粗い誤差の倍数
-  defaultDragMode: number; // デフォルトのドラッグモード
   lineWeight: number; // 線の太さ
   pointSize: number; // 制御点のサイズ
   llmProvider: LLMProvider; // LLMプロバイダ名
@@ -28,7 +27,6 @@ export interface Colors {
 export const DEFAULT_CONFIG: Config = {
   fitTolerance: 20,
   coarseErrorWeight: 2.0,
-  defaultDragMode: 1,
   lineWeight: 1,
   pointSize: 6,
   llmProvider: 'OpenAI',

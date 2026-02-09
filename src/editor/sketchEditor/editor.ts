@@ -548,7 +548,7 @@ export class SketchEditor {
 
   // 全パスを取得（シリアライズ用）
   public getPaths(): Path[] {
-    return this.paths;
+    return [...this.paths];
   }
 
   // プロジェクトを適用（Load時）
@@ -576,9 +576,16 @@ export class SketchEditor {
     serializedPaths: SerializedProjectPath[],
     settings: ProjectSettings,
   ): void {
-    if (!this.p) return;
-    const paths = deserializePaths(serializedPaths, this.p);
-    this.applyProject(paths, settings);
+    if (!this.p) {
+      console.warn('[SketchEditor] Cannot apply project: p5 instance is not initialized.');
+      return;
+    }
+    try {
+      const paths = deserializePaths(serializedPaths, this.p);
+      this.applyProject(paths, settings);
+    } catch (error) {
+      console.error('[SketchEditor] Failed to deserialize project.', error);
+    }
   }
 
   // キーフレームをハンドルにマッピング
