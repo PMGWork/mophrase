@@ -153,6 +153,6 @@ export function roundNormalizedValue(value: number): number {
 // 曲線の長さ
 export function curveLength(c: Vector[]): number {
   const chord = c[0].dist(c[3]);
-  const controlNetLength = c[0].dist(c[1]) + c[1].dist(c[2]) + c[2].dist(c[3]);
-  return (chord + controlNetLength) / 2;
+  const cont_net = c[0].dist(c[1]) + c[1].dist(c[2]) + c[2].dist(c[3]);
+  return (chord + cont_net) / 2;
 }

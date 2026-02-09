@@ -1,30 +1,15 @@
-import type { FitErrorResult, Vector } from '../../types';
+import type { FitErrorResult, Range, Tangents, Vector } from '../types';
 import {
   bernstein,
   bezierCurve,
   refineParameter,
+  splitTangent,
   unitTangent,
-} from '../../utils/math';
+} from '../utils/math';
 
-// 範囲情報
-export interface Range {
-  start: number;
-  end: number;
-}
-
-// 接ベクトル情報
-export interface Tangents {
-  start: Vector;
-  end: Vector;
-}
-
-export interface FitCurveResult {
-  curves: Vector[][];
-  ranges: Range[];
-}
-
+// #region プライベート関数
 // ベジェ曲線の始点と終点の接ベクトルを計算する
-export function computeEndTangents(points: Vector[]): [Vector, Vector] {
+function computeEndTangents(points: Vector[]): [Vector, Vector] {
   const n = points.length;
 
   // 始点の接ベクトル t_1 を計算
@@ -41,11 +26,11 @@ export function computeEndTangents(points: Vector[]): [Vector, Vector] {
 }
 
 // 点列に対応する曲線のパラメータの位置を計算する
-export function parametrizeRange(points: Vector[], range: Range): number[] {
-  const params: number[] = [0];
+function parametrizeRange(points: Vector[], range: Range): number[] {
+  const _params: number[] = [0];
 
   // 分割点が1つの場合はパラメータを計算しない
-  if (range.end - range.start < 1) return params;
+  if (range.end - range.start < 1) return _params;
 
   // 分割点間の距離を計算
   let totalDist = 0;
@@ -58,22 +43,19 @@ export function parametrizeRange(points: Vector[], range: Range): number[] {
   for (let i = range.start + 1; i <= range.end; i++) {
     cumulativeDist += points[i].dist(points[i - 1]);
     const u_i = totalDist > 0 ? cumulativeDist / totalDist : 0;
-    params.push(u_i);
+    _params.push(u_i);
   }
 
-  return params;
+  return _params;
 }
 
 // 3次ベジェ曲線の始点と終点を定める
-export function extractEndPoints(
-  points: Vector[],
-  range: Range,
-): [Vector, Vector] {
+function extractEndPoints(points: Vector[], range: Range): [Vector, Vector] {
   return [points[range.start].copy(), points[range.end].copy()];
 }
 
 // 始点と終点以外の2つの制御点の端点からの距離を求める
-export function fitControlPoints(
+function fitControlPoints(
   controls: Vector[],
   params: number[],
   tangents: Tangents,
@@ -153,7 +135,7 @@ export function fitControlPoints(
 }
 
 // ベジェ曲線と点列との最大距離を求める
-export function computeMaxError(
+function computeMaxError(
   controls: Vector[],
   params: number[],
   points: Vector[],
@@ -191,40 +173,8 @@ export function computeMaxError(
   return { maxError, index: maxIndex };
 }
 
-// 分割点を考慮してベジェ曲線と点列との最大距離を求める
-export function computeMaxErrorAtSplitPoints(
-  controls: Vector[],
-  params: number[],
-  points: Vector[],
-  range: Range,
-  splitPoints: number[],
-): FitErrorResult {
-  let maxError = -1;
-  let maxIndex = -1;
-
-  for (const index of splitPoints) {
-    if (index <= range.start || index >= range.end) continue;
-    const u = params[index - range.start];
-    if (u === undefined) continue;
-    const curve = bezierCurve(
-      controls[0],
-      controls[1],
-      controls[2],
-      controls[3],
-      u,
-    );
-    const error = points[index].dist(curve);
-    if (error > maxError) {
-      maxError = error;
-      maxIndex = index;
-    }
-  }
-
-  return { maxError: Math.max(0, maxError), index: maxIndex };
-}
-
 // ニュートン法でパラメータを1回更新する
-export function refineParams(
+function refineParams(
   controls: Vector[],
   params: number[],
   points: Vector[],
@@ -238,8 +188,127 @@ export function refineParams(
 
     let newU = refineParameter(cubicControls, point, u);
     if (!Number.isFinite(newU)) continue;
-    newU = Math.max(0, Math.min(1, newU));
+    newU = Math.max(0, Math.min(1, newU)); // constrain
 
     params[i] = newU;
   }
+}
+
+// 再帰的にベジェ曲線をフィットする
+function fitCurveRange(
+  points: Vector[],
+  curves: Vector[][],
+  range: Range,
+  tangents: Tangents,
+  errorTol: number,
+  coarseErrTol: number,
+  fitError: { current: FitErrorResult },
+): void {
+  // パラメータを計算
+  const params = parametrizeRange(points, range);
+
+  // 制御点を計算
+  const controls: Vector[] = new Array(4);
+  const [p0, p3] = extractEndPoints(points, range);
+  controls[0] = p0;
+  controls[3] = p3;
+  fitControlPoints(controls, params, tangents, points, range);
+
+  // 最大誤差を計算
+  const errorResult = computeMaxError(controls, params, points, range);
+  let maxError = errorResult.maxError;
+
+  // fitErrorを更新
+  fitError.current = errorResult;
+
+  // 許容誤差内にある場合のみ確定
+  if (maxError <= errorTol) {
+    curves.push(controls);
+    return;
+  }
+
+  // 粗めの誤差を満たす場合
+  if (maxError <= coarseErrTol) {
+    // Newton法でパラメータを1回だけ再計算
+    refineParams(controls, params, points, range.start);
+
+    // 制御点を再生成
+    fitControlPoints(controls, params, tangents, points, range);
+
+    // 誤差を再評価
+    const newErrorResult = computeMaxError(controls, params, points, range);
+    maxError = newErrorResult.maxError;
+
+    // fitErrorを更新
+    fitError.current = newErrorResult;
+
+    // 許容誤差内に収まったら確定
+    if (maxError <= errorTol) {
+      curves.push(controls);
+      return;
+    }
+  }
+
+  // 分割点で分割する
+  const splitIndex = fitError.current.index;
+  if (splitIndex <= range.start || splitIndex >= range.end) {
+    curves.push(controls);
+    return;
+  }
+
+  // 分割点の接ベクトルを計算
+  const tangent = splitTangent(points, splitIndex);
+  if (tangent === null) {
+    curves.push(controls);
+    return;
+  }
+
+  // 再帰的に分割してフィッティング
+  fitCurveRange(
+    points,
+    curves,
+    { start: range.start, end: splitIndex },
+    { start: tangents.start, end: tangent },
+    errorTol,
+    coarseErrTol,
+    fitError,
+  );
+  fitCurveRange(
+    points,
+    curves,
+    { start: splitIndex, end: range.end },
+    { start: tangent.copy().mult(-1), end: tangents.end },
+    errorTol,
+    coarseErrTol,
+    fitError,
+  );
+}
+
+// #region メイン関数
+// ベジェ曲線をフィットする関数
+export function fitCurve(
+  points: Vector[],
+  curves: Vector[][],
+  errorTol: number,
+  coarseErrTol: number,
+  fitError: { current: FitErrorResult },
+): void {
+  // 全体の接ベクトルを計算
+  const [tangent0, tangent1] = computeEndTangents(points);
+
+  // 再帰的にフィッティングを開始
+  fitCurveRange(
+    points,
+    curves,
+    { start: 0, end: points.length - 1 },
+    { start: tangent0, end: tangent1 },
+    errorTol,
+    coarseErrTol,
+    fitError,
+  );
+
+  // 最終的な誤差と分割数を出力
+  console.log(
+    `Final error: ${fitError.current.maxError}\nNumber of segments: ${curves.length}\nError tolerance: ${errorTol}`,
+  );
 }
