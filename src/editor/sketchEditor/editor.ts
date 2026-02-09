@@ -11,11 +11,13 @@ import type {
   HandleSelection,
   Path,
   ProjectSettings,
+  SerializedProjectPath,
   ToolKind,
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
 import { isLeftMouseButton } from '../../utils/p5Helpers';
+import { deserializePaths } from '../../utils/serialization/project';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
 import type { SketchDomRefs, ToolContext } from './types';
@@ -570,6 +572,16 @@ export class SketchEditor {
 
     // コールバックを呼び出す
     this.onPathSelected(null);
+  }
+
+  // シリアライズ済みプロジェクトを復元して適用
+  public applySerializedProject(
+    serializedPaths: SerializedProjectPath[],
+    settings: ProjectSettings,
+  ): void {
+    if (!this.p) return;
+    const paths = deserializePaths(serializedPaths, this.p);
+    this.applyProject(paths, settings);
   }
 
   // キーフレームをハンドルにマッピング

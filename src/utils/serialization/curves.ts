@@ -2,17 +2,14 @@ import type p5 from 'p5';
 import type {
   Keyframe,
   Path,
-  ProjectData,
-  ProjectSettings,
-  SerializedKeyframe,
   SerializedBoundingBox,
   SerializedHandle,
+  SerializedKeyframe,
   SerializedPath,
   Vector,
-} from '../types';
-import { DEFAULT_PROJECT_SETTINGS } from '../types';
-import { roundNormalizedValue } from './math';
-import { buildSketchCurves, computeKeyframeProgress } from './keyframes';
+} from '../../types';
+import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
+import { roundNormalizedValue } from '../math';
 
 // p5.Vector -> キーフレーム座標（正規化）
 function serializePosition(
@@ -134,7 +131,6 @@ export function serializePaths(paths: Path[]): SerializedPath[] {
   });
 }
 
-// #region デシリアライズ
 // シリアライズされたパス -> p5.Vector[][]
 export function deserializeCurves(
   serializedPath: SerializedPath,
@@ -260,7 +256,6 @@ function deserializeGraphHandle(
   return p.createVector(x, y);
 }
 
-// #region ユーティリティ
 // バウンディングボックスを計算
 function computeBbox(curves: p5.Vector[][]): SerializedBoundingBox {
   if (!curves.length) {
@@ -295,52 +290,4 @@ function computeBbox(curves: p5.Vector[][]): SerializedBoundingBox {
     width,
     height,
   };
-}
-
-// #region プロジェクト シリアライズ/デシリアライズ
-
-// 現在のプロジェクトバージョン
-const PROJECT_VERSION = 1;
-
-// プロジェクトをシリアライズ
-export function serializeProject(
-  paths: Path[],
-  settings: ProjectSettings,
-): ProjectData {
-  return {
-    version: PROJECT_VERSION,
-    settings,
-    paths: serializePaths(paths),
-  };
-}
-
-// プロジェクトをデシリアライズ
-export function deserializeProject(data: unknown): {
-  settings: ProjectSettings;
-  paths: SerializedPath[];
-} {
-  // 型ガード
-  if (!data || typeof data !== 'object') {
-    return { settings: { ...DEFAULT_PROJECT_SETTINGS }, paths: [] };
-  }
-
-  const obj = data as Record<string, unknown>;
-
-  // settings を補完
-  const rawSettings = obj.settings as Partial<ProjectSettings> | undefined;
-  const settings: ProjectSettings = {
-    playbackDuration:
-      typeof rawSettings?.playbackDuration === 'number'
-        ? rawSettings.playbackDuration
-        : DEFAULT_PROJECT_SETTINGS.playbackDuration,
-    playbackFrameRate:
-      typeof rawSettings?.playbackFrameRate === 'number'
-        ? rawSettings.playbackFrameRate
-        : DEFAULT_PROJECT_SETTINGS.playbackFrameRate,
-  };
-
-  // paths を取得
-  const paths = Array.isArray(obj.paths) ? (obj.paths as SerializedPath[]) : [];
-
-  return { settings, paths };
 }

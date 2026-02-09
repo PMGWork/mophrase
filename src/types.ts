@@ -103,6 +103,15 @@ export interface SerializedPath {
   bbox: SerializedBoundingBox;
 }
 
+// プロジェクト保存用のシリアライズ済みパス
+export interface SerializedProjectPath extends SerializedPath {
+  id: string;
+  startTime: number;
+  duration: number;
+  sketchModifiers?: Modifier[];
+  graphModifiers?: Modifier[];
+}
+
 // #region 5. 提案/LLM関連
 
 // LLMプロバイダの種類
@@ -128,9 +137,8 @@ export interface ProjectSettings {
 
 // プロジェクトデータ
 export interface ProjectData {
-  version: number;
   settings: ProjectSettings;
-  paths: SerializedPath[];
+  paths: SerializedProjectPath[];
 }
 
 // デフォルトのプロジェクト設定

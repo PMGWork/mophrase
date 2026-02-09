@@ -19,7 +19,7 @@ import {
   deserializeCurves,
   deserializeGraphCurves,
   serializePaths,
-} from '../utils/serialization';
+} from '../utils/serialization/curves';
 import { fetchSuggestions } from './suggestionService';
 import {
   drawSketchPreview,

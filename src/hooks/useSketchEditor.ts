@@ -14,7 +14,10 @@ import type { Path, ProjectSettings, ToolKind } from '../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
 import { loadConfig, saveConfig } from '../services/configStorage';
-import { serializeProject, deserializeProject } from '../utils/serialization';
+import {
+  serializeProject,
+  deserializeProject,
+} from '../utils/serialization/project';
 
 // 設定更新用のパラメータ
 type SketchConfigUpdate = {
@@ -263,22 +266,13 @@ export const useSketchEditor = (): UseSketchEditorResult => {
             const { settings, paths: serializedPaths } =
               deserializeProject(data);
 
-            // パスをデシリアライズ（p5.Vectorに復元）
-            // 注: 現在の実装ではシリアライズされたパスをそのまま持っている
-            // 将来的にエディタ側でデシリアライズが必要
-            // ひとまずsettingsだけ適用し、pathsは空で開始
-            // TODO: paths のデシリアライズを実装
+            editorRef.current?.applySerializedProject(serializedPaths, settings);
             setProjectSettings(settings);
-            editorRef.current?.setProjectSettings(settings);
-
-            // シリアライズされたpathsがある場合は警告
-            if (serializedPaths.length > 0) {
-              console.warn(
-                '[loadProject] Paths deserialization not yet implemented. Settings loaded.',
-              );
-            }
           } catch (error) {
-            console.error('[loadProject] Failed to parse project file:', error);
+            console.error(
+              '[loadProject] Failed to load project JSON.',
+              error,
+            );
           }
         };
         reader.readAsText(file);

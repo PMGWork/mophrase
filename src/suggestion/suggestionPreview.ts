@@ -13,7 +13,7 @@ import { getSelectionReference } from '../utils/path';
 import {
   deserializeCurves,
   deserializeGraphCurves,
-} from '../utils/serialization';
+} from '../utils/serialization/curves';
 
 // スケッチ提案のプレビュー描画パラメータ
 type SketchPreviewParams = {
