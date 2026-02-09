@@ -11,6 +11,10 @@ export default [
       '**/dist/**',
       '**/public/**',
       '**/.vite/**',
+      'AGENTS.md',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+      'worker/.wrangler/**',
     ],
   },
 
@@ -26,6 +30,16 @@ export default [
 
   // TypeScript
   ...tseslint.configs.recommended,
+
+  // Project rules
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
+    },
+  },
 
   // Prettier
   prettierConfig,

@@ -3,19 +3,42 @@
 
 @theme {
   --font-sans: 'Geist', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Background & Surface */
+  --color-background: #030712; /* gray-950 */
+  --color-panel: #111827; /* gray-900 */
+  --color-panel-elevated: #1f2937; /* gray-800 */
+
+  /* Border */
+  --color-border: #1f2937; /* gray-800 */
+  --color-border-muted: #374151; /* gray-700 */
+
+  /* Text */
+  --color-text: #ffffff; /* white */
+  --color-text-muted: #9ca3af; /* gray-400 */
+  --color-text-subtle: #6b7280; /* gray-500 */
+
+  /* Accent & States */
+  --color-accent: #eab308; /* yellow-500 */
+  --color-success: #10b981; /* emerald-500 */
+  --color-danger: #f87171; /* red-400 */
+
+  /* Object */
+  --color-object-1: #f43f5e; /* rose-500 */
+  --color-object-2: #f59e0b; /* amber-500 */
+  --color-object-3: #4ade80; /* green-400 */
 }
 
-:root {
-  --color-handle: #fbbf24; /* Amber-400 */
-  --color-curve: #f9fafb; /* Gray-50 */
-  --color-sketch: #374151; /* Gray-700 */
-  --color-background: #030712; /* Gray-950 */
+kbd {
+  font-family: var(--font-mono);
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
+  background-color: var(--color-background);
 }
 
 canvas {

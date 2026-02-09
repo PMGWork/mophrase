@@ -3,19 +3,26 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n app,worker -c blue,green --kill-others \"pnpm run dev:app\" \"pnpm run dev:worker\"",
+    "dev:app": "vite",
+    "dev:worker": "pnpm -C worker dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "check": "eslint . && prettier --check .",
-    "fix": "eslint . --fix && prettier --write ."
+    "format": "prettier --log-level warn --write .",
+    "format:check": "prettier --log-level warn --check .",
+    "check": "concurrently -n lint,format -c yellow,red \"eslint .\" \"prettier --log-level warn --check .\"",
+    "fix": "concurrently -n lint,format -c yellow,red \"eslint . --fix\" \"prettier --log-level warn --write .\""
   },
   "devDependencies": {
     "@types/p5": "^1.7.7",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.0.2",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.5.0",
@@ -26,13 +33,12 @@
     "vite": "^7.2.2"
   },
   "dependencies": {
-    "@google/genai": "^1.29.1",
     "@tailwindcss/vite": "^4.1.17",
     "@toon-format/toon": "^1.0.0",
-    "groq-sdk": "^0.35.0",
-    "lucide": "^0.555.0",
-    "openai": "^6.9.0",
+    "lucide-react": "^0.562.0",
     "p5": "^2.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^4.1.17",
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.24.6"
