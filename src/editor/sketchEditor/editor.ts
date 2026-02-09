@@ -386,14 +386,11 @@ export class SketchEditor {
     }
 
     // 停止中なら全パスの再生開始
-    if (this.paths.length > 0) {
-      const colors = this.getPathColors();
-      const elapsed = this.motionManager.getElapsedTime();
-      this.motionManager.startAll(this.paths, colors, elapsed);
-      this.isPreviewing = false;
-      return true;
-    }
-    return false;
+    const colors = this.getPathColors();
+    const elapsed = this.motionManager.getElapsedTime();
+    this.motionManager.startAll(this.paths, colors, elapsed);
+    this.isPreviewing = false;
+    return this.motionManager.getIsPlaying();
   }
 
   public resetPlayback(): void {
@@ -438,7 +435,7 @@ export class SketchEditor {
   }
 
   public hasPaths(): boolean {
-    return this.paths.length > 0;
+    return (this.motionManager?.getTotalDuration() ?? 0) > 0;
   }
 
   // アクティブなパスを安全に更新
@@ -484,7 +481,7 @@ export class SketchEditor {
     if (this.paths.length === 0) {
       this.motionManager.prepareAll([], []);
       this.isPreviewing = false;
-      return false;
+      return this.motionManager.getTotalDuration() > 0;
     }
 
     this.motionManager.prepareAll(this.paths, this.getPathColors());

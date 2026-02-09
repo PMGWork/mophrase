@@ -70,8 +70,6 @@ export class MotionManager {
     colors: string[],
     startAtMs: number = 0,
   ): void {
-    if (paths.length === 0) return;
-
     const { states, totalDuration } = this.buildAnimationStates(paths, colors);
     this.animationStates = states;
     this.totalDuration =
@@ -79,14 +77,18 @@ export class MotionManager {
 
     const clamped = Math.max(0, Math.min(this.totalDuration, startAtMs));
     this.elapsedTime = clamped;
-    this.isPlaying = this.animationStates.length > 0;
+    this.isPlaying = this.totalDuration > 0;
   }
 
   // 再生前にアニメーション情報を準備
   public prepareAll(paths: Path[], colors: string[]): void {
     if (paths.length === 0) {
       this.animationStates = [];
-      this.totalDuration = 0;
+      this.totalDuration =
+        this.durationOverrideMs > 0 ? this.durationOverrideMs : 0;
+      if (this.elapsedTime > this.totalDuration) {
+        this.elapsedTime = this.totalDuration;
+      }
       return;
     }
 
