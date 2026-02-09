@@ -36,12 +36,14 @@ export const App = () => {
     // 設定
     config,
     updateConfig,
+    isProjectDirty,
 
     // 色設定
     colors,
     getPreviewGraphCurves,
 
     // プロジェクト関連
+    projectName,
     projectSettings,
     updateProjectSettings,
     saveProject,
@@ -141,6 +143,8 @@ export const App = () => {
   return (
     <div className="flex h-screen flex-col">
       <Header
+        projectName={projectName}
+        isProjectDirty={isProjectDirty}
         selectedTool={selectedTool}
         onSelectTool={handleToolSelect}
         onOpenSettings={() => setIsSettingsOpen(true)}
