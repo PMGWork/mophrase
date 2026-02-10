@@ -577,7 +577,9 @@ export class SketchEditor {
     settings: ProjectSettings,
   ): void {
     if (!this.p) {
-      console.warn('[SketchEditor] Cannot apply project: p5 instance is not initialized.');
+      console.warn(
+        '[SketchEditor] Cannot apply project: p5 instance is not initialized.',
+      );
       return;
     }
     try {
