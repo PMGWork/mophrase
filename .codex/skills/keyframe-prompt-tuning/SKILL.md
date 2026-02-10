@@ -1,9 +1,9 @@
 ---
-name: prompt-tuning
+name: keyframe-prompt-tuning
 description: "MoPhraseのキーフレーム提案用プロンプト（`src/prompts/keyframePrompt.md`）を改善するスキル。ユーザーが「提案の質を上げたい」「プロンプトを調整したい」「LLMの出力が不安定・意図外」と依頼したときに使う。出力スキーマ整合性（`src/types.ts`）を維持しつつ、指示解釈・スタイル保持・バリエーション品質を改善する。"
 ---
 
-# Prompt Tuning
+# Keyframe Prompt Tuning
 
 ## Overview
 

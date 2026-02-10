@@ -1,0 +1,4 @@
+interface:
+  display_name: "Editor Interaction Check"
+  short_description: "MoPhraseの編集操作を差分起点で確認するSkill"
+  default_prompt: "Use $editor-interaction-check to run targeted interaction checks for editor changes and summarize failures with repro steps."

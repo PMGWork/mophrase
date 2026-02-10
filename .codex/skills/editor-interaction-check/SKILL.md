@@ -1,9 +1,9 @@
 ---
-name: editor-regression-check
-description: "MoPhraseのエディタ回帰確認を定型化するスキル。ユーザーが「描画や選択を直したので壊れていないか確認したい」「編集操作の回帰チェックをしたい」「UI変更後の最低限の動作確認をしたい」と依頼したときに使う。`src/editor` `src/hooks` `src/components` の変更影響を見て、必要な自動チェックと手動チェックを実施する。"
+name: editor-interaction-check
+description: "MoPhraseのエディタ操作確認を定型化するスキル。ユーザーが「描画や選択を直したので壊れていないか確認したい」「編集操作のチェックをしたい」「UI変更後の最低限の動作確認をしたい」と依頼したときに使う。`src/editor` `src/hooks` `src/components` の変更影響を見て、必要な自動チェックと手動チェックを実施する。"
 ---
 
-# Editor Regression Check
+# Editor Interaction Check
 
 ## Overview
 

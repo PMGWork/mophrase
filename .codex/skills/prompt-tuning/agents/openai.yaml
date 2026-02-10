@@ -1,4 +1,0 @@
-interface:
-  display_name: "Prompt Tuning"
-  short_description: "MoPhraseの提案プロンプトを安全に改善するSkill"
-  default_prompt: "Use $prompt-tuning to improve keyframe prompt quality while preserving schema compliance and style preservation."
