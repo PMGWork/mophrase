@@ -1,0 +1,4 @@
+interface:
+  display_name: "Editor Regression"
+  short_description: "MoPhraseの編集動作を差分起点で回帰確認するSkill"
+  default_prompt: "Use $editor-regression-check to run targeted regression checks for editor changes and summarize failures with repro steps."

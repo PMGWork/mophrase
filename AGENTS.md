@@ -1,48 +1,10 @@
-# Commit Message Guidelines
+# エージェント運用ルール
 
-このプロジェクトでは **Semantic Commit Message** を採用しています。
-コミットメッセージを作成する際は、以下のフォーマットとルールを厳守してください。
+- 日本語で回答する。
 
-## フォーマット
+## Skills
 
-```text
-<Type>: #<Issue Number> <Title>
-```
+利用可能なスキルは以下。
 
-### 具体例
-> feat: #123 ログイン機能の実装をする
-
----
-
-## 構成要素のルール
-
-### 1. Type (必須)
-変更の種類を一目で理解するために、以下のPrefixを使用してください。
-
-| Type | 説明 |
-| :--- | :--- |
-| **feat** | ユーザー向けの機能の追加や変更 |
-| **fix** | ユーザー向けの不具合の修正 |
-| **docs** | ドキュメントの更新 |
-| **style** | フォーマットやセミコロンの欠落など、コードの動作に影響しない修正 |
-| **refactor** | バグ修正や機能追加を含まないリファクタリング |
-| **test** | テストコードの追加や修正 |
-| **chore** | ビルドプロセスやライブラリ更新など、プロダクションコードに影響しない修正 |
-
-### 2. Issue Number (強く推奨)
-そのコミットに紐づくIssue番号を記述します。
-* 書式: `#` + `数字` (例: `#123`)
-* 位置: デフォルト設定でのコメントアウト回避のため、Type/Emojiの後ろに配置します。
-* 例外: Issueを作成していないケースやhotfixの場合は省略可能です。
-* 目的: トラッキングを容易にし、修正意図を明確にするため、可能な限りIssueを作成し紐付けることを推奨します。
-
-### 3. Subject / Title (必須)
-変更内容を簡潔に記述します。
-* 文体: 現在形（Present Tense）を使用してください。「◯◯した」ではなく**「◯◯する」**と記述します。
-* 文字数: 20〜30文字以内を目安とします。
-
-### 4. Description (任意)
-スリーライン（詳細説明）は必須ではありません。必要な場合のみ記述してください。
-
-## AIエージェントへの指示（Prompting Guide）
-コミットメッセージを生成する際は、上記ルールの `<Type>` を適切に選択し、`<Title>` は日本語の現在形で出力してください。
+- prompt-tuning: MoPhraseのキーフレーム提案用プロンプト（`src/prompts/keyframePrompt.md`）を改善するスキル。ユーザーが「提案の質を上げたい」「プロンプトを調整したい」「LLMの出力が不安定・意図外」と依頼したときに使う。出力スキーマ整合性（`src/types.ts`）を維持しつつ、指示解釈・スタイル保持・バリエーション品質を改善する。 (file: /Users/yuto/Documents/GitHub/laboratory/mophrase/.codex/skills/prompt-tuning/SKILL.md)
+- editor-regression-check: MoPhraseのエディタ回帰確認を定型化するスキル。ユーザーが「描画や選択を直したので壊れていないか確認したい」「編集操作の回帰チェックをしたい」「UI変更後の最低限の動作確認をしたい」と依頼したときに使う。`src/editor` `src/hooks` `src/components` の変更影響を見て、必要な自動チェックと手動チェックを実施する。 (file: /Users/yuto/Documents/GitHub/laboratory/mophrase/.codex/skills/editor-regression-check/SKILL.md)
