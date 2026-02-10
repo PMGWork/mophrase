@@ -1,5 +1,7 @@
 import { HANDLE_RADIUS } from '../constants';
-import type {  HandleDragMode,  HandleSelection,
+import type {
+  HandleDragMode,
+  HandleSelection,
   MarqueeRect,
   SelectionRange,
   HandleType,
@@ -300,7 +302,11 @@ export class HandleManager {
   }
 
   // 複数選択時のドラッグ処理
-  private applyMultiDrag(dx: number, dy: number, dragMode: HandleDragMode): void {
+  private applyMultiDrag(
+    dx: number,
+    dy: number,
+    dragMode: HandleDragMode,
+  ): void {
     const paths = this.getPaths();
     const anchorKeys = new Set<string>();
     for (const selection of this.selectedHandles) {

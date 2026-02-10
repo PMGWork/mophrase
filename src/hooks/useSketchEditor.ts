@@ -82,7 +82,7 @@ type UseSketchEditorResult = {
   config: Config;
   colors: Colors;
   updateConfig: (next: SketchConfigUpdate) => void;
-  isProjectDirty: boolean;
+  hasUnsavedChanges: boolean;
 
   // プロジェクト
   projectName: string | null;
@@ -114,7 +114,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const [suggestionUI, setSuggestionUI] =
     useState<SuggestionUIState>(initialSuggestionUI);
   const [isReady, setIsReady] = useState(false);
-  const [isProjectDirty, setIsProjectDirty] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>(
     () => ({ ...DEFAULT_PROJECT_SETTINGS }),
@@ -150,7 +150,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
       const currentJson = buildProjectJson(editor);
       if (!currentJson) return;
       cleanProjectJsonRef.current = currentJson;
-      setIsProjectDirty(false);
+      setHasUnsavedChanges(false);
     },
     [buildProjectJson],
   );
@@ -161,7 +161,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
       const currentJson = buildProjectJson(editor);
       if (!currentJson) return;
       const cleanJson = cleanProjectJsonRef.current;
-      setIsProjectDirty(cleanJson !== null && currentJson !== cleanJson);
+      setHasUnsavedChanges(cleanJson !== null && currentJson !== cleanJson);
     },
     [buildProjectJson],
   );
@@ -175,7 +175,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
       projectFileHandleRef.current = fileHandle;
       setProjectName(stripJsonExtension(fileHandle.name));
       cleanProjectJsonRef.current = json;
-      setIsProjectDirty(false);
+      setHasUnsavedChanges(false);
     },
     [],
   );
@@ -465,7 +465,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     config,
     colors: resolvedColors,
     updateConfig,
-    isProjectDirty,
+    hasUnsavedChanges,
 
     // プロジェクト
     projectName,
