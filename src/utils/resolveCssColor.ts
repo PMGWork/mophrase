@@ -1,7 +1,13 @@
+/**
+ * CSS カスタムプロパティ（var(--xxx)）を実際のカラー値に解決する。
+ * fallback 値と SSR 環境にも対応。
+ */
+
 import type { Colors } from '../config';
 
 const CSS_VAR_PATTERN = /^var\(\s*(--[^,\s)]+)\s*(?:,\s*([^)]+))?\s*\)$/;
 
+// 単一の CSS カスタムプロパティを解決
 export const resolveCssColor = (value: string): string => {
   if (typeof window === 'undefined') return value;
   if (!value.includes('var(')) return value;
@@ -20,9 +26,11 @@ export const resolveCssColor = (value: string): string => {
   return value;
 };
 
+// 複数の CSS カスタムプロパティを解決
 export const resolveCssColorList = (values: readonly string[]): string[] =>
   values.map((value) => resolveCssColor(value));
 
+// Colors オブジェクト内の CSS カスタムプロパティを解決
 export const resolveCssColors = (colors: Colors): Colors => ({
   handle: resolveCssColor(colors.handle),
   curve: resolveCssColor(colors.curve),

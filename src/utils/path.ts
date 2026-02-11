@@ -1,3 +1,7 @@
+/**
+ * 選択範囲に基づくパスのスライスと参照情報の取得。
+ */
+
 import type { Path, SelectionRange } from '../types';
 
 // 部分パスを作成

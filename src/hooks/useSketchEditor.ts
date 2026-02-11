@@ -6,7 +6,7 @@ import { OBJECT_COLORS } from '../constants';
 import {
   resolveCssColorList,
   resolveCssColors,
-} from '../theme/resolveCssColor';
+} from '../utils/resolveCssColor';
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';

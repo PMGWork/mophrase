@@ -11,6 +11,7 @@ export default [
       '**/dist/**',
       '**/public/**',
       '**/.vite/**',
+      '**/.codex/**',
       'AGENTS.md',
       'pnpm-lock.yaml',
       'pnpm-workspace.yaml',

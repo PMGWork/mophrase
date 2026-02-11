@@ -1,7 +1,10 @@
+/**
+ * キーフレーム配列からスケッチ用・グラフ用のベジエ曲線を構築する。
+ * 各キーフレーム間のハンドル情報をもとに制御点列を生成する。
+ */
+
 import type { Keyframe, Vector } from '../types';
 import { curveLength } from './math';
-
-const EPSILON = 1e-6;
 
 // キーフレームから空間ベジェ曲線を生成
 export function buildSketchCurves(keyframes: Keyframe[]): Vector[][] {
@@ -33,7 +36,7 @@ export function computeKeyframeProgress(
 
   const lengths = curves.map((c) => curveLength(c));
   const total = lengths.reduce((sum, len) => sum + len, 0);
-  if (total <= EPSILON) return keyframes.map(() => 0);
+  if (total <= 1e-6) return keyframes.map(() => 0);
 
   const progress: number[] = [0];
   let cumulative = 0;
