@@ -1,3 +1,8 @@
+/**
+ * LLM API との通信。
+ * シリアライズ済みパスとプロンプト履歴から提案を取得する。
+ */
+
 import { encode } from '@toon-format/toon';
 
 import type { Config } from '../config';

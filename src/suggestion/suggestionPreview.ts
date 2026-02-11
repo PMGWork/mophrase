@@ -1,3 +1,8 @@
+/**
+ * 提案のプレビュー描画。
+ * ホバー中の提案をスケッチ・グラフの両エディタ上に破線で重ね描きする。
+ */
+
 import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';

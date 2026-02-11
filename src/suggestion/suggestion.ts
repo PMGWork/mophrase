@@ -1,3 +1,8 @@
+/**
+ * 提案マネージャー。
+ * LLM による提案の生成・管理・プレビュー・選択を担当する。
+ */
+
 import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';

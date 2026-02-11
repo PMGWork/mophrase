@@ -1,3 +1,8 @@
+/**
+ * 提案ポップアップの配置計算。
+ * パス終点の座標からポップアップ表示位置を算出する。
+ */
+
 import type { Path, SelectionRange } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
 import { applyModifiers } from '../utils/modifier';

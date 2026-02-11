@@ -1,3 +1,8 @@
+/**
+ * グラフエディタ。
+ * 時間カーブ（イージング）の表示とハンドル操作を p5.js で提供する。
+ */
+
 import p5 from 'p5';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';

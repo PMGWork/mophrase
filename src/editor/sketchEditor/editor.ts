@@ -1,3 +1,8 @@
+/**
+ * スケッチエディタ。
+ * パスの描画・選択・ハンドル編集・モーション再生・提案連携を統合する中心クラス。
+ */
+
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
 import { OBJECT_SIZE } from '../../constants';
@@ -16,7 +21,7 @@ import type {
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { drawSketchPath } from '../../utils/draw';
-import { isLeftMouseButton } from '../../utils/p5Helpers';
+import { isLeftMouseButton } from '../../utils/input';
 import { deserializePaths } from '../../utils/serialization/project';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';

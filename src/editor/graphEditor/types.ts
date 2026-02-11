@@ -1,3 +1,7 @@
+/**
+ * グラフエディタの型定義。
+ */
+
 // グラフエディタのDOM参照
 export type GraphEditorDomRefs = {
   graphEditorCanvas: HTMLDivElement;
