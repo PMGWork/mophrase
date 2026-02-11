@@ -3,7 +3,6 @@
  * バーンスタイン多項式、曲線評価、微分、パラメータ精緻化などを提供する。
  */
 
-
 import type { Vector } from '../types';
 
 // #region 基礎数学
@@ -184,7 +183,10 @@ function assertSplitInput(points: readonly Vector[], t: number): void {
 
 // ベクトルの線形補間
 function lerpVector(a: Vector, b: Vector, t: number): Vector {
-  return a.copy().mult(1 - t).add(b.copy().mult(t));
+  return a
+    .copy()
+    .mult(1 - t)
+    .add(b.copy().mult(t));
 }
 
 // de Casteljauでn次ベジェをt位置で2つに分割する
@@ -221,7 +223,11 @@ export function splitBezier(
 export function splitCubicBezier(
   curve: readonly Vector[],
   t: number,
-): { left: [Vector, Vector, Vector, Vector]; right: [Vector, Vector, Vector, Vector]; point: Vector } {
+): {
+  left: [Vector, Vector, Vector, Vector];
+  right: [Vector, Vector, Vector, Vector];
+  point: Vector;
+} {
   if (curve.length !== 4) {
     throw new Error('Cubic Bezier split requires exactly 4 control points');
   }
