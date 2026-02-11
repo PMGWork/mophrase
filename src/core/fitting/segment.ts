@@ -11,8 +11,8 @@ import {
   unitTangent,
 } from '../../utils/bezier';
 
-// 範囲情報
-export interface Range {
+// フィッティング用の範囲情報
+export interface FitRange {
   start: number;
   end: number;
 }
@@ -25,7 +25,7 @@ export interface Tangents {
 
 export interface FitCurveResult {
   curves: Vector[][];
-  ranges: Range[];
+  ranges: FitRange[];
 }
 
 // ベジェ曲線の始点と終点の接ベクトルを計算する
@@ -46,7 +46,7 @@ export function computeEndTangents(points: Vector[]): [Vector, Vector] {
 }
 
 // 点列に対応する曲線のパラメータの位置を計算する
-export function parametrizeRange(points: Vector[], range: Range): number[] {
+export function parametrizeRange(points: Vector[], range: FitRange): number[] {
   const params: number[] = [0];
 
   // 分割点が1つの場合はパラメータを計算しない
@@ -72,7 +72,7 @@ export function parametrizeRange(points: Vector[], range: Range): number[] {
 // 3次ベジェ曲線の始点と終点を定める
 export function extractEndPoints(
   points: Vector[],
-  range: Range,
+  range: FitRange,
 ): [Vector, Vector] {
   return [points[range.start].copy(), points[range.end].copy()];
 }
@@ -83,7 +83,7 @@ export function fitControlPoints(
   params: number[],
   tangents: Tangents,
   points: Vector[],
-  range: Range,
+  range: FitRange,
 ): void {
   const n = range.end - range.start + 1;
   if (n < 2) return;
@@ -162,7 +162,7 @@ export function computeMaxError(
   controls: Vector[],
   params: number[],
   points: Vector[],
-  range: Range,
+  range: FitRange,
 ): FitErrorResult {
   const n = range.end - range.start + 1;
 
@@ -201,7 +201,7 @@ export function computeMaxErrorAtSplitPoints(
   controls: Vector[],
   params: number[],
   points: Vector[],
-  range: Range,
+  range: FitRange,
   splitPoints: number[],
 ): FitErrorResult {
   let maxError = -1;

@@ -15,7 +15,7 @@ import {
   parametrizeRange,
   refineParams,
   type FitCurveResult,
-  type Range,
+  type FitRange,
   type Tangents,
 } from './segment';
 
@@ -29,7 +29,7 @@ export function fitSketchCurves(
   fitError: { current: FitErrorResult },
 ): FitCurveResult {
   const curves: Vector[][] = [];
-  const ranges: Range[] = [];
+  const ranges: FitRange[] = [];
   const [tangent0, tangent1] = computeEndTangents(points);
 
   fitSketchRecursive(
@@ -52,7 +52,7 @@ export function fitGraphCurves(
   splitPoints: number[],
 ): FitCurveResult {
   const curves: Vector[][] = [];
-  const ranges: Range[] = [];
+  const ranges: FitRange[] = [];
   const [tangent0, tangent1] = computeEndTangents(points);
   const normalizedSplitPoints = Array.from(
     new Set(
@@ -82,12 +82,12 @@ export function fitGraphCurves(
 function fitSketchRecursive(
   points: Vector[],
   curves: Vector[][],
-  range: Range,
+  range: FitRange,
   tangents: Tangents,
   errorTol: number,
   coarseErrTol: number,
   fitError: { current: FitErrorResult },
-  ranges?: Range[],
+  ranges?: FitRange[],
 ): void {
   // パラメータを計算
   const params = parametrizeRange(points, range);
@@ -180,10 +180,10 @@ function fitSketchRecursive(
 function fitGraphRecursive(
   points: Vector[],
   curves: Vector[][],
-  range: Range,
+  range: FitRange,
   tangents: Tangents,
   splitPoints: number[],
-  ranges: Range[],
+  ranges: FitRange[],
 ): void {
   const params = parametrizeRange(points, range);
 
