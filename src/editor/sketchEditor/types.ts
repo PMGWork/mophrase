@@ -1,3 +1,8 @@
+/**
+ * スケッチエディタの型定義。
+ * DOM参照とツール共通コンテキスト。
+ */
+
 import type { Colors, Config } from '../../config';
 import type { HandleManager } from '../../core/handleManager';
 import type { MotionManager } from '../../core/motionManager';

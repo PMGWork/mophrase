@@ -1,3 +1,8 @@
+/**
+ * スケッチエディタ用のカスタムフック。
+ * エディタの初期化、状態管理、プロジェクトの保存・読み込みを担当する。
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type p5 from 'p5';
@@ -6,7 +11,7 @@ import { OBJECT_COLORS } from '../constants';
 import {
   resolveCssColorList,
   resolveCssColors,
-} from '../theme/resolveCssColor';
+} from '../utils/resolveCssColor';
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';

@@ -1,3 +1,8 @@
+/**
+ * ベジエフィッティングのセグメント単位の演算。
+ * パラメトライズ、制御点求解、誤差計算、ニュートン法によるパラメータ精緻化を提供。
+ */
+
 import type { FitErrorResult, Vector } from '../../types';
 import {
   bernstein,

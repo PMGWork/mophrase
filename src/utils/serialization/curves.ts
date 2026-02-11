@@ -1,3 +1,8 @@
+/**
+ * パス・キーフレーム・ハンドルの JSON シリアライズ／デシリアライズ。
+ * LLM との通信やクリップボードコピーで使用する。
+ */
+
 import type p5 from 'p5';
 import type {
   Keyframe,

@@ -1,3 +1,8 @@
+/**
+ * p5.js を使ったベジエ曲線・制御点・パスの描画関数群。
+ * スケッチエディタとグラフエディタの両方から利用される。
+ */
+
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import type { Path, Vector } from '../types';

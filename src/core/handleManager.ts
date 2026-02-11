@@ -1,3 +1,8 @@
+/**
+ * ハンドルのヒットテスト・ドラッグ・選択の管理。
+ * アンカーと制御点の操作を抽象化し、スケッチエディタに提供する。
+ */
+
 import { HANDLE_RADIUS } from '../constants';
 import type {
   HandleDragMode,

@@ -1,4 +1,5 @@
 .agent/
+.codex/
 AGENTS.md
 pnpm-lock.yaml
 pnpm-workspace.yaml

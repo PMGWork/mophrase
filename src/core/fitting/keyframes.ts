@@ -1,3 +1,8 @@
+/**
+ * 手書き点群からキーフレームを生成。
+ * スケッチフィッティング→タイムスタンプ正規化→グラフフィッティングの一連のパイプラインを実行する。
+ */
+
 import type { FitErrorResult, Keyframe, Vector } from '../../types';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 

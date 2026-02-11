@@ -1,3 +1,9 @@
+/**
+ * ベジエ曲線フィッティングの再帰アルゴリズム。
+ * 手書き点群を許容誤差内でベジエ曲線列に変換する。
+ * スケッチ（誤差ベース分割）とグラフ（分割点指定）の両方に対応。
+ */
+
 import type { FitErrorResult, Vector } from '../../types';
 import { splitTangent } from '../../utils/math';
 import {

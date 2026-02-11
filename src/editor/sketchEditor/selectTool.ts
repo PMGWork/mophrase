@@ -1,3 +1,8 @@
+/**
+ * 選択ツール。
+ * パスのクリック選択・矩形範囲選択・ハンドルドラッグを処理する。
+ */
+
 import type p5 from 'p5';
 import { BEZIER_T_STEP, OBJECT_SIZE } from '../../constants';
 import type { MarqueeRect, Path } from '../../types';

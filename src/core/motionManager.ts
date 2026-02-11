@@ -1,3 +1,8 @@
+/**
+ * タイムライン再生エンジン。
+ * 全パスの空間曲線と時間曲線からオブジェクトの位置を評価し、アニメーションを描画する。
+ */
+
 import type p5 from 'p5';
 import type { Path, Vector } from '../types';
 import { bezierCurve } from '../utils/math';

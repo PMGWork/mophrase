@@ -1,8 +1,13 @@
+/**
+ * ペンツール。
+ * マウスドラッグで手書き入力を受け付け、フィッティングでベジエパスに変換する。
+ */
+
 import type p5 from 'p5';
 import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
 import { drawPoints } from '../../utils/draw';
-import { isInRect } from '../../utils/p5Helpers';
+import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
 
 type DraftPath = {

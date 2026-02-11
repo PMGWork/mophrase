@@ -1,6 +1,12 @@
+/**
+ * モディファイアの作成・適用・更新・削除。
+ * LLM提案による形状変形をオフセットとして管理し、強度で制御する。
+ */
+
 import type p5 from 'p5';
 import type { Modifier, SelectionRange, Vector } from '../types';
 
+// モディファイアを適用して変形後の点列を取得
 export function applyModifiers(
   curves: Vector[][],
   modifiers: Modifier[] | undefined,
@@ -38,7 +44,8 @@ type CreateModifierOptions = {
   extendBoundary?: boolean;
 };
 
-export function createModifier(
+// 共通のモディファイア作成ロジック
+function createModifier(
   originalCurves: Vector[][],
   modifiedCurves: Vector[][],
   name: string,

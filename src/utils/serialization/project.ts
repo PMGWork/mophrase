@@ -1,3 +1,8 @@
+/**
+ * プロジェクト全体の保存と復元。
+ * パス・モディファイア・設定を含む ProjectData を JSON 形式で入出力する。
+ */
+
 import type p5 from 'p5';
 import type {
   Keyframe,

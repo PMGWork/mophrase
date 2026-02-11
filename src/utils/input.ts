@@ -1,3 +1,7 @@
+/**
+ * p5.js のマウス入力判定やヒットテストのヘルパー。
+ */
+
 // p5.jsのmouseButtonの型
 type MouseButtonState = {
   left?: boolean;
