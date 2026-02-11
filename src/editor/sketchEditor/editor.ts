@@ -20,7 +20,7 @@ import type {
   ToolKind,
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
-import { drawSketchPath } from '../../utils/draw';
+import { drawSketchPath } from '../../utils/rendering';
 import { isLeftMouseButton } from '../../utils/input';
 import { deserializePaths } from '../../utils/serialization/project';
 import { PenTool } from './penTool';

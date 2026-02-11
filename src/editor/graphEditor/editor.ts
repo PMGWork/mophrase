@@ -7,14 +7,14 @@ import p5 from 'p5';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
-import { drawBezierCurve, drawControls } from '../../utils/draw';
+import { drawBezierCurve, drawControls } from '../../utils/rendering';
 import {
   buildGraphCurves,
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../../utils/keyframes';
 import { applyModifiers } from '../../utils/modifier';
-import { isLeftMouseButton } from '../../utils/p5Helpers';
+import { isLeftMouseButton } from '../../utils/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
 // グラフエディタ

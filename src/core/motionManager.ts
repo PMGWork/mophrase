@@ -5,7 +5,7 @@
 
 import type p5 from 'p5';
 import type { Path, Vector } from '../types';
-import { bezierCurve } from '../utils/math';
+import { bezierCurve } from '../utils/bezier';
 import {
   buildGraphCurves,
   buildSketchCurves,

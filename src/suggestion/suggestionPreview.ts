@@ -7,7 +7,7 @@ import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
 import type { Path, SelectionRange, Suggestion } from '../types';
-import { drawBezierCurve } from '../utils/draw';
+import { drawBezierCurve } from '../utils/rendering';
 import {
   buildGraphCurves,
   buildSketchCurves,

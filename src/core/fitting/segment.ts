@@ -9,7 +9,7 @@ import {
   bezierCurve,
   refineParameter,
   unitTangent,
-} from '../../utils/math';
+} from '../../utils/bezier';
 
 // 範囲情報
 export interface Range {

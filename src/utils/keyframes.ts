@@ -4,7 +4,7 @@
  */
 
 import type { Keyframe, Vector } from '../types';
-import { curveLength } from './math';
+import { curveLength } from './bezier';
 
 // キーフレームから空間ベジェ曲線を生成
 export function buildSketchCurves(keyframes: Keyframe[]): Vector[][] {

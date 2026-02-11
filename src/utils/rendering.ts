@@ -6,7 +6,7 @@
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import type { Path, Vector } from '../types';
-import { bezierCurve } from './math';
+import { bezierCurve } from './bezier';
 import { applyModifiers } from './modifier';
 import { buildSketchCurves } from './keyframes';
 
