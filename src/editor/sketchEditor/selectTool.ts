@@ -6,7 +6,7 @@
 import type p5 from 'p5';
 import { BEZIER_T_STEP, OBJECT_SIZE } from '../../constants';
 import type { MarqueeRect, Path } from '../../types';
-import { bezierCurve } from '../../utils/math';
+import { bezierCurve } from '../../utils/bezier';
 import { buildSketchCurves } from '../../utils/keyframes';
 import { applyModifiers } from '../../utils/modifier';
 import type { ToolContext } from './types';

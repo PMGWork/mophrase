@@ -5,7 +5,7 @@
  */
 
 import type { FitErrorResult, Vector } from '../../types';
-import { splitTangent } from '../../utils/math';
+import { splitTangent } from '../../utils/bezier';
 import {
   computeEndTangents,
   computeMaxError,

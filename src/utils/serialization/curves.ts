@@ -14,7 +14,7 @@ import type {
   Vector,
 } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
-import { roundNormalizedValue } from '../math';
+import { roundNormalizedValue } from '../bezier';
 
 // p5.Vector -> キーフレーム座標（正規化）
 function serializePosition(

@@ -6,7 +6,7 @@
 import type p5 from 'p5';
 import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
-import { drawPoints } from '../../utils/draw';
+import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
 
