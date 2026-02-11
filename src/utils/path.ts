@@ -22,7 +22,7 @@ export function slicePath(path: Path, range?: SelectionRange): Path {
   return { ...path, keyframes };
 }
 
-// 選択範囲に基づいてパスのキーフレームと進捗情報を取得
+// 選択範囲に基づいてパスのキーフレームと進行度情報を取得
 export function getSelectionReference(
   path: Path,
   range: SelectionRange | undefined,
