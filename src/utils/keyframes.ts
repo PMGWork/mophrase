@@ -4,9 +4,10 @@
  */
 
 import type { Keyframe, Vector } from '../types';
-import { curveLength } from './bezier';
+import { curveLength, splitCubicBezier } from './bezier';
 
-// キーフレームから空間ベジェ曲線を生成
+// #region 共通利用
+// キーフレームからベジェ曲線を生成
 export function buildSketchCurves(keyframes: Keyframe[]): Vector[][] {
   if (keyframes.length < 2) return [];
 
@@ -25,8 +26,10 @@ export function buildSketchCurves(keyframes: Keyframe[]): Vector[][] {
 
   return curves;
 }
+// #endregion
 
-// 空間曲線からキーフレームの進行度（0-1）を算出
+// #region イージング曲線の利用
+// キーフレーム配列と対応する曲線群から進行度を計算
 export function computeKeyframeProgress(
   keyframes: Keyframe[],
   curves: Vector[][],
@@ -48,7 +51,7 @@ export function computeKeyframeProgress(
   return progress;
 }
 
-// キーフレームから時間カーブ（タイミング）を生成
+// キーフレーム配列と進行度からグラフ用ベジェ曲線を生成
 export function buildGraphCurves(
   keyframes: Keyframe[],
   progress: number[],
@@ -82,3 +85,110 @@ export function buildGraphCurves(
 
   return curves;
 }
+// #endregion
+
+// #region セグメント分割
+type SketchSegmentSplitResult = {
+  point: Vector;
+  startSketchOut?: Vector;
+  endSketchIn?: Vector;
+  insertedSketchIn?: Vector;
+  insertedSketchOut?: Vector;
+};
+
+// 入力検証
+function assertSplitSegmentInput(
+  keyframes: Keyframe[],
+  segmentIndex: number,
+  t: number,
+): void {
+  if (!Number.isFinite(t) || t <= 0 || t >= 1) {
+    throw new RangeError('split parameter t must be within (0, 1)');
+  }
+  if (keyframes.length < 2) {
+    throw new Error('At least 2 keyframes are required to split a segment');
+  }
+  if (segmentIndex < 0 || segmentIndex >= keyframes.length - 1) {
+    throw new RangeError('segmentIndex is out of range');
+  }
+}
+
+// セグメント分割のジオメトリ計算
+function splitSketchSegmentGeometry(
+  start: Keyframe,
+  end: Keyframe,
+  t: number,
+): SketchSegmentSplitResult {
+  const p0 = start.position.copy();
+  const p3 = end.position.copy();
+  const p1 = p0.copy().add(start.sketchOut ?? p0.copy().set(0, 0));
+  const p2 = p3.copy().add(end.sketchIn ?? p3.copy().set(0, 0));
+  const { left, right, point } = splitCubicBezier([p0, p1, p2, p3], t);
+
+  return {
+    point: point.copy(),
+    startSketchOut: normalizeHandle(left[1].copy().sub(left[0])),
+    endSketchIn: normalizeHandle(right[2].copy().sub(right[3])),
+    insertedSketchIn: normalizeHandle(left[2].copy().sub(left[3])),
+    insertedSketchOut: normalizeHandle(right[1].copy().sub(right[0])),
+  };
+}
+
+// キーフレーム配列へ分割キーフレームを挿入
+function insertSplitKeyframe(
+  keyframes: Keyframe[],
+  segmentIndex: number,
+  t: number,
+  split: SketchSegmentSplitResult,
+): Keyframe[] {
+  const start = keyframes[segmentIndex];
+  const end = keyframes[segmentIndex + 1];
+
+  start.sketchOut = split.startSketchOut;
+  end.sketchIn = split.endSketchIn;
+
+  const inserted: Keyframe = {
+    time: start.time + (end.time - start.time) * t,
+    position: split.point.copy(),
+    sketchIn: split.insertedSketchIn,
+    sketchOut: split.insertedSketchOut,
+  };
+
+  keyframes.splice(segmentIndex + 1, 0, inserted);
+  return keyframes;
+}
+
+// セグメント分割のメイン関数
+export function splitKeyframeSegment(
+  keyframes: Keyframe[],
+  segmentIndex: number,
+  t: number,
+): Keyframe[] {
+  assertSplitSegmentInput(keyframes, segmentIndex, t);
+  const next = keyframes.map(cloneKeyframe);
+  const start = next[segmentIndex];
+  const end = next[segmentIndex + 1];
+  const split = splitSketchSegmentGeometry(start, end, t);
+  return insertSplitKeyframe(next, segmentIndex, t, split);
+}
+// #endregion
+
+// #region 内部ヘルパー
+// ハンドルベクトルの正規化（ゼロベクトルはundefinedに変換）
+function normalizeHandle(vec: Vector): Vector | undefined {
+  if (vec.magSq() <= 1e-6 * 1e-6) return undefined;
+  return vec;
+}
+
+// キーフレームのクローン作成
+function cloneKeyframe(keyframe: Keyframe): Keyframe {
+  return {
+    ...keyframe,
+    position: keyframe.position.copy(),
+    sketchIn: keyframe.sketchIn?.copy(),
+    sketchOut: keyframe.sketchOut?.copy(),
+    graphIn: keyframe.graphIn?.copy(),
+    graphOut: keyframe.graphOut?.copy(),
+  };
+}
+// #endregion
