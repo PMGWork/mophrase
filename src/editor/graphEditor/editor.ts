@@ -13,7 +13,7 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../../utils/keyframes';
-import { applyModifiers } from '../../utils/modifier';
+import { applySketchModifiers, applyGraphModifiers } from '../../utils/modifier';
 import { isLeftMouseButton } from '../../utils/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
@@ -294,8 +294,9 @@ export class GraphEditor {
 
     // 空間カーブを構築（Modifier 適用）
     const originalSketchCurves = buildSketchCurves(this.activePath.keyframes);
-    const sketchCurves = applyModifiers(
+    const sketchCurves = applySketchModifiers(
       originalSketchCurves,
+      this.activePath.keyframes,
       this.activePath.sketchModifiers,
     );
 
@@ -309,8 +310,9 @@ export class GraphEditor {
     const curves = buildGraphCurves(this.activePath.keyframes, progress);
 
     // Modifier 適用後の時間カーブ
-    const effectiveCurves = applyModifiers(
+    const effectiveCurves = applyGraphModifiers(
       curves,
+      this.activePath.keyframes,
       this.activePath.graphModifiers,
     );
 

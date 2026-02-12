@@ -1,6 +1,6 @@
 # MoPhrase AI用語集
 
-このドキュメントは、MoPhrase に関わる用語を AI が一貫して解釈するための共通辞書です。  
+このドキュメントは、MoPhrase に関わる用語を AI が一貫して解釈するための共通辞書です。
 
 ## 1. 目的
 
@@ -23,14 +23,16 @@
 
 | 用語 | 型/場所 | 定義 |
 | --- | --- | --- |
-| `Keyframe` | `src/types.ts` | 時刻 `time` と位置 `position`、およびハンドルを持つ節点 |
+| `Keyframe` | `src/types.ts` | 時刻 `time` と位置 `position`、およびハンドルを持つ節点。配列インデックスで識別 |
 | `sketchIn` / `sketchOut` | `Keyframe` | 空間ベジェの入出ハンドル（アンカー相対ベクトル） |
 | `graphIn` / `graphOut` | `Keyframe` | 時間カーブの入出ハンドル（時間-進行度平面のベクトル） |
 | `SerializedKeyframe` | `src/types.ts` | LLM 通信用の正規化キーフレーム |
 | `SerializedHandle` | `src/types.ts` | `angle` と `dist` で表現される極座標ハンドル |
 | `SerializedPath` | `src/types.ts` | `keyframes` + `bbox` の LLM 通信用パス |
 | `Suggestion` | `src/types.ts` | UI表示用の提案（`id`, `title`, `path`） |
-| `Modifier` | `src/types.ts` | 適用強度付きの差分編集データ |
+| `Modifier` | `src/types.ts` | `SketchModifier \| GraphModifier` の共通型エイリアス |
+| `SketchModifier` | `src/types.ts` | 空間ベジェ差分をキーフレーム単位で保持する編集単位 |
+| `GraphModifier` | `src/types.ts` | 時間カーブ差分をキーフレーム単位で保持する編集単位 |
 
 ## 4. 座標・正規化ルール
 

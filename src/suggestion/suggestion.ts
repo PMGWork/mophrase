@@ -7,9 +7,10 @@ import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
 import type {
-  Modifier,
+  GraphModifier,
   Path,
   SelectionRange,
+  SketchModifier,
   Suggestion,
   SuggestionStatus,
 } from '../types';
@@ -286,6 +287,7 @@ export class SuggestionManager {
 
     // SketchModifier を作成
     const sketchModifier = createSketchModifier(
+      this.targetPath.keyframes,
       originalCurves,
       llmCurves,
       modifierName,
@@ -294,9 +296,10 @@ export class SuggestionManager {
     sketchModifier.strength = strength;
 
     // GraphModifier を作成（時間カーブの差分がある場合のみ）
-    let graphModifier: Modifier | null = null;
+    let graphModifier: GraphModifier | null = null;
     if (llmGraphCurves.length > 0) {
       graphModifier = createGraphModifier(
+        this.targetPath.keyframes,
         originalGraphCurves,
         llmGraphCurves,
         modifierName,
@@ -318,8 +321,8 @@ export class SuggestionManager {
   // パスにmodifierを追加
   private addModifiersToPath(
     path: Path,
-    sketchModifier: Modifier,
-    graphModifier: Modifier | null,
+    sketchModifier: SketchModifier,
+    graphModifier: GraphModifier | null,
   ): void {
     if (!path.sketchModifiers) {
       path.sketchModifiers = [];

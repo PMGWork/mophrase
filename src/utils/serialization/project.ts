@@ -5,14 +5,17 @@
 
 import type p5 from 'p5';
 import type {
+  GraphKeyframeDelta,
+  GraphModifier,
   Keyframe,
-  Modifier,
   Path,
   ProjectData,
   ProjectSettings,
   SerializedKeyframe,
   SerializedPath,
   SerializedProjectPath,
+  SketchKeyframeDelta,
+  SketchModifier,
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
@@ -43,8 +46,8 @@ export function serializeProject(
       id: path.id,
       startTime,
       duration,
-      sketchModifiers: sanitizeModifiers(path.sketchModifiers),
-      graphModifiers: sanitizeModifiers(path.graphModifiers),
+      sketchModifiers: sanitizeSketchModifiers(path.sketchModifiers),
+      graphModifiers: sanitizeGraphModifiers(path.graphModifiers),
     };
   });
 
@@ -81,33 +84,77 @@ export function deserializeProject(data: unknown): {
 
 // #region プライベート関数
 
-// unknown -> Modifier | null
-function parseModifier(value: unknown): Modifier | null {
+type ModifierMeta = {
+  id: string;
+  name: string;
+  strength: number;
+};
+
+type DeltaMapper<TDelta> = (
+  raw: Record<string, unknown>,
+  delta: TDelta,
+) => void;
+
+// unknown -> SketchModifier | null（新フォーマット対応）
+function parseSketchModifier(
+  value: unknown,
+  numKeyframes: number,
+): SketchModifier | null {
   if (!isRecord(value)) return null;
-  if (!Array.isArray(value.offsets)) return null;
+  const meta = parseModifierMeta(value);
 
-  const offsets: ({ dx: number; dy: number } | null)[][] = [];
-  for (const curve of value.offsets) {
-    if (!Array.isArray(curve)) return null;
-
-    const offsetCurve: ({ dx: number; dy: number } | null)[] = [];
-    for (const point of curve) {
-      if (point === null) {
-        offsetCurve.push(null);
-        continue;
-      }
-      if (
-        !isRecord(point) ||
-        !isFiniteNumber(point.dx) ||
-        !isFiniteNumber(point.dy)
-      ) {
-        return null;
-      }
-      offsetCurve.push({ dx: point.dx, dy: point.dy });
-    }
-    offsets.push(offsetCurve);
+  // 新フォーマット（deltas）
+  if (Array.isArray(value.deltas)) {
+    return {
+      ...meta,
+      deltas: parseModifierDeltas({
+        rawDeltas: value.deltas,
+        numKeyframes,
+        mapDelta: mapSketchDelta,
+      }),
+    };
   }
+  return null;
+}
 
+// unknown -> GraphModifier | null（新フォーマット対応）
+function parseGraphModifier(
+  value: unknown,
+  numKeyframes: number,
+): GraphModifier | null {
+  if (!isRecord(value)) return null;
+  const meta = parseModifierMeta(value);
+
+  // 新フォーマット（deltas）
+  if (Array.isArray(value.deltas)) {
+    return {
+      ...meta,
+      deltas: parseModifierDeltas({
+        rawDeltas: value.deltas,
+        numKeyframes,
+        mapDelta: mapGraphDelta,
+      }),
+    };
+  }
+  return null;
+}
+
+// シリアライズ用: SketchModifier[] をサニタイズ
+function sanitizeSketchModifiers(
+  modifiers: SketchModifier[] | undefined,
+): SketchModifier[] | undefined {
+  return sanitizeModifierList(modifiers, sanitizeSketchDelta);
+}
+
+// シリアライズ用: GraphModifier[] をサニタイズ
+function sanitizeGraphModifiers(
+  modifiers: GraphModifier[] | undefined,
+): GraphModifier[] | undefined {
+  return sanitizeModifierList(modifiers, sanitizeGraphDelta);
+}
+
+// モディファイア共通メタ情報の取得
+function parseModifierMeta(value: Record<string, unknown>): ModifierMeta {
   return {
     id:
       typeof value.id === 'string' && value.id.trim() !== ''
@@ -115,17 +162,108 @@ function parseModifier(value: unknown): Modifier | null {
         : crypto.randomUUID(),
     name: typeof value.name === 'string' ? value.name : 'modifier',
     strength: isFiniteNumber(value.strength) ? value.strength : 1,
-    offsets,
   };
 }
 
-// Modifier[] | undefined をサニタイズ
-function sanitizeModifiers(value: unknown): Modifier[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const modifiers = value
-    .map((modifier) => parseModifier(modifier))
-    .filter((modifier): modifier is Modifier => modifier !== null);
-  return modifiers.length > 0 ? modifiers : undefined;
+// 新フォーマットの deltas（密配列）を共通パース
+function parseModifierDeltas<TDelta extends object>({
+  rawDeltas,
+  numKeyframes,
+  mapDelta,
+}: {
+  rawDeltas: unknown[];
+  numKeyframes: number;
+  mapDelta: DeltaMapper<TDelta>;
+}): TDelta[] {
+  const createDelta = (): TDelta => ({}) as TDelta;
+
+  const denseDeltas = rawDeltas.map((raw) => {
+    const delta = createDelta();
+    if (isRecord(raw)) mapDelta(raw, delta);
+    return delta;
+  });
+
+  return fitDeltaLength(denseDeltas, numKeyframes, createDelta);
+}
+
+// デルタ配列を numKeyframes に揃える（不足は空オブジェクトで補完）
+function fitDeltaLength<TDelta>(
+  deltas: TDelta[],
+  numKeyframes: number,
+  createDelta: () => TDelta,
+): TDelta[] {
+  const normalized = deltas.slice(0, numKeyframes);
+  while (normalized.length < numKeyframes) normalized.push(createDelta());
+  return normalized;
+}
+
+function mapSketchDelta(
+  raw: Record<string, unknown>,
+  delta: SketchKeyframeDelta,
+): void {
+  if (isVector2(raw.positionDelta))
+    delta.positionDelta = toVector2(raw.positionDelta);
+  if (isVector2(raw.sketchInDelta))
+    delta.sketchInDelta = toVector2(raw.sketchInDelta);
+  if (isVector2(raw.sketchOutDelta))
+    delta.sketchOutDelta = toVector2(raw.sketchOutDelta);
+}
+
+function mapGraphDelta(
+  raw: Record<string, unknown>,
+  delta: GraphKeyframeDelta,
+): void {
+  if (isVector2(raw.graphInDelta))
+    delta.graphInDelta = toVector2(raw.graphInDelta);
+  if (isVector2(raw.graphOutDelta))
+    delta.graphOutDelta = toVector2(raw.graphOutDelta);
+}
+
+function sanitizeSketchDelta(delta: SketchKeyframeDelta): SketchKeyframeDelta {
+  return {
+    ...delta,
+    positionDelta: delta.positionDelta
+      ? sanitizeVector2(delta.positionDelta)
+      : undefined,
+    sketchInDelta: delta.sketchInDelta
+      ? sanitizeVector2(delta.sketchInDelta)
+      : undefined,
+    sketchOutDelta: delta.sketchOutDelta
+      ? sanitizeVector2(delta.sketchOutDelta)
+      : undefined,
+  };
+}
+
+function sanitizeGraphDelta(delta: GraphKeyframeDelta): GraphKeyframeDelta {
+  return {
+    ...delta,
+    graphInDelta: delta.graphInDelta
+      ? sanitizeVector2(delta.graphInDelta)
+      : undefined,
+    graphOutDelta: delta.graphOutDelta
+      ? sanitizeVector2(delta.graphOutDelta)
+      : undefined,
+  };
+}
+
+function sanitizeModifierList<
+  TDelta extends object,
+  TModifier extends { deltas: TDelta[] },
+>(
+  modifiers: TModifier[] | undefined,
+  sanitizeDelta: (delta: TDelta) => TDelta,
+): TModifier[] | undefined {
+  if (!modifiers || modifiers.length === 0) return undefined;
+  const result = modifiers
+    .filter((modifier) => modifier.deltas.length > 0)
+    .map(
+      (modifier) =>
+        ({
+          ...modifier,
+          deltas: modifier.deltas.map((delta) => sanitizeDelta(delta)),
+        }) as TModifier,
+    );
+  return result.length > 0 ? result : undefined;
 }
 
 // unknown -> SerializedProjectPath
@@ -142,8 +280,13 @@ function toSerializedProjectPath(value: unknown): SerializedProjectPath {
     startTime: isFiniteNumber(obj.startTime) ? obj.startTime : 0,
     duration:
       isFiniteNumber(obj.duration) && obj.duration > 0 ? obj.duration : 1,
-    sketchModifiers: sanitizeModifiers(obj.sketchModifiers),
-    graphModifiers: sanitizeModifiers(obj.graphModifiers),
+    // モディファイアは deserializePaths でキーフレーム情報ありでパースする
+    sketchModifiers: Array.isArray(obj.sketchModifiers)
+      ? (obj.sketchModifiers as SketchModifier[])
+      : undefined,
+    graphModifiers: Array.isArray(obj.graphModifiers)
+      ? (obj.graphModifiers as GraphModifier[])
+      : undefined,
   };
 }
 
@@ -248,8 +391,14 @@ export function deserializePaths(
       keyframes,
       startTime: serializedPath.startTime,
       duration: serializedPath.duration,
-      sketchModifiers: serializedPath.sketchModifiers,
-      graphModifiers: serializedPath.graphModifiers,
+      sketchModifiers: parseSketchModifiers(
+        serializedPath.sketchModifiers,
+        keyframes.length,
+      ),
+      graphModifiers: parseGraphModifiers(
+        serializedPath.graphModifiers,
+        keyframes.length,
+      ),
     };
   });
 }
@@ -304,4 +453,51 @@ function isSerializedPath(value: unknown): value is SerializedPath {
     Math.abs(bbox.width as number) > 1e-6 &&
     Math.abs(bbox.height as number) > 1e-6
   );
+}
+
+// { x, y } かどうかをチェック
+function isVector2(value: unknown): value is Record<string, number> {
+  return (
+    isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y)
+  );
+}
+
+// unknown -> { x, y }
+function toVector2(value: Record<string, number>): { x: number; y: number } {
+  return { x: value.x, y: value.y };
+}
+
+// { x, y } をサニタイズ（NaN/Infinity 防止）
+function sanitizeVector2(
+  v: { x: number; y: number },
+): { x: number; y: number } {
+  return {
+    x: Number.isFinite(v.x) ? v.x : 0,
+    y: Number.isFinite(v.y) ? v.y : 0,
+  };
+}
+
+// デシリアライズ用: 生データからスケッチモディファイアをパース
+function parseSketchModifiers(
+  raw: unknown,
+  numKeyframes: number,
+): SketchModifier[] | undefined {
+  return parseModifierList(raw, (v) => parseSketchModifier(v, numKeyframes));
+}
+
+// デシリアライズ用: 生データからグラフモディファイアをパース
+function parseGraphModifiers(
+  raw: unknown,
+  numKeyframes: number,
+): GraphModifier[] | undefined {
+  return parseModifierList(raw, (v) => parseGraphModifier(v, numKeyframes));
+}
+
+function parseModifierList<T>(
+  raw: unknown,
+  parseItem: (value: unknown) => T | null,
+): T[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const result = raw.map(parseItem).filter((v): v is T => v !== null);
+  return result.length > 0 ? result : undefined;
 }

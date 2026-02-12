@@ -3,12 +3,13 @@
  * スケッチフィッティング→タイムスタンプ正規化→グラフフィッティングの一連のパイプラインを実行する。
  */
 
-import type { FitErrorResult, Keyframe, Vector } from '../../types';
+import type p5 from 'p5';
+import type { FitErrorResult, Keyframe } from '../../types';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 
 // キーフレームを生成
 export function generateKeyframes(
-  points: Vector[],
+  points: p5.Vector[],
   timestamps: number[],
   errorTol: number,
   coarseErrTol: number,
@@ -73,7 +74,7 @@ export function generateKeyframes(
 
   // 4. グラフをフィッティング
   // スケッチ由来の分割点のみで曲線を分割し、最大誤差の分割点から確定する
-  const graphPoints: Vector[] = [];
+  const graphPoints: p5.Vector[] = [];
   for (let i = 0; i < points.length; i++) {
     const t = timeNorm[i] ?? 0;
     const v = progressNorm[i] ?? 0;
@@ -114,7 +115,7 @@ export function generateKeyframes(
 }
 
 // 累積距離を計算
-function cumulativeDistances(points: Vector[]): {
+function cumulativeDistances(points: p5.Vector[]): {
   distances: number[];
   totalDistance: number;
 } {

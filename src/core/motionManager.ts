@@ -4,21 +4,21 @@
  */
 
 import type p5 from 'p5';
-import type { Path, Vector } from '../types';
+import type { Path } from '../types';
 import { bezierCurve } from '../utils/bezier';
 import {
   buildGraphCurves,
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applyModifiers } from '../utils/modifier';
+import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
 
 // 個別パスのアニメーション状態
 type PathAnimationState = {
   path: Path;
   color: string;
-  spatialCurves: Vector[][];
-  graphCurves: Vector[][];
+  spatialCurves: p5.Vector[][];
+  graphCurves: p5.Vector[][];
   keyframeProgress: number[];
   startTime: number; // ミリ秒
   duration: number; // ミリ秒
@@ -153,8 +153,9 @@ export class MotionManager {
     // 再生していない場合は、設定されたパスの開始位置を表示
     if (this.staticPath && this.staticPath.keyframes.length > 0) {
       const originalCurves = buildSketchCurves(this.staticPath.keyframes);
-      const effectiveCurves = applyModifiers(
+      const effectiveCurves = applySketchModifiers(
         originalCurves,
+        this.staticPath.keyframes,
         this.staticPath.sketchModifiers,
         this.p,
       );
@@ -202,8 +203,9 @@ export class MotionManager {
 
       // 空間カーブと進行度を計算
       const originalCurves = buildSketchCurves(path.keyframes);
-      const spatialCurves = applyModifiers(
+      const spatialCurves = applySketchModifiers(
         originalCurves,
+        path.keyframes,
         path.sketchModifiers,
         this.p,
       );
@@ -217,8 +219,9 @@ export class MotionManager {
         path.keyframes,
         keyframeProgress,
       );
-      const graphCurves = applyModifiers(
+      const graphCurves = applyGraphModifiers(
         baseGraphCurves,
+        path.keyframes,
         path.graphModifiers,
         this.p,
       );
@@ -241,7 +244,7 @@ export class MotionManager {
   private evaluatePathPosition(
     state: PathAnimationState,
     elapsedTime: number,
-  ): Vector {
+  ): p5.Vector {
     const {
       path,
       spatialCurves,
@@ -278,7 +281,7 @@ export class MotionManager {
   }
 
   // オブジェクトを描画
-  private drawObject(position: Vector, color: string): void {
+  private drawObject(position: p5.Vector, color: string): void {
     this.p.push();
     this.p.fill(color);
     this.p.noStroke();
@@ -287,7 +290,7 @@ export class MotionManager {
   }
 
   // X(u) = targetX となる u を求める
-  private solveBezierX(curve: Vector[], targetX: number): number {
+  private solveBezierX(curve: p5.Vector[], targetX: number): number {
     let low = 0;
     let high = 1;
     let u = 0;
@@ -308,10 +311,10 @@ export class MotionManager {
   private evaluatePosition(
     time: number,
     keyframes: Path['keyframes'],
-    spatialCurves: Vector[][],
-    graphCurves: Vector[][],
+    spatialCurves: p5.Vector[][],
+    graphCurves: p5.Vector[][],
     keyframeProgress: number[],
-  ): Vector {
+  ): p5.Vector {
     if (keyframes.length === 0) {
       return this.p.createVector(0, 0);
     }

@@ -3,7 +3,7 @@
  * バーンスタイン多項式、曲線評価、微分、パラメータ精緻化などを提供する。
  */
 
-import type { Vector } from '../types';
+import type p5 from 'p5';
 
 // #region 基礎数学
 // バーンスタイン多項式
@@ -28,12 +28,12 @@ export function binomial(n: number, k: number): number {
 // #region 共通利用
 // 3次ベジェ曲線
 export function bezierCurve(
-  v0: Vector,
-  v1: Vector,
-  v2: Vector,
-  v3: Vector,
+  v0: p5.Vector,
+  v1: p5.Vector,
+  v2: p5.Vector,
+  v3: p5.Vector,
   t: number,
-): Vector {
+): p5.Vector {
   const point = v0.copy().mult(0);
   point.add(v0.copy().mult(bernstein(0, 3, t)));
   point.add(v1.copy().mult(bernstein(1, 3, t)));
@@ -50,7 +50,7 @@ export function roundNormalizedValue(value: number): number {
 }
 
 // 曲線の長さ
-export function curveLength(c: Vector[]): number {
+export function curveLength(c: p5.Vector[]): number {
   const chord = c[0].dist(c[3]);
   const controlNetLength = c[0].dist(c[1]) + c[1].dist(c[2]) + c[2].dist(c[3]);
   return (chord + controlNetLength) / 2;
@@ -59,7 +59,7 @@ export function curveLength(c: Vector[]): number {
 
 // #region Fitting
 // 単位接ベクトル
-export function unitTangent(d0: Vector, d1: Vector): Vector {
+export function unitTangent(d0: p5.Vector, d1: p5.Vector): p5.Vector {
   const tangent = d1.copy().sub(d0);
   tangent.normalize();
   return tangent;
@@ -67,12 +67,12 @@ export function unitTangent(d0: Vector, d1: Vector): Vector {
 
 // 3次ベジェ曲線の1階微分
 export function bezierDerivative(
-  v0: Vector,
-  v1: Vector,
-  v2: Vector,
-  v3: Vector,
+  v0: p5.Vector,
+  v1: p5.Vector,
+  v2: p5.Vector,
+  v3: p5.Vector,
   t: number,
-): Vector {
+): p5.Vector {
   const d = v0.copy().mult(0);
   d.add(
     v1
@@ -97,12 +97,12 @@ export function bezierDerivative(
 
 // 3次ベジェ曲線の2階微分
 export function bezierSecondDerivative(
-  v0: Vector,
-  v1: Vector,
-  v2: Vector,
-  v3: Vector,
+  v0: p5.Vector,
+  v1: p5.Vector,
+  v2: p5.Vector,
+  v3: p5.Vector,
   t: number,
-): Vector {
+): p5.Vector {
   const d2 = v0.copy().mult(0);
   const term1 = v2.copy().sub(v1.copy().mult(2)).add(v0);
   const term2 = v3.copy().sub(v2.copy().mult(2)).add(v1);
@@ -113,8 +113,8 @@ export function bezierSecondDerivative(
 
 // ニュートン法によるパラメータの精密化
 export function refineParameter(
-  control: Vector[],
-  point: Vector,
+  control: p5.Vector[],
+  point: p5.Vector,
   u: number,
 ): number {
   const q = bezierCurve(control[0], control[1], control[2], control[3], u);
@@ -151,9 +151,9 @@ export function refineParameter(
 
 // 分割点における接ベクトルの計算
 export function splitTangent(
-  points: Vector[],
+  points: p5.Vector[],
   splitIndex: number,
-): Vector | null {
+): p5.Vector | null {
   const n = points.length;
   if (n < 3) return null;
 
@@ -172,7 +172,7 @@ export function splitTangent(
 
 // #region 曲線分割
 // ベジェ曲線をt位置で分割する関数
-function assertSplitInput(points: readonly Vector[], t: number): void {
+function assertSplitInput(points: readonly p5.Vector[], t: number): void {
   if (!Number.isFinite(t) || t < 0 || t > 1) {
     throw new RangeError('split parameter t must be within [0, 1]');
   }
@@ -182,7 +182,7 @@ function assertSplitInput(points: readonly Vector[], t: number): void {
 }
 
 // ベクトルの線形補間
-function lerpVector(a: Vector, b: Vector, t: number): Vector {
+function lerpVector(a: p5.Vector, b: p5.Vector, t: number): p5.Vector {
   return a
     .copy()
     .mult(1 - t)
@@ -191,13 +191,13 @@ function lerpVector(a: Vector, b: Vector, t: number): Vector {
 
 // de Casteljauでn次ベジェをt位置で2つに分割する
 export function splitBezier(
-  points: readonly Vector[],
+  points: readonly p5.Vector[],
   t: number,
-): { left: Vector[]; right: Vector[]; point: Vector } {
+): { left: p5.Vector[]; right: p5.Vector[]; point: p5.Vector } {
   assertSplitInput(points, t);
 
-  const left: Vector[] = [];
-  const right: Vector[] = [];
+  const left: p5.Vector[] = [];
+  const right: p5.Vector[] = [];
   let current = points.map((p) => p.copy());
 
   while (true) {
@@ -206,7 +206,7 @@ export function splitBezier(
 
     if (current.length === 1) break;
 
-    const next: Vector[] = [];
+    const next: p5.Vector[] = [];
     for (let i = 0; i < current.length - 1; i++) {
       next.push(lerpVector(current[i], current[i + 1], t));
     }
@@ -221,12 +221,12 @@ export function splitBezier(
 
 // 3次ベジェ専用のラッパー
 export function splitCubicBezier(
-  curve: readonly Vector[],
+  curve: readonly p5.Vector[],
   t: number,
 ): {
-  left: [Vector, Vector, Vector, Vector];
-  right: [Vector, Vector, Vector, Vector];
-  point: Vector;
+  left: [p5.Vector, p5.Vector, p5.Vector, p5.Vector];
+  right: [p5.Vector, p5.Vector, p5.Vector, p5.Vector];
+  point: p5.Vector;
 } {
   if (curve.length !== 4) {
     throw new Error('Cubic Bezier split requires exactly 4 control points');
@@ -234,8 +234,8 @@ export function splitCubicBezier(
 
   const { left, right, point } = splitBezier(curve, t);
   return {
-    left: left as [Vector, Vector, Vector, Vector],
-    right: right as [Vector, Vector, Vector, Vector],
+    left: left as [p5.Vector, p5.Vector, p5.Vector, p5.Vector],
+    right: right as [p5.Vector, p5.Vector, p5.Vector, p5.Vector],
     point,
   };
 }

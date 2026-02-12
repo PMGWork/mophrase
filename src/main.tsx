@@ -95,11 +95,11 @@ const App = () => {
     (modifierId: string, type: 'sketch' | 'graph', value: number) => {
       applyPathUpdate((path) => {
         const strength = clamp(value / 100, 0, 2);
-        updateModifierStrength(
-          type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
-          modifierId,
-          strength,
-        );
+        if (type === 'sketch') {
+          updateModifierStrength(path.sketchModifiers, modifierId, strength);
+        } else {
+          updateModifierStrength(path.graphModifiers, modifierId, strength);
+        }
       });
     },
     [applyPathUpdate],
@@ -109,22 +109,24 @@ const App = () => {
   const handleModifierRemove = useCallback(
     (modifierId: string, type: 'sketch' | 'graph') => {
       applyPathUpdate((path) => {
-        const modifiers =
-          type === 'sketch' ? path.sketchModifiers : path.graphModifiers;
-        const target = modifiers?.find(
-          (modifier) => modifier.id === modifierId,
-        );
-        if (target) {
-          target.strength = 0;
-        }
-        const next = removeModifier(
-          type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
-          modifierId,
-        );
         if (type === 'sketch') {
-          path.sketchModifiers = next;
+          const target = path.sketchModifiers?.find(
+            (modifier) => modifier.id === modifierId,
+          );
+          if (target) target.strength = 0;
+          path.sketchModifiers = removeModifier(
+            path.sketchModifiers,
+            modifierId,
+          );
         } else {
-          path.graphModifiers = next;
+          const target = path.graphModifiers?.find(
+            (modifier) => modifier.id === modifierId,
+          );
+          if (target) target.strength = 0;
+          path.graphModifiers = removeModifier(
+            path.graphModifiers,
+            modifierId,
+          );
         }
       });
     },

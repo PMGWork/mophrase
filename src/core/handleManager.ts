@@ -3,6 +3,7 @@
  * アンカーと制御点の操作を抽象化し、スケッチエディタに提供する。
  */
 
+import type p5 from 'p5';
 import { HANDLE_RADIUS } from '../constants';
 import type {
   HandleDragMode,
@@ -11,10 +12,9 @@ import type {
   SelectionRange,
   HandleType,
   Path,
-  Vector,
 } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
-import { applyModifiers } from '../utils/modifier';
+import { applySketchModifiers } from '../utils/modifier';
 
 // ハンドル位置情報（曲線インデックスと制御点インデックス）
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
@@ -25,16 +25,16 @@ export class HandleManager {
   private selectedHandles: HandleSelection[] = []; // 選択中のハンドル
 
   private getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[]; // パスの取得関数
-  private pixelToNorm: (x: number, y: number) => Vector; // ピクセル座標を正規化座標に変換
-  private normToPixel: (x: number, y: number) => Vector; // 正規化座標をピクセル座標に変換
+  private pixelToNorm: (x: number, y: number) => p5.Vector; // ピクセル座標を正規化座標に変換
+  private normToPixel: (x: number, y: number) => p5.Vector; // 正規化座標をピクセル座標に変換
 
   // コンストラクタ
   constructor(
     getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[],
-    pixelToNorm: (x: number, y: number) => Vector = (x, y) =>
-      ({ x, y }) as Vector,
-    normToPixel: (x: number, y: number) => Vector = (x, y) =>
-      ({ x, y }) as Vector,
+    pixelToNorm: (x: number, y: number) => p5.Vector = (x, y) =>
+      ({ x, y }) as p5.Vector,
+    normToPixel: (x: number, y: number) => p5.Vector = (x, y) =>
+      ({ x, y }) as p5.Vector,
   ) {
     this.getPaths = getPaths;
     this.pixelToNorm = pixelToNorm;
@@ -360,8 +360,8 @@ export class HandleManager {
     targetY: number,
     dragMode: HandleDragMode,
     path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
-    originalCurves: Vector[][],
-    effectiveCurves: Vector[][],
+    originalCurves: p5.Vector[][],
+    effectiveCurves: p5.Vector[][],
   ): void {
     this.applyHandleTarget(
       path,
@@ -382,11 +382,11 @@ export class HandleManager {
 
   // 元の曲線とModifier適用後の曲線を取得
   private getCurves(path: Pick<Path, 'keyframes' | 'sketchModifiers'>): {
-    original: Vector[][];
-    effective: Vector[][];
+    original: p5.Vector[][];
+    effective: p5.Vector[][];
   } {
     const original = buildSketchCurves(path.keyframes);
-    const effective = applyModifiers(original, path.sketchModifiers);
+    const effective = applySketchModifiers(original, path.keyframes, path.sketchModifiers);
     return { original, effective };
   }
 
@@ -424,8 +424,8 @@ export class HandleManager {
   private getHandlePoint(
     path: Pick<Path, 'keyframes'>,
     selection: HandleSelection,
-    curves: Vector[][],
-  ): Vector | null {
+    curves: p5.Vector[][],
+  ): p5.Vector | null {
     const info = this.getHandlePointInfo(path, selection);
     if (!info) return null;
     return curves[info.curveIndex]?.[info.pointIndex] ?? null;
@@ -437,8 +437,8 @@ export class HandleManager {
     selection: HandleSelection,
     targetX: number,
     targetY: number,
-    originalCurves: Vector[][],
-    effectiveCurves: Vector[][],
+    originalCurves: p5.Vector[][],
+    effectiveCurves: p5.Vector[][],
   ): void {
     const info = this.getHandlePointInfo(path, selection);
     if (!info) return;
@@ -473,7 +473,7 @@ export class HandleManager {
   private getHandleVector(
     keyframe: Path['keyframes'][number],
     type: HandleType,
-  ): Vector | undefined {
+  ): p5.Vector | undefined {
     if (type === 'SKETCH_IN') return keyframe.sketchIn;
     if (type === 'SKETCH_OUT') return keyframe.sketchOut;
     return undefined;

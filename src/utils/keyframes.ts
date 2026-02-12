@@ -3,15 +3,16 @@
  * 各キーフレーム間のハンドル情報をもとに制御点列を生成する。
  */
 
-import type { Keyframe, Vector } from '../types';
+import type p5 from 'p5';
+import type { Keyframe } from '../types';
 import { curveLength, splitCubicBezier } from './bezier';
 
 // #region 共通利用
 // キーフレームからベジェ曲線を生成
-export function buildSketchCurves(keyframes: Keyframe[]): Vector[][] {
+export function buildSketchCurves(keyframes: Keyframe[]): p5.Vector[][] {
   if (keyframes.length < 2) return [];
 
-  const curves: Vector[][] = [];
+  const curves: p5.Vector[][] = [];
   for (let i = 0; i < keyframes.length - 1; i++) {
     const start = keyframes[i];
     const end = keyframes[i + 1];
@@ -32,7 +33,7 @@ export function buildSketchCurves(keyframes: Keyframe[]): Vector[][] {
 // キーフレーム配列と対応する曲線群から進行度を計算
 export function computeKeyframeProgress(
   keyframes: Keyframe[],
-  curves: Vector[][],
+  curves: p5.Vector[][],
 ): number[] {
   if (keyframes.length === 0) return [];
   if (keyframes.length === 1) return [0];
@@ -55,10 +56,10 @@ export function computeKeyframeProgress(
 export function buildGraphCurves(
   keyframes: Keyframe[],
   progress: number[],
-): Vector[][] {
+): p5.Vector[][] {
   if (keyframes.length < 2) return [];
 
-  const curves: Vector[][] = [];
+  const curves: p5.Vector[][] = [];
   for (let i = 0; i < keyframes.length - 1; i++) {
     const start = keyframes[i];
     const end = keyframes[i + 1];
@@ -89,11 +90,11 @@ export function buildGraphCurves(
 
 // #region セグメント分割
 type SketchSegmentSplitResult = {
-  point: Vector;
-  startSketchOut?: Vector;
-  endSketchIn?: Vector;
-  insertedSketchIn?: Vector;
-  insertedSketchOut?: Vector;
+  point: p5.Vector;
+  startSketchOut?: p5.Vector;
+  endSketchIn?: p5.Vector;
+  insertedSketchIn?: p5.Vector;
+  insertedSketchOut?: p5.Vector;
 };
 
 // 入力検証
@@ -175,7 +176,7 @@ export function splitKeyframeSegment(
 
 // #region 内部ヘルパー
 // ハンドルベクトルの正規化（ゼロベクトルはundefinedに変換）
-function normalizeHandle(vec: Vector): Vector | undefined {
+function normalizeHandle(vec: p5.Vector): p5.Vector | undefined {
   if (vec.magSq() <= 1e-6 * 1e-6) return undefined;
   return vec;
 }

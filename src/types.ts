@@ -2,12 +2,7 @@
 import type p5 from 'p5';
 import { z } from 'zod';
 
-// #region 1. 基本/汎用型
-
-// p5.jsベクトル
-export type Vector = p5.Vector;
-
-// #region 2. エディタ関連
+// #region 1. エディタ関連
 
 // 編集ツール
 export type ToolKind = 'select' | 'pen';
@@ -43,16 +38,16 @@ export type HandleType = 'ANCHOR' | 'SKETCH_IN' | 'SKETCH_OUT';
 // ハンドルドラッグモード
 export type HandleDragMode = 'mirror' | 'free';
 
-// #region 3. コアデータモデル
+// #region 2. コアデータモデル
 
 // キーフレーム
 export interface Keyframe {
   time: number;
-  position: Vector;
-  sketchIn?: Vector;
-  sketchOut?: Vector;
-  graphIn?: Vector;
-  graphOut?: Vector;
+  position: p5.Vector;
+  sketchIn?: p5.Vector;
+  sketchOut?: p5.Vector;
+  graphIn?: p5.Vector;
+  graphOut?: p5.Vector;
 }
 
 // 描画パス情報
@@ -61,19 +56,43 @@ export interface Path {
   keyframes: Keyframe[];
   duration: number;
   startTime: number;
-  sketchModifiers?: Modifier[];
-  graphModifiers?: Modifier[];
+  sketchModifiers?: SketchModifier[];
+  graphModifiers?: GraphModifier[];
+}
+
+// スケッチモディファイアのキーフレーム差分
+export interface SketchKeyframeDelta {
+  positionDelta?: { x: number; y: number };
+  sketchInDelta?: { x: number; y: number };
+  sketchOutDelta?: { x: number; y: number };
+}
+
+// グラフモディファイアのキーフレーム差分
+export interface GraphKeyframeDelta {
+  graphInDelta?: { x: number; y: number };
+  graphOutDelta?: { x: number; y: number };
+}
+
+// スケッチモディファイア
+export interface SketchModifier {
+  id: string;
+  name: string;
+  strength: number;
+  deltas: SketchKeyframeDelta[];
+}
+
+// グラフモディファイア
+export interface GraphModifier {
+  id: string;
+  name: string;
+  strength: number;
+  deltas: GraphKeyframeDelta[];
 }
 
 // モディファイアの共通型
-export interface Modifier {
-  id: string;
-  name: string;
-  offsets: ({ dx: number; dy: number } | null)[][];
-  strength: number;
-}
+export type AnyModifier = SketchModifier | GraphModifier;
 
-// #region 4. シリアライズ（LLM通信用）
+// #region 3. シリアライズ（LLM通信用）
 
 // シリアライズされたハンドル（スケッチ・グラフ共通・極座標）
 export interface SerializedHandle {
@@ -111,11 +130,11 @@ export interface SerializedProjectPath extends SerializedPath {
   id: string;
   startTime: number;
   duration: number;
-  sketchModifiers?: Modifier[];
-  graphModifiers?: Modifier[];
+  sketchModifiers?: SketchModifier[];
+  graphModifiers?: GraphModifier[];
 }
 
-// #region 5. 提案/LLM関連
+// #region 4. 提案/LLM関連
 
 // LLMプロバイダの種類
 export type LLMProvider = 'OpenAI' | 'Cerebras';
@@ -130,7 +149,7 @@ export interface Suggestion {
 // 提案のステータス
 export type SuggestionStatus = 'idle' | 'generating' | 'error' | 'input';
 
-// #region 6. プロジェクト関連
+// #region 5. プロジェクト関連
 
 // プロジェクト設定
 export interface ProjectSettings {
@@ -150,7 +169,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   playbackFrameRate: 60,
 };
 
-// #region 7. フィッティング関連
+// #region 6. フィッティング関連
 
 // フィッティングエラーの結果
 export interface FitErrorResult {
@@ -158,7 +177,7 @@ export interface FitErrorResult {
   index: number;
 }
 
-// #region 8. Zodスキーマ定義
+// #region 7. Zodスキーマ定義
 
 // ハンドルスキーマ
 const handleSchema = z.object({

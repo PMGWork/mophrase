@@ -13,7 +13,7 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applyModifiers } from '../utils/modifier';
+import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
 import { getSelectionReference } from '../utils/path';
 import {
   deserializeCurves,
@@ -104,8 +104,9 @@ export function getPreviewGraphCurves(
     baseSketchCurves,
   );
   const baseGraphCurves = buildGraphCurves(targetPath.keyframes, baseProgress);
-  const effectiveSketchCurves = applyModifiers(
+  const effectiveSketchCurves = applySketchModifiers(
     baseSketchCurves,
+    targetPath.keyframes,
     targetPath.sketchModifiers,
     p,
   );
@@ -113,8 +114,9 @@ export function getPreviewGraphCurves(
     targetPath.keyframes,
     effectiveSketchCurves,
   );
-  const effectiveGraphCurves = applyModifiers(
+  const effectiveGraphCurves = applyGraphModifiers(
     buildGraphCurves(targetPath.keyframes, effectiveProgress),
+    targetPath.keyframes,
     targetPath.graphModifiers,
     p,
   );
@@ -179,8 +181,9 @@ function buildFullPreviewCurves(
   const suggestionCurves = deserializeCurves(suggestion.path, p);
   if (suggestionCurves.length === 0) return null;
 
-  const effectiveCurves = applyModifiers(
+  const effectiveCurves = applySketchModifiers(
     originalCurves,
+    targetPath.keyframes,
     targetPath.sketchModifiers,
     p,
   );
@@ -211,8 +214,9 @@ function buildSelectionPreviewCurves(
   strength: number,
 ): p5.Vector[][] | null {
   const originalCurves = buildSketchCurves(targetPath.keyframes);
-  const effectiveCurves = applyModifiers(
+  const effectiveCurves = applySketchModifiers(
     originalCurves,
+    targetPath.keyframes,
     targetPath.sketchModifiers,
     p,
   );

@@ -11,7 +11,6 @@ import type {
   SerializedHandle,
   SerializedKeyframe,
   SerializedPath,
-  Vector,
 } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
 import { roundNormalizedValue } from '../bezier';
@@ -48,7 +47,7 @@ function serializeHandle(
 
 // グラフハンドルを極座標で正規化
 function serializeGraphHandle(
-  handle: Vector | undefined,
+  handle: p5.Vector | undefined,
   start: { time: number; progress: number },
   end: { time: number; progress: number },
   isOut: boolean,

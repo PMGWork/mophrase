@@ -9,7 +9,7 @@ import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
 import { bezierCurve, refineParameter } from '../../utils/bezier';
 import { buildSketchCurves, splitKeyframeSegment } from '../../utils/keyframes';
-import { applyModifiers } from '../../utils/modifier';
+import { applySketchModifiers } from '../../utils/modifier';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
@@ -162,7 +162,7 @@ export class PenTool {
     const curves = buildSketchCurves(path.keyframes);
     if (curves.length === 0) return null;
 
-    const effectiveCurves = applyModifiers(curves, path.sketchModifiers);
+    const effectiveCurves = applySketchModifiers(curves, path.keyframes, path.sketchModifiers);
     const sampleCount = Math.max(4, Math.round(1 / BEZIER_T_STEP));
 
     let best: {

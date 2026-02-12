@@ -1,12 +1,12 @@
 import { Minus } from 'lucide-react';
-import type { Modifier, ModifierKind } from '../types';
+import type { AnyModifier, ModifierKind } from '../types';
 
 // プロパティ
 type ModifierItemProps = {
-  modifier: Modifier; // モディファイア
+  modifier: AnyModifier; // モディファイア
   type: ModifierKind; // モディファイアの種類
-  onChange: (modifier: Modifier, type: ModifierKind, value: number) => void;
-  onRemove: (modifier: Modifier, type: ModifierKind) => void;
+  onChange: (modifier: AnyModifier, type: ModifierKind, value: number) => void;
+  onRemove: (modifier: AnyModifier, type: ModifierKind) => void;
 };
 
 // 影響度を0から2の範囲にクランプする関数

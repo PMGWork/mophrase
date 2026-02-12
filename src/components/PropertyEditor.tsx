@@ -1,4 +1,4 @@
-import type { Modifier, Path, ModifierKind } from '../types';
+import type { AnyModifier, Path, ModifierKind } from '../types';
 import { ModifierSection } from './ModifierSection';
 import { TimeSection } from './TimeSection';
 
@@ -51,14 +51,16 @@ export const PropertyEditor = ({
 
   // モディファイア変更ハンドラ
   const handleModifierChange = (
-    modifier: Modifier,
+    modifier: AnyModifier,
     type: ModifierKind,
     value: number,
   ) => handlers?.onModifierChange?.(modifier.id, type, value);
 
   // モディファイア削除ハンドラ
-  const handleModifierRemove = (modifier: Modifier, type: ModifierKind) =>
-    handlers?.onModifierRemove?.(modifier.id, type);
+  const handleModifierRemove = (
+    modifier: AnyModifier,
+    type: ModifierKind,
+  ) => handlers?.onModifierRemove?.(modifier.id, type);
 
   return (
     <div
