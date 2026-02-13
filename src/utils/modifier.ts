@@ -131,6 +131,7 @@ export function createSketchModifier(
     if (i >= keyframes.length) break;
 
     const localIndex = i - startIndex;
+    if (localIndex < 0 || localIndex >= modifiedKeyframes.length) continue;
     const original = keyframes[i];
     const modified = modifiedKeyframes[localIndex];
     if (!original || !modified) continue;
@@ -140,16 +141,16 @@ export function createSketchModifier(
     const pos = diffVec2(modified.position, original.position);
     if (pos) delta.posDelta = pos;
 
-    // outデルタ（出力カーブが範囲内の場合のみ）
-    if (i <= endIndex) {
+    // outデルタ（キーフレーム自身の out ハンドルを更新）
+    if (i < keyframes.length - 1) {
       const v = diffVec2(modified.sketchOut, original.sketchOut, {
         treatUndefinedAsZero: true,
       });
       if (v) delta.outDelta = v;
     }
 
-    // inデルタ（入力カーブが範囲内の場合のみ）
-    if (i > startIndex) {
+    // inデルタ（キーフレーム自身の in ハンドルを更新）
+    if (i > 0) {
       const v = diffVec2(modified.sketchIn, original.sketchIn, {
         treatUndefinedAsZero: true,
       });
@@ -193,6 +194,7 @@ export function createGraphModifier(
     if (i >= keyframes.length) break;
 
     const localIndex = i - startIndex;
+    if (localIndex < 0 || localIndex >= modifiedKeyframes.length) continue;
     const delta = deltas[i];
 
     // outデルタ（出力カーブが範囲内の場合のみ）

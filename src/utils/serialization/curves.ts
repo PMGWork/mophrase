@@ -81,28 +81,27 @@ function serializeKeyframes(
   bbox: SerializedBoundingBox,
   progress: number[],
 ): SerializedKeyframe[] {
-  const serialized: SerializedKeyframe[] = keyframes.map((keyframe) => ({
-    ...serializePosition(keyframe.position, bbox),
-    time: roundNormalizedValue(keyframe.time),
-  }));
-
   const diag = Math.hypot(bbox.width, bbox.height);
+  const serialized: SerializedKeyframe[] = keyframes.map((keyframe) => {
+    const anchor = keyframe.position;
+    const inHandle = keyframe.sketchIn ? anchor.copy().add(keyframe.sketchIn) : anchor;
+    const outHandle = keyframe.sketchOut
+      ? anchor.copy().add(keyframe.sketchOut)
+      : anchor;
+
+    return {
+      ...serializePosition(anchor, bbox),
+      time: roundNormalizedValue(keyframe.time),
+      sketchIn: serializeHandle(inHandle, anchor, diag),
+      sketchOut: serializeHandle(outHandle, anchor, diag),
+    };
+  });
 
   for (let i = 0; i < keyframes.length - 1; i++) {
     const start = keyframes[i];
     const end = keyframes[i + 1];
     const startKeyframe = serialized[i];
     const endKeyframe = serialized[i + 1];
-    const startPos = start.position;
-    const endPos = end.position;
-
-    const outHandle = start.sketchOut
-      ? startPos.copy().add(start.sketchOut)
-      : startPos;
-    const inHandle = end.sketchIn ? endPos.copy().add(end.sketchIn) : endPos;
-
-    startKeyframe.sketchOut = serializeHandle(outHandle, startPos, diag);
-    endKeyframe.sketchIn = serializeHandle(inHandle, endPos, diag);
 
     const startProgress = progress[i] ?? 0;
     const endProgress = progress[i + 1] ?? startProgress;
