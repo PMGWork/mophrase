@@ -1,5 +1,6 @@
 import { Minus } from 'lucide-react';
 import type { AnyModifier, ModifierKind } from '../types';
+import { clamp } from '../utils/number';
 
 // プロパティ
 type ModifierItemProps = {
@@ -9,12 +10,9 @@ type ModifierItemProps = {
   onRemove: (modifier: AnyModifier, type: ModifierKind) => void;
 };
 
-// 影響度を0から2の範囲にクランプする関数
-const clampStrength = (value: number) => Math.max(0, Math.min(2, value));
-
 // 影響度をパーセンテージ形式にフォーマットする関数
 const formatStrength = (value: number) =>
-  Math.round(clampStrength(value) * 100);
+  Math.round(clamp(value, 0, 2) * 100);
 
 // モディファイアアイテム
 export const ModifierItem = ({

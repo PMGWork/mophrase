@@ -11,6 +11,7 @@ import {
   refineParameter,
   unitTangent,
 } from '../../utils/bezier';
+import { clamp } from '../../utils/number';
 
 // フィッティング用の範囲情報
 export interface FitRange {
@@ -254,7 +255,7 @@ export function refineParams(
 
     let newU = refineParameter(cubicControls, point, u);
     if (!Number.isFinite(newU)) continue;
-    newU = Math.max(0, Math.min(1, newU));
+    newU = clamp(newU, 0, 1);
 
     params[i] = newU;
   }

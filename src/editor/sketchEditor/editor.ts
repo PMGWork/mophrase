@@ -22,6 +22,7 @@ import type {
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { drawSketchPath } from '../../utils/rendering';
 import { isLeftMouseButton } from '../../utils/input';
+import { clamp } from '../../utils/number';
 import { deserializePaths } from '../../utils/serialization/project';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
@@ -469,7 +470,7 @@ export class SketchEditor {
     const totalDuration = this.motionManager.getTotalDuration();
     if (totalDuration <= 0) return;
 
-    const clamped = Math.max(0, Math.min(1, progress));
+    const clamped = clamp(progress, 0, 1);
     this.motionManager.seekTo(clamped * totalDuration);
     this.isPreviewing = true;
   }

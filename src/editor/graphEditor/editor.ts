@@ -7,6 +7,7 @@ import p5 from 'p5';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
+import { clamp } from '../../utils/number';
 import { drawBezierCurve, drawControls } from '../../utils/rendering';
 import {
   buildGraphCurves,
@@ -393,7 +394,7 @@ export class GraphEditor {
     // 正規化座標(セグメント内)に変換
     const normX = (correctedX - t0) / dt;
     const normY = (correctedY - v0) / dv;
-    const clampedX = Math.max(0, Math.min(1, normX));
+    const clampedX = clamp(normX, 0, 1);
 
     if (selection.type === 'GRAPH_OUT') {
       start.graphOut = start.position.copy().set(clampedX * dt, normY * dv);

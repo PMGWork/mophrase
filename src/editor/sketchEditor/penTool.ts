@@ -14,6 +14,7 @@ import {
   splitGraphModifierDeltas,
   splitSketchModifierDeltas,
 } from '../../utils/modifier';
+import { clamp } from '../../utils/number';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
@@ -221,9 +222,7 @@ export class PenTool {
       query,
       best.t,
     );
-    const t = Number.isFinite(refined)
-      ? Math.max(0, Math.min(1, refined))
-      : best.t;
+    const t = Number.isFinite(refined) ? clamp(refined, 0, 1) : best.t;
     const edgeEpsilon = Math.max(1e-3, BEZIER_T_STEP * 0.5);
     if (t <= edgeEpsilon || t >= 1 - edgeEpsilon) return null;
 

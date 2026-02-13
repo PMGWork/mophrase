@@ -19,6 +19,7 @@ import type {
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
+import { clamp } from '../number';
 import {
   deserializeGraphHandle,
   deserializeHandle,
@@ -292,7 +293,7 @@ export function deserializePaths(
       const rawTime = isFiniteNumber(keyframe.time)
         ? keyframe.time
         : fallbackTime;
-      const time = Math.max(0, Math.min(1, rawTime));
+      const time = clamp(rawTime, 0, 1);
 
       return {
         time,

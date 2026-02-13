@@ -13,6 +13,7 @@ import type {
   SketchModifier,
 } from '../types';
 import { splitKeyframeSegment } from './keyframes';
+import { clamp } from './number';
 
 // #region 適用
 
@@ -216,7 +217,7 @@ export function splitSketchModifierDeltas(
 ): void {
   if (!modifiers || modifiers.length === 0) return;
 
-  const clampedT = clamp01(t);
+  const clampedT = clamp(Number.isFinite(t) ? t : 0.5, 0, 1);
   const insertIndex = segmentIndex + 1;
   const endIndex = insertIndex + 1;
   const baseSplit = splitKeyframeSegment(keyframes, segmentIndex, clampedT);
@@ -288,7 +289,7 @@ export function splitGraphModifierDeltas(
 ): void {
   if (!modifiers || modifiers.length === 0) return;
 
-  const clampedT = clamp01(t);
+  const clampedT = clamp(Number.isFinite(t) ? t : 0.5, 0, 1);
   const insertIndex = segmentIndex + 1;
   const endIndex = insertIndex + 1;
   const baseSplit = splitKeyframeSegment(keyframes, segmentIndex, clampedT);
@@ -356,7 +357,7 @@ export function updateModifierStrength(
 ): void {
   if (!modifiers) return;
   const modifier = modifiers.find((m) => m.id === modifierId);
-  if (modifier) modifier.strength = Math.max(0, Math.min(2, strength));
+  if (modifier) modifier.strength = clamp(strength, 0, 2);
 }
 
 // モディファイアを削除
@@ -384,12 +385,6 @@ function accumulateDelta(
   if (!delta) return;
   target.x += delta.x * strength;
   target.y += delta.y * strength;
-}
-
-// [0,1] にクランプ
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0.5;
-  return Math.max(0, Math.min(1, value));
 }
 
 // strength=1 として SketchModifier を適用したキーフレーム配列を生成

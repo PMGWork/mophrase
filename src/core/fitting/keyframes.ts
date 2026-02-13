@@ -5,6 +5,7 @@
 
 import type p5 from 'p5';
 import type { FitErrorResult, Keyframe } from '../../types';
+import { clamp } from '../../utils/number';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 
 // キーフレームを生成
@@ -53,7 +54,7 @@ export function generateKeyframes(
     const p3 = curve[3];
 
     if (i === 0) {
-      const startTime = Math.max(0, Math.min(1, timeNorm[range.start] ?? 0));
+      const startTime = clamp(timeNorm[range.start] ?? 0, 0, 1);
       keyframes.push({
         time: startTime,
         position: p0.copy(),
@@ -64,7 +65,7 @@ export function generateKeyframes(
       if (keyframe) keyframe.sketchOut = p1.copy().sub(p0);
     }
 
-    const endTime = Math.max(0, Math.min(1, timeNorm[range.end] ?? 0));
+    const endTime = clamp(timeNorm[range.end] ?? 0, 0, 1);
     keyframes.push({
       time: endTime,
       position: p3.copy(),

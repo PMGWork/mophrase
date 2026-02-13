@@ -6,6 +6,7 @@
 import type p5 from 'p5';
 import type { Path } from '../types';
 import { bezierCurve } from '../utils/bezier';
+import { clamp } from '../utils/number';
 import {
   buildGraphCurves,
   buildSketchCurves,
@@ -80,7 +81,7 @@ export class MotionManager {
     this.totalDuration =
       this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
 
-    const clamped = Math.max(0, Math.min(this.totalDuration, startAtMs));
+    const clamped = clamp(startAtMs, 0, this.totalDuration);
     this.elapsedTime = clamped;
     this.isPlaying = this.totalDuration > 0;
   }
@@ -113,7 +114,7 @@ export class MotionManager {
       this.elapsedTime = 0;
       return;
     }
-    this.elapsedTime = Math.max(0, Math.min(this.totalDuration, elapsedMs));
+    this.elapsedTime = clamp(elapsedMs, 0, this.totalDuration);
   }
 
   // モーション再生を停止
@@ -169,10 +170,7 @@ export class MotionManager {
   public drawPreview(): void {
     if (this.animationStates.length === 0) return;
 
-    const previewTime = Math.max(
-      0,
-      Math.min(this.totalDuration, this.elapsedTime),
-    );
+    const previewTime = clamp(this.elapsedTime, 0, this.totalDuration);
     for (const state of this.animationStates) {
       const position = this.evaluatePathPosition(state, previewTime);
       this.drawObject(position, state.color);
@@ -261,7 +259,7 @@ export class MotionManager {
 
     // アニメーション進行度を計算
     const localTime = (elapsedTime - startTime) / duration;
-    const time = Math.min(1, Math.max(0, localTime));
+    const time = clamp(localTime, 0, 1);
 
     // 終了後は終点位置
     if (time >= 1) {
@@ -346,7 +344,7 @@ export class MotionManager {
     const v1 = keyframeProgress[segmentIndex + 1] ?? v0;
     const denom = v1 - v0;
     const localU = Math.abs(denom) > 1e-6 ? (progress - v0) / denom : 0;
-    const clamped = Math.max(0, Math.min(1, localU));
+    const clamped = clamp(localU, 0, 1);
 
     return bezierCurve(
       spatialCurve[0],
@@ -375,6 +373,6 @@ export class MotionManager {
       }
     }
 
-    return Math.max(0, Math.min(keyframes.length - 2, low));
+    return clamp(low, 0, keyframes.length - 2);
   }
 }

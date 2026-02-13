@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { useCallback, useState } from 'react';
 import type { Path, ToolKind } from './types';
 import { removeModifier, updateModifierStrength } from './utils/modifier';
+import { clamp } from './utils/number';
 import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';
@@ -57,10 +58,6 @@ const App = () => {
     colors,
     previewProvider: getPreviewGraphCurves,
   });
-
-  // 値クランプヘルパー
-  const clamp = (value: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, value));
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {

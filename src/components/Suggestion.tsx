@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 import type { Suggestion, SuggestionStatus } from '../types';
+import { clamp } from '../utils/number';
 import { SuggestionItem } from './SuggestionItem';
 
 // Props
@@ -73,7 +74,7 @@ export const SketchSuggestion = ({
 
   // 影響度を計算
   const computeStrength = (clientX: number, rect: DOMRect): number =>
-    Math.max(0, Math.min(2, ((clientX - rect.left) / rect.width) * 2));
+    clamp(((clientX - rect.left) / rect.width) * 2, 0, 2);
 
   // ホバー状態更新
   const updateHover = (id: string | null, strength: number) => {
