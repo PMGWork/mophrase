@@ -520,7 +520,9 @@ function resolveGraphOutHandle(
   if (current.graphOut) return current.graphOut;
   const v0 = progress[index] ?? 0;
   const v1 = progress[index + 1] ?? v0;
-  return current.position.copy().set((next.time - current.time) / 3, (v1 - v0) / 3);
+  return current.position
+    .copy()
+    .set((next.time - current.time) / 3, (v1 - v0) / 3);
 }
 
 // graphIn を実効ベクトルとして取得（未指定時はデフォルトを返す）
@@ -535,10 +537,9 @@ function resolveGraphInHandle(
   if (current.graphIn) return current.graphIn;
   const v0 = progress[index - 1] ?? 0;
   const v1 = progress[index] ?? v0;
-  return current.position.copy().set(
-    -(current.time - previous.time) / 3,
-    -(v1 - v0) / 3,
-  );
+  return current.position
+    .copy()
+    .set(-(current.time - previous.time) / 3, -(v1 - v0) / 3);
 }
 
 // ポイントにオフセットを適用

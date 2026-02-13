@@ -11,8 +11,7 @@ type ModifierItemProps = {
 };
 
 // 影響度をパーセンテージ形式にフォーマットする関数
-const formatStrength = (value: number) =>
-  Math.round(clamp(value, 0, 2) * 100);
+const formatStrength = (value: number) => Math.round(clamp(value, 0, 2) * 100);
 
 // モディファイアアイテム
 export const ModifierItem = ({

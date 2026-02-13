@@ -84,7 +84,9 @@ function serializeKeyframes(
   const diag = Math.hypot(bbox.width, bbox.height);
   const serialized: SerializedKeyframe[] = keyframes.map((keyframe) => {
     const anchor = keyframe.position;
-    const inHandle = keyframe.sketchIn ? anchor.copy().add(keyframe.sketchIn) : anchor;
+    const inHandle = keyframe.sketchIn
+      ? anchor.copy().add(keyframe.sketchIn)
+      : anchor;
     const outHandle = keyframe.sketchOut
       ? anchor.copy().add(keyframe.sketchOut)
       : anchor;
