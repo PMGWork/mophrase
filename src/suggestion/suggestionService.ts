@@ -51,6 +51,8 @@ export async function fetchSuggestions(
   return lastResult.suggestions.map(
     (suggestion): SuggestionItem => ({
       title: suggestion.title,
+      modifierTarget: suggestion.modifierTarget,
+      confidence: suggestion.confidence,
       keyframes: suggestion.keyframes,
     }),
   );

@@ -9,6 +9,7 @@ export type ToolKind = 'select' | 'pen';
 
 // モディファイア種別
 export type ModifierKind = 'sketch' | 'graph';
+export type ModifierTarget = 'sketch' | 'graph' | 'both';
 
 // 範囲選択用の矩形
 export interface MarqueeRect {
@@ -143,6 +144,8 @@ export type LLMProvider = 'OpenAI' | 'Cerebras';
 export interface Suggestion {
   id: string;
   title: string;
+  modifierTarget: ModifierTarget;
+  confidence: number;
   path: SerializedPath;
 }
 
@@ -199,6 +202,8 @@ const keyframeSchema = z.object({
 // 提案アイテム
 const suggestionItemSchema = z.object({
   title: z.string(),
+  modifierTarget: z.enum(['sketch', 'graph', 'both']),
+  confidence: z.number().min(0).max(1),
   keyframes: z.array(keyframeSchema),
 });
 

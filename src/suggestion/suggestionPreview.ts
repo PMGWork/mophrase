@@ -6,7 +6,12 @@
 import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
-import type { Path, SelectionRange, Suggestion } from '../types';
+import type {
+  ModifierTarget,
+  Path,
+  SelectionRange,
+  Suggestion,
+} from '../types';
 import { drawBezierCurve } from '../utils/rendering';
 import {
   buildGraphCurves,
@@ -28,6 +33,7 @@ type SketchPreviewParams = {
   colors: Colors;
   config: Pick<Config, 'lineWeight'>;
   suggestion: Suggestion;
+  modifierTarget: ModifierTarget;
   targetPath: Path;
   selectionRange?: SelectionRange;
   strength: number;
@@ -38,6 +44,7 @@ type SketchPreviewParams = {
 type GraphPreviewParams = {
   p: p5;
   suggestion: Suggestion;
+  modifierTarget: ModifierTarget;
   targetPath: Path;
   selectionRange?: SelectionRange;
   strength: number;
@@ -50,11 +57,13 @@ export function drawSketchPreview(params: SketchPreviewParams): void {
     colors,
     config,
     suggestion,
+    modifierTarget,
     targetPath,
     selectionRange,
     strength,
     transform,
   } = params;
+  if (modifierTarget === 'graph') return;
 
   const ctx = p.drawingContext as CanvasRenderingContext2D;
   const previousDash =
@@ -95,7 +104,15 @@ export function drawSketchPreview(params: SketchPreviewParams): void {
 export function getPreviewGraphCurves(
   params: GraphPreviewParams,
 ): { curves: p5.Vector[][]; strength: number } | null {
-  const { p, suggestion, targetPath, selectionRange, strength } = params;
+  const {
+    p,
+    suggestion,
+    modifierTarget,
+    targetPath,
+    selectionRange,
+    strength,
+  } = params;
+  if (modifierTarget === 'sketch') return null;
 
   // 元のカーブとプログレスを計算
   const baseSketchCurves = buildSketchCurves(targetPath.keyframes);
@@ -137,7 +154,10 @@ export function getPreviewGraphCurves(
     targetPath.keyframes,
     effectiveSketchCurves,
   );
-  const baseGraphCurves = buildGraphCurves(targetPath.keyframes, effectiveProgress);
+  const baseGraphCurves = buildGraphCurves(
+    targetPath.keyframes,
+    effectiveProgress,
+  );
   if (baseGraphCurves.length === 0) return null;
 
   const previewCurves = applyGraphModifiers(

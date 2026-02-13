@@ -8,16 +8,14 @@ import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import type {
   GraphModifier,
+  ModifierTarget,
   Path,
   SelectionRange,
   SketchModifier,
   Suggestion,
   SuggestionStatus,
 } from '../types';
-import {
-  buildSketchCurves,
-  computeKeyframeProgress,
-} from '../utils/keyframes';
+import { buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
 import { createSketchModifier, createGraphModifier } from '../utils/modifier';
 import { getSelectionReference, slicePath } from '../utils/path';
 import {
@@ -30,6 +28,8 @@ import {
   getPreviewGraphCurves as buildPreviewGraphCurves,
 } from './suggestionPreview';
 import { computeSuggestionPosition } from './ui';
+
+const SINGLE_TARGET_CONFIDENCE_THRESHOLD = 0.6;
 
 // 型定義
 type SuggestionManagerOptions = {
@@ -119,12 +119,14 @@ export class SuggestionManager {
 
     const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
     if (!suggestion || !this.targetPath) return;
+    const modifierTarget = this.resolveModifierTarget(suggestion);
 
     drawSketchPreview({
       p,
       colors,
       config: this.config,
       suggestion,
+      modifierTarget,
       targetPath: this.targetPath,
       selectionRange: this.selectionRange,
       strength: this.hoveredStrength,
@@ -140,9 +142,11 @@ export class SuggestionManager {
 
     const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
     if (!suggestion) return null;
+    const modifierTarget = this.resolveModifierTarget(suggestion);
     return buildPreviewGraphCurves({
       p,
       suggestion,
+      modifierTarget,
       targetPath: this.targetPath,
       selectionRange: this.selectionRange,
       strength: this.hoveredStrength,
@@ -220,6 +224,8 @@ export class SuggestionManager {
       const suggestions: Suggestion[] = items.map((item) => ({
         id: crypto.randomUUID(),
         title: item.title,
+        modifierTarget: item.modifierTarget,
+        confidence: item.confidence,
         path: {
           keyframes: item.keyframes,
           bbox: serializedPath.bbox,
@@ -277,6 +283,7 @@ export class SuggestionManager {
     // modifier名を設定
     const modifierName =
       this.prompts[this.prompts.length - 1] || suggestion.title;
+    const modifierTarget = this.resolveModifierTarget(suggestion);
 
     // SketchModifier を作成
     const sketchModifier = createSketchModifier(
@@ -301,8 +308,21 @@ export class SuggestionManager {
       graphModifier.strength = strength;
     }
 
+    const shouldApplyGraph =
+      (modifierTarget === 'graph' || modifierTarget === 'both') &&
+      !!graphModifier;
+    const shouldApplySketch =
+      modifierTarget === 'sketch' ||
+      modifierTarget === 'both' ||
+      !shouldApplyGraph;
+
     // パスにmodifierを追加
-    this.addModifiersToPath(this.targetPath, sketchModifier, graphModifier);
+    this.addModifiersToPath(this.targetPath, {
+      sketchModifier,
+      graphModifier,
+      shouldApplySketch,
+      shouldApplyGraph,
+    });
 
     this.onSelect?.(this.targetPath, this.targetPath);
 
@@ -314,20 +334,40 @@ export class SuggestionManager {
   // パスにmodifierを追加
   private addModifiersToPath(
     path: Path,
-    sketchModifier: SketchModifier,
-    graphModifier: GraphModifier | null,
+    options: {
+      sketchModifier: SketchModifier;
+      graphModifier: GraphModifier | null;
+      shouldApplySketch: boolean;
+      shouldApplyGraph: boolean;
+    },
   ): void {
-    if (!path.sketchModifiers) {
-      path.sketchModifiers = [];
-    }
-    path.sketchModifiers.push(sketchModifier);
+    const {
+      sketchModifier,
+      graphModifier,
+      shouldApplySketch,
+      shouldApplyGraph,
+    } = options;
 
-    if (graphModifier) {
+    if (shouldApplySketch) {
+      if (!path.sketchModifiers) {
+        path.sketchModifiers = [];
+      }
+      path.sketchModifiers.push(sketchModifier);
+    }
+
+    if (shouldApplyGraph && graphModifier) {
       if (!path.graphModifiers) {
         path.graphModifiers = [];
       }
       path.graphModifiers.push(graphModifier);
     }
+  }
+
+  private resolveModifierTarget(suggestion: Suggestion): ModifierTarget {
+    const confidence = suggestion.confidence;
+    if (!Number.isFinite(confidence)) return 'both';
+    if (confidence < SINGLE_TARGET_CONFIDENCE_THRESHOLD) return 'both';
+    return suggestion.modifierTarget;
   }
 
   // Hover状態を設定
