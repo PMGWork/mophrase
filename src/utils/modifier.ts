@@ -160,6 +160,18 @@ export function createSketchModifier(
     }
   }
 
+  // 選択範囲の境界キーフレームの posDelta をゼロにする。
+  // 境界キーフレームは選択外セグメントと共有されるため、
+  // posDelta が残ると非選択カーブに位置変更が伝播してしまう。
+  if (selectionRange) {
+    if (startIndex > 0) {
+      deltas[startIndex].posDelta = undefined;
+    }
+    if (endIndex + 1 < keyframes.length - 1) {
+      deltas[endIndex + 1].posDelta = undefined;
+    }
+  }
+
   return { id: crypto.randomUUID(), name, strength: 1.0, deltas };
 }
 
