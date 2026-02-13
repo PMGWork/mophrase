@@ -16,14 +16,12 @@ import type {
 } from '../types';
 import {
   buildSketchCurves,
-  buildGraphCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
 import { createSketchModifier, createGraphModifier } from '../utils/modifier';
 import { getSelectionReference, slicePath } from '../utils/path';
 import {
-  deserializeCurves,
-  deserializeGraphCurves,
+  deserializePathKeyframes,
   serializePaths,
 } from '../utils/serialization/curves';
 import { fetchSuggestions } from './suggestionService';
@@ -252,16 +250,7 @@ export class SuggestionManager {
     // ターゲットのカーブを取得
     const originalCurves = buildSketchCurves(this.targetPath.keyframes);
 
-    // LLM出力をcurvesにデシリアライズ
-    const llmCurves = deserializeCurves(suggestion.path, this.pInstance);
-    if (llmCurves.length === 0) {
-      this.setState('error');
-      this.updateUI();
-      return;
-    }
-
-    // 時間カーブを取得
-    // 全体の進行度を計算
+    // 選択範囲の参照キーフレームと進行度を取得
     const allProgress = computeKeyframeProgress(
       this.targetPath.keyframes,
       originalCurves,
@@ -270,16 +259,20 @@ export class SuggestionManager {
     const { keyframes: referenceKeyframes, progress: referenceProgress } =
       getSelectionReference(this.targetPath, this.selectionRange, allProgress);
 
-    const originalGraphCurves = buildGraphCurves(
-      this.targetPath.keyframes,
-      allProgress,
-    );
-    const llmGraphCurves = deserializeGraphCurves(
-      suggestion.path.keyframes,
+    // LLM出力をキーフレームにデシリアライズ（Modifier生成用）
+    const llmKeyframes = deserializePathKeyframes(
+      suggestion.path,
       referenceKeyframes,
       referenceProgress,
       this.pInstance,
     );
+
+    // キーフレームがない場合はエラー
+    if (llmKeyframes.length === 0) {
+      this.setState('error');
+      this.updateUI();
+      return;
+    }
 
     // modifier名を設定
     const modifierName =
@@ -288,8 +281,7 @@ export class SuggestionManager {
     // SketchModifier を作成
     const sketchModifier = createSketchModifier(
       this.targetPath.keyframes,
-      originalCurves,
-      llmCurves,
+      llmKeyframes,
       modifierName,
       this.selectionRange,
     );
@@ -297,11 +289,12 @@ export class SuggestionManager {
 
     // GraphModifier を作成（時間カーブの差分がある場合のみ）
     let graphModifier: GraphModifier | null = null;
-    if (llmGraphCurves.length > 0) {
+    if (llmKeyframes.length > 1) {
       graphModifier = createGraphModifier(
         this.targetPath.keyframes,
-        originalGraphCurves,
-        llmGraphCurves,
+        allProgress,
+        llmKeyframes,
+        referenceProgress,
         modifierName,
         this.selectionRange,
       );

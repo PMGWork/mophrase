@@ -13,12 +13,14 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
-import { getSelectionReference } from '../utils/path';
 import {
-  deserializeCurves,
-  deserializeGraphCurves,
-} from '../utils/serialization/curves';
+  applySketchModifiers,
+  applyGraphModifiers,
+  createSketchModifier,
+  createGraphModifier,
+} from '../utils/modifier';
+import { getSelectionReference } from '../utils/path';
+import { deserializePathKeyframes } from '../utils/serialization/curves';
 
 // スケッチ提案のプレビュー描画パラメータ
 type SketchPreviewParams = {
@@ -61,15 +63,13 @@ export function drawSketchPreview(params: SketchPreviewParams): void {
 
   p.push();
 
-  const previewCurves = selectionRange
-    ? buildSelectionPreviewCurves(
-        p,
-        targetPath,
-        suggestion,
-        selectionRange,
-        strength,
-      )
-    : buildFullPreviewCurves(p, targetPath, suggestion, strength);
+  const previewCurves = buildSketchPreviewCurves(
+    p,
+    targetPath,
+    suggestion,
+    selectionRange,
+    strength,
+  );
 
   if (!previewCurves || previewCurves.length === 0) {
     p.pop();
@@ -103,7 +103,30 @@ export function getPreviewGraphCurves(
     targetPath.keyframes,
     baseSketchCurves,
   );
-  const baseGraphCurves = buildGraphCurves(targetPath.keyframes, baseProgress);
+  if (baseSketchCurves.length === 0) return null;
+
+  // LLM の提案をキーフレームに変換
+  const { keyframes: referenceKeyframes, progress: referenceProgress } =
+    getSelectionReference(targetPath, selectionRange, baseProgress);
+
+  const llmKeyframes = deserializePathKeyframes(
+    suggestion.path,
+    referenceKeyframes,
+    referenceProgress,
+    p,
+  );
+  if (llmKeyframes.length < 2) return null;
+
+  const previewGraphModifier = createGraphModifier(
+    targetPath.keyframes,
+    baseProgress,
+    llmKeyframes,
+    referenceProgress,
+    'preview',
+    selectionRange,
+  );
+  previewGraphModifier.strength = strength;
+
   const effectiveSketchCurves = applySketchModifiers(
     baseSketchCurves,
     targetPath.keyframes,
@@ -114,116 +137,59 @@ export function getPreviewGraphCurves(
     targetPath.keyframes,
     effectiveSketchCurves,
   );
-  const effectiveGraphCurves = applyGraphModifiers(
-    buildGraphCurves(targetPath.keyframes, effectiveProgress),
+  const baseGraphCurves = buildGraphCurves(targetPath.keyframes, effectiveProgress);
+  if (baseGraphCurves.length === 0) return null;
+
+  const previewCurves = applyGraphModifiers(
+    baseGraphCurves,
     targetPath.keyframes,
-    targetPath.graphModifiers,
+    [...(targetPath.graphModifiers ?? []), previewGraphModifier],
     p,
-  );
-  if (baseGraphCurves.length === 0 || effectiveGraphCurves.length === 0)
-    return null;
-
-  // LLM の提案から時間カーブを取得
-  const { keyframes: referenceKeyframes, progress: referenceProgress } =
-    getSelectionReference(targetPath, selectionRange, baseProgress);
-
-  const llmGraphCurves = deserializeGraphCurves(
-    suggestion.path.keyframes,
-    referenceKeyframes,
-    referenceProgress,
-    p,
-  );
-
-  if (llmGraphCurves.length === 0) return null;
-
-  // 範囲を計算
-  const rangeStart = selectionRange
-    ? Math.max(
-        0,
-        Math.min(baseGraphCurves.length - 1, selectionRange.startCurveIndex),
-      )
-    : 0;
-  const rangeEnd = selectionRange
-    ? Math.max(
-        0,
-        Math.min(baseGraphCurves.length - 1, selectionRange.endCurveIndex),
-      )
-    : baseGraphCurves.length - 1;
-
-  // プレビューカーブを計算
-  const previewCurves = effectiveGraphCurves.map((curve, curveIndex) =>
-    curve.map((pt, ptIndex) => {
-      if (curveIndex < rangeStart || curveIndex > rangeEnd) return pt;
-      const localIndex = curveIndex - rangeStart;
-      const baseCurve = baseGraphCurves[curveIndex];
-      const basePoint = baseCurve?.[ptIndex];
-      const suggPt = llmGraphCurves[localIndex]?.[ptIndex];
-      if (!suggPt || !basePoint) return pt;
-      const dx = (suggPt.x - basePoint.x) * strength;
-      const dy = (suggPt.y - basePoint.y) * strength;
-      if (dx === 0 && dy === 0) return pt;
-      return p.createVector(pt.x + dx, pt.y + dy);
-    }),
   );
 
   return { curves: previewCurves, strength };
 }
 
-function buildFullPreviewCurves(
+function buildSketchPreviewCurves(
   p: p5,
   targetPath: Path,
   suggestion: Suggestion,
+  selectionRange: SelectionRange | undefined,
   strength: number,
 ): p5.Vector[][] | null {
   const originalCurves = buildSketchCurves(targetPath.keyframes);
   if (originalCurves.length === 0) return null;
 
-  const suggestionCurves = deserializeCurves(suggestion.path, p);
-  if (suggestionCurves.length === 0) return null;
-
-  const effectiveCurves = applySketchModifiers(
-    originalCurves,
+  const baseProgress = computeKeyframeProgress(
     targetPath.keyframes,
-    targetPath.sketchModifiers,
+    originalCurves,
+  );
+  const { keyframes: referenceKeyframes, progress: referenceProgress } =
+    getSelectionReference(targetPath, selectionRange, baseProgress);
+
+  const llmKeyframes = deserializePathKeyframes(
+    suggestion.path,
+    referenceKeyframes,
+    referenceProgress,
     p,
   );
+  if (llmKeyframes.length === 0) return null;
 
-  return effectiveCurves.map((curve, curveIdx) => {
-    const suggCurve = suggestionCurves[curveIdx];
-    const originalCurve = originalCurves[curveIdx];
-    if (!suggCurve || !originalCurve) return curve;
+  const previewSketchModifier = createSketchModifier(
+    targetPath.keyframes,
+    llmKeyframes,
+    'preview',
+    selectionRange,
+  );
+  previewSketchModifier.strength = strength;
 
-    return curve.map((pt, ptIdx) => {
-      const suggPt = suggCurve[ptIdx];
-      const originalPt = originalCurve[ptIdx];
-      if (!suggPt || !originalPt) return pt;
-
-      const dx = (suggPt.x - originalPt.x) * strength;
-      const dy = (suggPt.y - originalPt.y) * strength;
-      if (dx === 0 && dy === 0) return pt;
-      return p.createVector(pt.x + dx, pt.y + dy);
-    });
-  });
-}
-
-function buildSelectionPreviewCurves(
-  p: p5,
-  targetPath: Path,
-  suggestion: Suggestion,
-  selectionRange: SelectionRange,
-  strength: number,
-): p5.Vector[][] | null {
-  const originalCurves = buildSketchCurves(targetPath.keyframes);
-  const effectiveCurves = applySketchModifiers(
+  const previewCurves = applySketchModifiers(
     originalCurves,
     targetPath.keyframes,
-    targetPath.sketchModifiers,
+    [...(targetPath.sketchModifiers ?? []), previewSketchModifier],
     p,
   );
-  const suggestionCurves = deserializeCurves(suggestion.path, p);
-  if (originalCurves.length === 0 || suggestionCurves.length === 0) {
-    return null;
-  }
+  if (!selectionRange) return previewCurves;
 
   const rangeStart = Math.max(
     0,
@@ -234,49 +200,6 @@ function buildSelectionPreviewCurves(
     Math.min(originalCurves.length - 1, selectionRange.endCurveIndex),
   );
   if (rangeStart > rangeEnd) return null;
-
-  const previewCurves = effectiveCurves.map((curve, curveIndex) =>
-    curve.map((pt, ptIndex) => {
-      if (curveIndex < rangeStart || curveIndex > rangeEnd) return pt;
-      const localIndex = curveIndex - rangeStart;
-      const originalCurve = originalCurves[curveIndex];
-      const originalPoint = originalCurve?.[ptIndex];
-      const suggPt = suggestionCurves[localIndex]?.[ptIndex];
-      if (!suggPt || !originalPoint) return pt;
-      const dx = (suggPt.x - originalPoint.x) * strength;
-      const dy = (suggPt.y - originalPoint.y) * strength;
-      if (dx === 0 && dy === 0) return pt;
-      return p.createVector(pt.x + dx, pt.y + dy);
-    }),
-  );
-
-  const startOriginal = originalCurves[rangeStart]?.[0];
-  const startSuggested = suggestionCurves[0]?.[0];
-  if (startOriginal && startSuggested && rangeStart > 0) {
-    const dx = (startSuggested.x - startOriginal.x) * strength;
-    const dy = (startSuggested.y - startOriginal.y) * strength;
-    const prevCurve = previewCurves[rangeStart - 1];
-    if (prevCurve) {
-      prevCurve[2] = p.createVector(prevCurve[2].x + dx, prevCurve[2].y + dy);
-      prevCurve[3] = p.createVector(prevCurve[3].x + dx, prevCurve[3].y + dy);
-    }
-  }
-
-  const localEndIndex = Math.min(
-    suggestionCurves.length - 1,
-    rangeEnd - rangeStart,
-  );
-  const endOriginal = originalCurves[rangeEnd]?.[3];
-  const endSuggested = suggestionCurves[localEndIndex]?.[3];
-  if (endOriginal && endSuggested && rangeEnd < originalCurves.length - 1) {
-    const dx = (endSuggested.x - endOriginal.x) * strength;
-    const dy = (endSuggested.y - endOriginal.y) * strength;
-    const nextCurve = previewCurves[rangeEnd + 1];
-    if (nextCurve) {
-      nextCurve[0] = p.createVector(nextCurve[0].x + dx, nextCurve[0].y + dy);
-      nextCurve[1] = p.createVector(nextCurve[1].x + dx, nextCurve[1].y + dy);
-    }
-  }
 
   const previewStart = Math.max(0, rangeStart - 1);
   const previewEnd = Math.min(previewCurves.length - 1, rangeEnd + 1);

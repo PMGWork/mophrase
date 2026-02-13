@@ -49,7 +49,7 @@ flowchart LR
   Worker --> LLMClient
   LLMClient --> Suggestion
 
-  Suggestion --> Deserialize["deserializeCurves / deserializeGraphCurves"]
+  Suggestion --> Deserialize["deserializePathKeyframes"]
   Deserialize --> Modifier["createSketchModifier / createGraphModifier"]
   Modifier --> Motion
   Modifier --> Graph
@@ -78,7 +78,7 @@ flowchart LR
 2. `serializePaths` が LLM 入力形式へ変換（`src/utils/serialization/curves.ts`）。
 3. `fetchSuggestions` が `keyframePrompt` と履歴を組み合わせ、`generateStructured` を呼ぶ（`src/suggestion/suggestionService.ts`, `src/services/llm.ts`）。
 4. Worker がプロバイダに問い合わせ、JSON を返却（`worker/src/index.ts`）。
-5. 返却キーフレームを `deserializeCurves` / `deserializeGraphCurves` で曲線化し、元曲線との差分を `Modifier` として生成（`src/utils/modifier.ts`）。
+5. 返却キーフレームを `deserializePathKeyframes` で復元し、元キーフレームとの差分から `Modifier` を生成（`src/utils/modifier.ts`）。
 6. `Path.sketchModifiers` / `Path.graphModifiers` に蓄積し、強度スライダで再調整する。
 
 ### 3.4 再生・プレビュー
@@ -113,4 +113,3 @@ flowchart LR
 - 時間カーブ挙動変更: `src/editor/graphEditor/editor.ts`, `src/utils/keyframes.ts`
 - 提案品質/契約変更: `src/prompts/keyframePrompt.md`, `src/types.ts`, `src/suggestion/*`, `worker/src/index.ts`
 - 保存形式変更: `src/utils/serialization/project.ts`, `src/utils/serialization/curves.ts`
-

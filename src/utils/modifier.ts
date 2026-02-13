@@ -115,13 +115,13 @@ export function applyGraphModifiers(
 // LLMの出力からスケッチモディファイアを作成
 export function createSketchModifier(
   keyframes: Keyframe[],
-  originalCurves: p5.Vector[][],
-  modifiedCurves: p5.Vector[][],
+  modifiedKeyframes: Keyframe[],
   name: string,
   selectionRange?: SelectionRange,
 ): SketchModifier {
   const startIndex = selectionRange?.startCurveIndex ?? 0;
-  const endIndex = selectionRange?.endCurveIndex ?? originalCurves.length - 1;
+  const endIndex =
+    selectionRange?.endCurveIndex ?? Math.max(0, keyframes.length - 2);
 
   // 密配列: deltas[i] が keyframes[i] に対応
   const deltas: SketchKeyframeDelta[] = keyframes.map(() => ({}));
@@ -131,31 +131,28 @@ export function createSketchModifier(
     if (i >= keyframes.length) break;
 
     const localIndex = i - startIndex;
+    const original = keyframes[i];
+    const modified = modifiedKeyframes[localIndex];
+    if (!original || !modified) continue;
     const delta = deltas[i];
 
     // positionデルタ
-    const originalAnchor = getAnchor(originalCurves, i);
-    const modifiedAnchor = getAnchor(modifiedCurves, localIndex);
-    if (originalAnchor && modifiedAnchor) {
-      const v = diffVec2(modifiedAnchor, originalAnchor);
-      if (v) delta.posDelta = v;
-    }
+    const pos = diffVec2(modified.position, original.position);
+    if (pos) delta.posDelta = pos;
 
     // outデルタ（出力カーブが範囲内の場合のみ）
     if (i <= endIndex) {
-      const v = handleDiff(originalCurves[i], modifiedCurves[localIndex], 0, 1);
+      const v = diffVec2(modified.sketchOut, original.sketchOut, {
+        treatUndefinedAsZero: true,
+      });
       if (v) delta.outDelta = v;
     }
 
     // inデルタ（入力カーブが範囲内の場合のみ）
     if (i > startIndex) {
-      const localIndex = i - 1 - startIndex;
-      const v = handleDiff(
-        originalCurves[i - 1],
-        modifiedCurves[localIndex],
-        3,
-        2,
-      );
+      const v = diffVec2(modified.sketchIn, original.sketchIn, {
+        treatUndefinedAsZero: true,
+      });
       if (v) delta.inDelta = v;
     }
   }
@@ -178,13 +175,15 @@ export function createSketchModifier(
 // LLMの出力からグラフモディファイアを作成
 export function createGraphModifier(
   keyframes: Keyframe[],
-  originalCurves: p5.Vector[][],
-  modifiedCurves: p5.Vector[][],
+  progress: number[],
+  modifiedKeyframes: Keyframe[],
+  modifiedProgress: number[],
   name: string,
   selectionRange?: SelectionRange,
 ): GraphModifier {
   const startIndex = selectionRange?.startCurveIndex ?? 0;
-  const endIndex = selectionRange?.endCurveIndex ?? originalCurves.length - 1;
+  const endIndex =
+    selectionRange?.endCurveIndex ?? Math.max(0, keyframes.length - 2);
 
   // 密配列: deltas[i] が keyframes[i] に対応
   const deltas: GraphKeyframeDelta[] = keyframes.map(() => ({}));
@@ -193,24 +192,34 @@ export function createGraphModifier(
   for (let i = startIndex; i <= endIndex + 1; i++) {
     if (i >= keyframes.length) break;
 
+    const localIndex = i - startIndex;
     const delta = deltas[i];
 
     // outデルタ（出力カーブが範囲内の場合のみ）
     if (i <= endIndex) {
-      const localIndex = i - startIndex;
-      const v = handleDiff(originalCurves[i], modifiedCurves[localIndex], 0, 1);
+      const originalOut = resolveGraphOutHandle(keyframes, progress, i);
+      const modifiedOut = resolveGraphOutHandle(
+        modifiedKeyframes,
+        modifiedProgress,
+        localIndex,
+      );
+      const v = diffVec2(modifiedOut, originalOut, {
+        treatUndefinedAsZero: true,
+      });
       if (v) delta.outDelta = v;
     }
 
     // inデルタ（入力カーブが範囲内の場合のみ）
     if (i > startIndex) {
-      const localIndex = i - 1 - startIndex;
-      const v = handleDiff(
-        originalCurves[i - 1],
-        modifiedCurves[localIndex],
-        3,
-        2,
+      const originalIn = resolveGraphInHandle(keyframes, progress, i);
+      const modifiedIn = resolveGraphInHandle(
+        modifiedKeyframes,
+        modifiedProgress,
+        localIndex,
       );
+      const v = diffVec2(modifiedIn, originalIn, {
+        treatUndefinedAsZero: true,
+      });
       if (v) delta.inDelta = v;
     }
   }
@@ -497,33 +506,37 @@ function diffVec2(
   return { x: dx, y: dy };
 }
 
-// キーフレームインデックスからアンカーポイントを取得
-function getAnchor(
-  curves: p5.Vector[][],
-  keyframeIndex: number,
-): p5.Vector | null {
-  if (keyframeIndex < curves.length) return curves[keyframeIndex]?.[0] ?? null;
-  if (keyframeIndex > 0) return curves[keyframeIndex - 1]?.[3] ?? null;
-  return null;
+// graphOut を実効ベクトルとして取得（未指定時はデフォルトを返す）
+function resolveGraphOutHandle(
+  keyframes: Keyframe[],
+  progress: number[],
+  index: number,
+): p5.Vector | undefined {
+  const current = keyframes[index];
+  const next = keyframes[index + 1];
+  if (!current || !next) return undefined;
+  if (current.graphOut) return current.graphOut;
+  const v0 = progress[index] ?? 0;
+  const v1 = progress[index + 1] ?? v0;
+  return current.position.copy().set((next.time - current.time) / 3, (v1 - v0) / 3);
 }
 
-// ハンドルベクトルの差分を計算（anchorIdx, handleIdx はカーブ内でのインデックス）
-function handleDiff(
-  origCurve: p5.Vector[] | undefined,
-  modCurve: p5.Vector[] | undefined,
-  anchorIdx: number,
-  handleIdx: number,
-): { x: number; y: number } | null {
-  if (!origCurve || !modCurve) return null;
-  const oA = origCurve[anchorIdx];
-  const oH = origCurve[handleIdx];
-  const mA = modCurve[anchorIdx];
-  const mH = modCurve[handleIdx];
-  if (!oA || !oH || !mA || !mH) return null;
-  const dx = mH.x - mA.x - (oH.x - oA.x);
-  const dy = mH.y - mA.y - (oH.y - oA.y);
-  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return null;
-  return { x: dx, y: dy };
+// graphIn を実効ベクトルとして取得（未指定時はデフォルトを返す）
+function resolveGraphInHandle(
+  keyframes: Keyframe[],
+  progress: number[],
+  index: number,
+): p5.Vector | undefined {
+  const previous = keyframes[index - 1];
+  const current = keyframes[index];
+  if (!previous || !current) return undefined;
+  if (current.graphIn) return current.graphIn;
+  const v0 = progress[index - 1] ?? 0;
+  const v1 = progress[index] ?? v0;
+  return current.position.copy().set(
+    -(current.time - previous.time) / 3,
+    -(v1 - v0) / 3,
+  );
 }
 
 // ポイントにオフセットを適用

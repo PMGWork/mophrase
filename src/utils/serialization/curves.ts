@@ -135,48 +135,84 @@ export function serializePaths(paths: Path[]): SerializedPath[] {
   });
 }
 
-// シリアライズされたパス -> p5.Vector[][]
-export function deserializeCurves(
+// シリアライズされたパス -> キーフレーム配列（Modifier生成用）
+export function deserializePathKeyframes(
   serializedPath: SerializedPath,
+  referenceKeyframes: Keyframe[],
+  referenceProgress: number[],
   p: p5,
-): p5.Vector[][] {
+): Keyframe[] {
   if (!serializedPath.keyframes || !serializedPath.bbox) return [];
 
-  // バウンディングボックス
   const bbox = serializedPath.bbox;
   const width = bbox.width;
   const height = bbox.height;
   const diagonal = Math.hypot(width, height);
+  const count = Math.min(
+    serializedPath.keyframes.length,
+    referenceKeyframes.length,
+  );
+  if (count === 0) return [];
 
-  // 連続するキーフレーム間を接続してカーブを生成
-  const curves: p5.Vector[][] = [];
-  for (let i = 0; i < serializedPath.keyframes.length - 1; i++) {
-    const startKeyframe = serializedPath.keyframes[i];
-    const endKeyframe = serializedPath.keyframes[i + 1];
-    if (!startKeyframe || !endKeyframe) continue;
+  const keyframes: Keyframe[] = [];
+  for (let i = 0; i < count; i++) {
+    const serialized = serializedPath.keyframes[i];
+    const reference = referenceKeyframes[i];
+    if (!serialized || !reference) continue;
 
-    const start = p.createVector(
-      bbox.x + startKeyframe.x * width,
-      bbox.y + startKeyframe.y * height,
+    const position = p.createVector(
+      bbox.x + serialized.x * width,
+      bbox.y + serialized.y * height,
     );
-    const end = p.createVector(
-      bbox.x + endKeyframe.x * width,
-      bbox.y + endKeyframe.y * height,
-    );
-    const handleOut = startKeyframe.sketchOut;
-    const handleIn = endKeyframe.sketchIn;
 
-    curves.push([
-      start,
-      handleOut
-        ? deserializeHandle(handleOut, start, diagonal, p)
-        : start.copy(),
-      handleIn ? deserializeHandle(handleIn, end, diagonal, p) : end.copy(),
-      end,
-    ]);
+    const sketchIn = serialized.sketchIn
+      ? deserializeHandle(serialized.sketchIn, position, diagonal, p)
+          .copy()
+          .sub(position)
+      : undefined;
+    const sketchOut = serialized.sketchOut
+      ? deserializeHandle(serialized.sketchOut, position, diagonal, p)
+          .copy()
+          .sub(position)
+      : undefined;
+
+    keyframes.push({
+      time: reference.time,
+      position,
+      sketchIn,
+      sketchOut,
+    });
   }
 
-  return curves;
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    const startSerialized = serializedPath.keyframes[i];
+    const endSerialized = serializedPath.keyframes[i + 1];
+    const startRef = referenceKeyframes[i];
+    const endRef = referenceKeyframes[i + 1];
+    const start = keyframes[i];
+    const end = keyframes[i + 1];
+    if (!startSerialized || !endSerialized || !startRef || !endRef) continue;
+
+    const dt = endRef.time - startRef.time;
+    const v0 = referenceProgress[i] ?? 0;
+    const v1 = referenceProgress[i + 1] ?? v0;
+    const dv = v1 - v0;
+    const segmentDiag = Math.hypot(dt, dv);
+
+    const defaultOut = p.createVector(dt / 3, dv / 3);
+    const defaultIn = p.createVector(-dt / 3, -dv / 3);
+
+    start.graphOut =
+      startSerialized.graphOut && segmentDiag > 1e-6
+        ? deserializeGraphHandle(startSerialized.graphOut, segmentDiag, p)
+        : defaultOut;
+    end.graphIn =
+      endSerialized.graphIn && segmentDiag > 1e-6
+        ? deserializeGraphHandle(endSerialized.graphIn, segmentDiag, p)
+        : defaultIn;
+  }
+
+  return keyframes;
 }
 
 // 極座標のハンドル -> p5.Vector
@@ -191,60 +227,6 @@ export function deserializeHandle(
   const x = anchor.x + Math.cos(angle) * dist;
   const y = anchor.y + Math.sin(angle) * dist;
   return p.createVector(x, y);
-}
-
-// シリアライズされたキーフレームから時間カーブをデシリアライズ
-export function deserializeGraphCurves(
-  serializedKeyframes: SerializedKeyframe[],
-  keyframes: Keyframe[],
-  progress: number[],
-  p: p5,
-): p5.Vector[][] {
-  if (serializedKeyframes.length < 2 || keyframes.length < 2) return [];
-
-  const result: p5.Vector[][] = [];
-
-  for (let i = 0; i < serializedKeyframes.length - 1; i++) {
-    const startSerialized = serializedKeyframes[i];
-    const endSerialized = serializedKeyframes[i + 1];
-    const startKf = keyframes[i];
-    const endKf = keyframes[i + 1];
-    if (!startKf || !endKf) continue;
-
-    const t0 = startKf.time;
-    const t1 = endKf.time;
-    const v0 = progress[i] ?? 0;
-    const v1 = progress[i + 1] ?? v0;
-    const dt = t1 - t0;
-    const dv = v1 - v0;
-
-    const p0 = p.createVector(t0, v0);
-    const p3 = p.createVector(t1, v1);
-
-    // セグメントの対角線長
-    const segmentDiag = Math.hypot(dt, dv);
-
-    // デフォルトハンドル
-    const defaultOut = p.createVector(dt / 3, dv / 3);
-    const defaultIn = p.createVector(-dt / 3, -dv / 3);
-
-    // LLM からのハンドルを極座標からデシリアライズ
-    let outVec = defaultOut;
-    if (startSerialized.graphOut && segmentDiag > 1e-6) {
-      outVec = deserializeGraphHandle(startSerialized.graphOut, segmentDiag, p);
-    }
-
-    let inVec = defaultIn;
-    if (endSerialized.graphIn && segmentDiag > 1e-6) {
-      inVec = deserializeGraphHandle(endSerialized.graphIn, segmentDiag, p);
-    }
-
-    const p1 = p0.copy().add(outVec);
-    const p2 = p3.copy().add(inVec);
-    result.push([p0, p1, p2, p3]);
-  }
-
-  return result;
 }
 
 // 極座標のグラフハンドル -> p5.Vector
