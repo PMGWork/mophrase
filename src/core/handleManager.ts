@@ -386,7 +386,11 @@ export class HandleManager {
     effective: p5.Vector[][];
   } {
     const original = buildSketchCurves(path.keyframes);
-    const effective = applySketchModifiers(original, path.keyframes, path.sketchModifiers);
+    const effective = applySketchModifiers(
+      original,
+      path.keyframes,
+      path.sketchModifiers,
+    );
     return { original, effective };
   }
 

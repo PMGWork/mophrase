@@ -97,6 +97,13 @@ type SketchSegmentSplitResult = {
   insertedSketchOut?: p5.Vector;
 };
 
+type GraphSegmentSplitResult = {
+  startGraphOut?: p5.Vector;
+  endGraphIn?: p5.Vector;
+  insertedGraphIn?: p5.Vector;
+  insertedGraphOut?: p5.Vector;
+};
+
 // 入力検証
 function assertSplitSegmentInput(
   keyframes: Keyframe[],
@@ -135,24 +142,58 @@ function splitSketchSegmentGeometry(
   };
 }
 
+// セグメント分割時のグラフハンドル計算
+function splitGraphSegmentGeometry(
+  start: Keyframe,
+  end: Keyframe,
+  startProgress: number,
+  endProgress: number,
+  t: number,
+): GraphSegmentSplitResult {
+  const t0 = start.time;
+  const t1 = end.time;
+  const dt = t1 - t0;
+  const dv = endProgress - startProgress;
+
+  const p0 = start.position.copy().set(t0, startProgress);
+  const p3 = end.position.copy().set(t1, endProgress);
+  const defaultOut = start.position.copy().set(dt / 3, dv / 3);
+  const defaultIn = start.position.copy().set(-dt / 3, -dv / 3);
+  const p1 = p0.copy().add(start.graphOut ?? defaultOut);
+  const p2 = p3.copy().add(end.graphIn ?? defaultIn);
+  const { left, right } = splitCubicBezier([p0, p1, p2, p3], t);
+
+  return {
+    startGraphOut: normalizeHandle(left[1].copy().sub(left[0])),
+    endGraphIn: normalizeHandle(right[2].copy().sub(right[3])),
+    insertedGraphIn: normalizeHandle(left[2].copy().sub(left[3])),
+    insertedGraphOut: normalizeHandle(right[1].copy().sub(right[0])),
+  };
+}
+
 // キーフレーム配列へ分割キーフレームを挿入
 function insertSplitKeyframe(
   keyframes: Keyframe[],
   segmentIndex: number,
   t: number,
   split: SketchSegmentSplitResult,
+  graphSplit: GraphSegmentSplitResult,
 ): Keyframe[] {
   const start = keyframes[segmentIndex];
   const end = keyframes[segmentIndex + 1];
 
   start.sketchOut = split.startSketchOut;
   end.sketchIn = split.endSketchIn;
+  start.graphOut = graphSplit.startGraphOut;
+  end.graphIn = graphSplit.endGraphIn;
 
   const inserted: Keyframe = {
     time: start.time + (end.time - start.time) * t,
     position: split.point.copy(),
     sketchIn: split.insertedSketchIn,
     sketchOut: split.insertedSketchOut,
+    graphIn: graphSplit.insertedGraphIn,
+    graphOut: graphSplit.insertedGraphOut,
   };
 
   keyframes.splice(segmentIndex + 1, 0, inserted);
@@ -167,10 +208,21 @@ export function splitKeyframeSegment(
 ): Keyframe[] {
   assertSplitSegmentInput(keyframes, segmentIndex, t);
   const next = keyframes.map(cloneKeyframe);
+  const curves = buildSketchCurves(next);
+  const progress = computeKeyframeProgress(next, curves);
   const start = next[segmentIndex];
   const end = next[segmentIndex + 1];
   const split = splitSketchSegmentGeometry(start, end, t);
-  return insertSplitKeyframe(next, segmentIndex, t, split);
+  const startProgress = progress[segmentIndex] ?? 0;
+  const endProgress = progress[segmentIndex + 1] ?? startProgress;
+  const graphSplit = splitGraphSegmentGeometry(
+    start,
+    end,
+    startProgress,
+    endProgress,
+    t,
+  );
+  return insertSplitKeyframe(next, segmentIndex, t, split, graphSplit);
 }
 // #endregion
 

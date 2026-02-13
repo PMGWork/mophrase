@@ -201,48 +201,33 @@ function mapSketchDelta(
   raw: Record<string, unknown>,
   delta: SketchKeyframeDelta,
 ): void {
-  if (isVector2(raw.positionDelta))
-    delta.positionDelta = toVector2(raw.positionDelta);
-  if (isVector2(raw.sketchInDelta))
-    delta.sketchInDelta = toVector2(raw.sketchInDelta);
-  if (isVector2(raw.sketchOutDelta))
-    delta.sketchOutDelta = toVector2(raw.sketchOutDelta);
+  if (isVector2(raw.posDelta)) delta.posDelta = toVector2(raw.posDelta);
+  if (isVector2(raw.inDelta)) delta.inDelta = toVector2(raw.inDelta);
+  if (isVector2(raw.outDelta)) delta.outDelta = toVector2(raw.outDelta);
 }
 
 function mapGraphDelta(
   raw: Record<string, unknown>,
   delta: GraphKeyframeDelta,
 ): void {
-  if (isVector2(raw.graphInDelta))
-    delta.graphInDelta = toVector2(raw.graphInDelta);
-  if (isVector2(raw.graphOutDelta))
-    delta.graphOutDelta = toVector2(raw.graphOutDelta);
+  if (isVector2(raw.inDelta)) delta.inDelta = toVector2(raw.inDelta);
+  if (isVector2(raw.outDelta)) delta.outDelta = toVector2(raw.outDelta);
 }
 
 function sanitizeSketchDelta(delta: SketchKeyframeDelta): SketchKeyframeDelta {
   return {
     ...delta,
-    positionDelta: delta.positionDelta
-      ? sanitizeVector2(delta.positionDelta)
-      : undefined,
-    sketchInDelta: delta.sketchInDelta
-      ? sanitizeVector2(delta.sketchInDelta)
-      : undefined,
-    sketchOutDelta: delta.sketchOutDelta
-      ? sanitizeVector2(delta.sketchOutDelta)
-      : undefined,
+    posDelta: delta.posDelta ? sanitizeVector2(delta.posDelta) : undefined,
+    inDelta: delta.inDelta ? sanitizeVector2(delta.inDelta) : undefined,
+    outDelta: delta.outDelta ? sanitizeVector2(delta.outDelta) : undefined,
   };
 }
 
 function sanitizeGraphDelta(delta: GraphKeyframeDelta): GraphKeyframeDelta {
   return {
     ...delta,
-    graphInDelta: delta.graphInDelta
-      ? sanitizeVector2(delta.graphInDelta)
-      : undefined,
-    graphOutDelta: delta.graphOutDelta
-      ? sanitizeVector2(delta.graphOutDelta)
-      : undefined,
+    inDelta: delta.inDelta ? sanitizeVector2(delta.inDelta) : undefined,
+    outDelta: delta.outDelta ? sanitizeVector2(delta.outDelta) : undefined,
   };
 }
 
@@ -457,9 +442,7 @@ function isSerializedPath(value: unknown): value is SerializedPath {
 
 // { x, y } かどうかをチェック
 function isVector2(value: unknown): value is Record<string, number> {
-  return (
-    isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y)
-  );
+  return isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y);
 }
 
 // unknown -> { x, y }
@@ -468,9 +451,10 @@ function toVector2(value: Record<string, number>): { x: number; y: number } {
 }
 
 // { x, y } をサニタイズ（NaN/Infinity 防止）
-function sanitizeVector2(
-  v: { x: number; y: number },
-): { x: number; y: number } {
+function sanitizeVector2(v: { x: number; y: number }): {
+  x: number;
+  y: number;
+} {
   return {
     x: Number.isFinite(v.x) ? v.x : 0,
     y: Number.isFinite(v.y) ? v.y : 0,

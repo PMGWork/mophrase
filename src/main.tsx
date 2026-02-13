@@ -123,10 +123,7 @@ const App = () => {
             (modifier) => modifier.id === modifierId,
           );
           if (target) target.strength = 0;
-          path.graphModifiers = removeModifier(
-            path.graphModifiers,
-            modifierId,
-          );
+          path.graphModifiers = removeModifier(path.graphModifiers, modifierId);
         }
       });
     },

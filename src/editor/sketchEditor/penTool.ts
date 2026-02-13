@@ -9,7 +9,11 @@ import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
 import { bezierCurve, refineParameter } from '../../utils/bezier';
 import { buildSketchCurves, splitKeyframeSegment } from '../../utils/keyframes';
-import { applySketchModifiers } from '../../utils/modifier';
+import {
+  applySketchModifiers,
+  splitGraphModifierDeltas,
+  splitSketchModifierDeltas,
+} from '../../utils/modifier';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
@@ -134,8 +138,21 @@ export class PenTool {
       if (!splitHit) continue;
 
       try {
+        const baseKeyframes = path.keyframes;
         path.keyframes = splitKeyframeSegment(
-          path.keyframes,
+          baseKeyframes,
+          splitHit.segmentIndex,
+          splitHit.t,
+        );
+        splitSketchModifierDeltas(
+          path.sketchModifiers,
+          baseKeyframes,
+          splitHit.segmentIndex,
+          splitHit.t,
+        );
+        splitGraphModifierDeltas(
+          path.graphModifiers,
+          baseKeyframes,
           splitHit.segmentIndex,
           splitHit.t,
         );
@@ -162,7 +179,11 @@ export class PenTool {
     const curves = buildSketchCurves(path.keyframes);
     if (curves.length === 0) return null;
 
-    const effectiveCurves = applySketchModifiers(curves, path.keyframes, path.sketchModifiers);
+    const effectiveCurves = applySketchModifiers(
+      curves,
+      path.keyframes,
+      path.sketchModifiers,
+    );
     const sampleCount = Math.max(4, Math.round(1 / BEZIER_T_STEP));
 
     let best: {

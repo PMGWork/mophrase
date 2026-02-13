@@ -30,7 +30,9 @@ export interface FitCurveResult {
 }
 
 // ベジェ曲線の始点と終点の接ベクトルを計算する
-export function computeEndTangents(points: p5.Vector[]): [p5.Vector, p5.Vector] {
+export function computeEndTangents(
+  points: p5.Vector[],
+): [p5.Vector, p5.Vector] {
   const n = points.length;
 
   // 始点の接ベクトル t_1 を計算
@@ -47,7 +49,10 @@ export function computeEndTangents(points: p5.Vector[]): [p5.Vector, p5.Vector] 
 }
 
 // 点列に対応する曲線のパラメータの位置を計算する
-export function parametrizeRange(points: p5.Vector[], range: FitRange): number[] {
+export function parametrizeRange(
+  points: p5.Vector[],
+  range: FitRange,
+): number[] {
   const params: number[] = [0];
 
   // 分割点が1つの場合はパラメータを計算しない
@@ -236,7 +241,12 @@ export function refineParams(
   points: p5.Vector[],
   startIndex: number,
 ): void {
-  const cubicControls = controls as [p5.Vector, p5.Vector, p5.Vector, p5.Vector];
+  const cubicControls = controls as [
+    p5.Vector,
+    p5.Vector,
+    p5.Vector,
+    p5.Vector,
+  ];
 
   for (let i = 1; i < params.length - 1; i++) {
     const u = params[i];

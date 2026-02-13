@@ -148,7 +148,12 @@ export function drawSketchPath(
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
 ): void {
   const curves = buildSketchCurves(path.keyframes);
-  const effectiveCurves = applySketchModifiers(curves, path.keyframes, path.sketchModifiers, p);
+  const effectiveCurves = applySketchModifiers(
+    curves,
+    path.keyframes,
+    path.sketchModifiers,
+    p,
+  );
 
   // ベジェ曲線の描画（modifiers適用後）
   const curveColor = isSelected ? colors.handle : '#4b5563';

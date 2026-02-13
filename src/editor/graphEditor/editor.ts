@@ -13,7 +13,10 @@ import {
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../../utils/keyframes';
-import { applySketchModifiers, applyGraphModifiers } from '../../utils/modifier';
+import {
+  applySketchModifiers,
+  applyGraphModifiers,
+} from '../../utils/modifier';
 import { isLeftMouseButton } from '../../utils/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 

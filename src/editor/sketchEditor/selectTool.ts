@@ -172,7 +172,11 @@ export class SelectTool {
     if (curves.length === 0) return false;
 
     // modifier適用後の曲線で判定
-    const effectiveCurves = applySketchModifiers(curves, path.keyframes, path.sketchModifiers);
+    const effectiveCurves = applySketchModifiers(
+      curves,
+      path.keyframes,
+      path.sketchModifiers,
+    );
 
     for (const curve of effectiveCurves) {
       for (let t = 0; t <= 1; t += BEZIER_T_STEP) {

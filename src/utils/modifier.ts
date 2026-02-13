@@ -12,10 +12,11 @@ import type {
   SketchKeyframeDelta,
   SketchModifier,
 } from '../types';
+import { splitKeyframeSegment } from './keyframes';
 
 // #region 適用
 
-// スケッチモディファイアを適用して変形後の点列を取得
+// スケッチモディファイアを適用
 export function applySketchModifiers(
   curves: p5.Vector[][],
   keyframes: Keyframe[],
@@ -26,30 +27,30 @@ export function applySketchModifiers(
 
   // キーフレームごとに位置・ハンドルの累積デルタを計算
   const posDelta = zeroVecs(keyframes.length);
-  const soDelta = zeroVecs(keyframes.length);
-  const siDelta = zeroVecs(keyframes.length);
+  const outDelta = zeroVecs(keyframes.length);
+  const inDelta = zeroVecs(keyframes.length);
 
-  for (const mod of modifiers) {
-    const len = Math.min(mod.deltas.length, keyframes.length);
+  for (const modifier of modifiers) {
+    const len = Math.min(modifier.deltas.length, keyframes.length);
     for (let idx = 0; idx < len; idx++) {
-      const d = mod.deltas[idx];
-      accumulate(posDelta[idx], d.positionDelta, mod.strength);
-      accumulate(soDelta[idx], d.sketchOutDelta, mod.strength);
-      accumulate(siDelta[idx], d.sketchInDelta, mod.strength);
+      const deltas = modifier.deltas[idx];
+      accumulateDelta(posDelta[idx], deltas.posDelta, modifier.strength);
+      accumulateDelta(outDelta[idx], deltas.outDelta, modifier.strength);
+      accumulateDelta(inDelta[idx], deltas.inDelta, modifier.strength);
     }
   }
 
+  // 各カーブにデルタを適用
   return curves.map((curve, i) => {
-    // curve[i] は keyframe[i] → keyframe[i+1] を接続
     const dp0 = posDelta[i];
     const dp3 = posDelta[i + 1];
-    const so = soDelta[i];
-    const si = siDelta[i + 1];
+    const out = outDelta[i];
+    const inn = inDelta[i + 1];
 
     const offsets = [
       { x: dp0.x, y: dp0.y },
-      { x: dp0.x + so.x, y: dp0.y + so.y },
-      { x: dp3.x + si.x, y: dp3.y + si.y },
+      { x: dp0.x + out.x, y: dp0.y + out.y },
+      { x: dp3.x + inn.x, y: dp3.y + inn.y },
       { x: dp3.x, y: dp3.y },
     ];
 
@@ -63,7 +64,7 @@ export function applySketchModifiers(
   });
 }
 
-// グラフモディファイアを適用して変形後の点列を取得
+// グラフモディファイアを適用
 export function applyGraphModifiers(
   curves: p5.Vector[][],
   keyframes: Keyframe[],
@@ -72,33 +73,35 @@ export function applyGraphModifiers(
 ): p5.Vector[][] {
   if (!modifiers || modifiers.length === 0) return curves;
 
-  const goDelta = zeroVecs(keyframes.length);
-  const giDelta = zeroVecs(keyframes.length);
+  // キーフレームごとにハンドルの累積デルタを計算
+  const outDelta = zeroVecs(keyframes.length);
+  const inDelta = zeroVecs(keyframes.length);
 
   for (const mod of modifiers) {
     const len = Math.min(mod.deltas.length, keyframes.length);
     for (let idx = 0; idx < len; idx++) {
       const d = mod.deltas[idx];
-      accumulate(goDelta[idx], d.graphOutDelta, mod.strength);
-      accumulate(giDelta[idx], d.graphInDelta, mod.strength);
+      accumulateDelta(outDelta[idx], d.outDelta, mod.strength);
+      accumulateDelta(inDelta[idx], d.inDelta, mod.strength);
     }
   }
 
+  // 各カーブにデルタを適用
   return curves.map((curve, i) => {
-    const go = goDelta[i];
-    const gi = giDelta[i + 1];
+    const out = outDelta[i];
+    const inn = inDelta[i + 1];
 
-    if (go.x === 0 && go.y === 0 && gi.x === 0 && gi.y === 0) return curve;
+    if (out.x === 0 && out.y === 0 && inn.x === 0 && inn.y === 0) return curve;
 
     return curve.map((point, j) => {
       let dx = 0;
       let dy = 0;
       if (j === 1) {
-        dx = go.x;
-        dy = go.y;
+        dx = out.x;
+        dy = out.y;
       } else if (j === 2) {
-        dx = gi.x;
-        dy = gi.y;
+        dx = inn.x;
+        dy = inn.y;
       }
       if (dx === 0 && dy === 0) return point;
       return offsetPoint(point, dx, dy, p);
@@ -116,38 +119,43 @@ export function createSketchModifier(
   name: string,
   selectionRange?: SelectionRange,
 ): SketchModifier {
-  const startCI = selectionRange?.startCurveIndex ?? 0;
-  const endCI = selectionRange?.endCurveIndex ?? originalCurves.length - 1;
+  const startIndex = selectionRange?.startCurveIndex ?? 0;
+  const endIndex = selectionRange?.endCurveIndex ?? originalCurves.length - 1;
 
   // 密配列: deltas[i] が keyframes[i] に対応
   const deltas: SketchKeyframeDelta[] = keyframes.map(() => ({}));
 
-  for (let k = startCI; k <= endCI + 1; k++) {
-    if (k >= keyframes.length) break;
+  // 各キーフレームに対してデルタを計算
+  for (let i = startIndex; i <= endIndex + 1; i++) {
+    if (i >= keyframes.length) break;
 
-    const localK = k - startCI;
-    const delta = deltas[k];
+    const localIndex = i - startIndex;
+    const delta = deltas[i];
 
-    // 位置デルタ
-    const origAnchor = getAnchor(originalCurves, k);
-    const modAnchor = getAnchor(modifiedCurves, localK);
-    if (origAnchor && modAnchor) {
-      const v = diffVec(modAnchor, origAnchor);
-      if (v) delta.positionDelta = v;
+    // positionデルタ
+    const originalAnchor = getAnchor(originalCurves, i);
+    const modifiedAnchor = getAnchor(modifiedCurves, localIndex);
+    if (originalAnchor && modifiedAnchor) {
+      const v = diffVec2(modifiedAnchor, originalAnchor);
+      if (v) delta.posDelta = v;
     }
 
-    // sketchOutデルタ（出力カーブが範囲内の場合のみ）
-    if (k >= startCI && k <= endCI) {
-      const localI = k - startCI;
-      const v = handleDiff(originalCurves[k], modifiedCurves[localI], 0, 1);
-      if (v) delta.sketchOutDelta = v;
+    // outデルタ（出力カーブが範囲内の場合のみ）
+    if (i <= endIndex) {
+      const v = handleDiff(originalCurves[i], modifiedCurves[localIndex], 0, 1);
+      if (v) delta.outDelta = v;
     }
 
-    // sketchInデルタ（入力カーブが範囲内の場合のみ）
-    if (k - 1 >= startCI && k - 1 <= endCI) {
-      const localI = k - 1 - startCI;
-      const v = handleDiff(originalCurves[k - 1], modifiedCurves[localI], 3, 2);
-      if (v) delta.sketchInDelta = v;
+    // inデルタ（入力カーブが範囲内の場合のみ）
+    if (i > startIndex) {
+      const localIndex = i - 1 - startIndex;
+      const v = handleDiff(
+        originalCurves[i - 1],
+        modifiedCurves[localIndex],
+        3,
+        2,
+      );
+      if (v) delta.inDelta = v;
     }
   }
 
@@ -162,33 +170,180 @@ export function createGraphModifier(
   name: string,
   selectionRange?: SelectionRange,
 ): GraphModifier {
-  const startCI = selectionRange?.startCurveIndex ?? 0;
-  const endCI = selectionRange?.endCurveIndex ?? originalCurves.length - 1;
+  const startIndex = selectionRange?.startCurveIndex ?? 0;
+  const endIndex = selectionRange?.endCurveIndex ?? originalCurves.length - 1;
 
   // 密配列: deltas[i] が keyframes[i] に対応
   const deltas: GraphKeyframeDelta[] = keyframes.map(() => ({}));
 
-  for (let k = startCI; k <= endCI + 1; k++) {
-    if (k >= keyframes.length) break;
+  // 各キーフレームに対してデルタを計算
+  for (let i = startIndex; i <= endIndex + 1; i++) {
+    if (i >= keyframes.length) break;
 
-    const delta = deltas[k];
+    const delta = deltas[i];
 
-    // graphOutデルタ
-    if (k >= startCI && k <= endCI) {
-      const localI = k - startCI;
-      const v = handleDiff(originalCurves[k], modifiedCurves[localI], 0, 1);
-      if (v) delta.graphOutDelta = v;
+    // outデルタ（出力カーブが範囲内の場合のみ）
+    if (i <= endIndex) {
+      const localIndex = i - startIndex;
+      const v = handleDiff(originalCurves[i], modifiedCurves[localIndex], 0, 1);
+      if (v) delta.outDelta = v;
     }
 
-    // graphInデルタ
-    if (k - 1 >= startCI && k - 1 <= endCI) {
-      const localI = k - 1 - startCI;
-      const v = handleDiff(originalCurves[k - 1], modifiedCurves[localI], 3, 2);
-      if (v) delta.graphInDelta = v;
+    // inデルタ（入力カーブが範囲内の場合のみ）
+    if (i > startIndex) {
+      const localIndex = i - 1 - startIndex;
+      const v = handleDiff(
+        originalCurves[i - 1],
+        modifiedCurves[localIndex],
+        3,
+        2,
+      );
+      if (v) delta.inDelta = v;
     }
   }
 
   return { id: crypto.randomUUID(), name, strength: 1.0, deltas };
+}
+
+// #region 分割
+
+// パス分割に合わせて SketchModifier の deltas を挿入
+export function splitSketchModifierDeltas(
+  modifiers: SketchModifier[] | undefined,
+  keyframes: Keyframe[],
+  segmentIndex: number,
+  t: number,
+): void {
+  if (!modifiers || modifiers.length === 0) return;
+
+  const clampedT = clamp01(t);
+  const insertIndex = segmentIndex + 1;
+  const endIndex = insertIndex + 1;
+  const baseSplit = splitKeyframeSegment(keyframes, segmentIndex, clampedT);
+
+  // 各モディファイアに対してデルタを挿入・更新
+  for (const modifier of modifiers) {
+    // デルタ配列を現在の長さに揃える
+    fitDenseDeltas(modifier.deltas, keyframes.length, () => ({}));
+
+    // モディファイア適応後の分割結果を計算
+    const modified = computeSketchModified(keyframes, modifier);
+    const modifiedSplit = splitKeyframeSegment(
+      modified,
+      segmentIndex,
+      clampedT,
+    );
+
+    // 新しいデルタを挿入して配列を拡張
+    modifier.deltas.splice(insertIndex, 0, {});
+    fitDenseDeltas(modifier.deltas, baseSplit.length, () => ({}));
+
+    const startDelta = modifier.deltas[segmentIndex] ?? {};
+    const insertedDelta = modifier.deltas[insertIndex] ?? {};
+    const endDelta = modifier.deltas[endIndex] ?? {};
+
+    // 開始点: 出力ハンドルのみ更新
+    startDelta.outDelta = diffVec2(
+      modifiedSplit[segmentIndex]?.sketchOut,
+      baseSplit[segmentIndex]?.sketchOut,
+      { treatUndefinedAsZero: true },
+    );
+
+    // 挿入点: 位置と両ハンドルを更新
+    insertedDelta.posDelta = diffVec2(
+      modifiedSplit[insertIndex]?.position,
+      baseSplit[insertIndex]?.position,
+    );
+    insertedDelta.inDelta = diffVec2(
+      modifiedSplit[insertIndex]?.sketchIn,
+      baseSplit[insertIndex]?.sketchIn,
+      { treatUndefinedAsZero: true },
+    );
+    insertedDelta.outDelta = diffVec2(
+      modifiedSplit[insertIndex]?.sketchOut,
+      baseSplit[insertIndex]?.sketchOut,
+      { treatUndefinedAsZero: true },
+    );
+
+    // 終点: 入力ハンドルのみ更新
+    endDelta.inDelta = diffVec2(
+      modifiedSplit[endIndex]?.sketchIn,
+      baseSplit[endIndex]?.sketchIn,
+      { treatUndefinedAsZero: true },
+    );
+
+    // 更新を反映
+    modifier.deltas[segmentIndex] = startDelta;
+    modifier.deltas[insertIndex] = insertedDelta;
+    modifier.deltas[endIndex] = endDelta;
+  }
+}
+
+// パス分割に合わせて GraphModifier の deltas を挿入
+export function splitGraphModifierDeltas(
+  modifiers: GraphModifier[] | undefined,
+  keyframes: Keyframe[],
+  segmentIndex: number,
+  t: number,
+): void {
+  if (!modifiers || modifiers.length === 0) return;
+
+  const clampedT = clamp01(t);
+  const insertIndex = segmentIndex + 1;
+  const endIndex = insertIndex + 1;
+  const baseSplit = splitKeyframeSegment(keyframes, segmentIndex, clampedT);
+
+  for (const modifier of modifiers) {
+    // デルタ配列を現在の長さに揃える
+    fitDenseDeltas(modifier.deltas, keyframes.length, () => ({}));
+
+    // モディファイア適応後の分割結果を計算
+    const modified = computeGraphModified(keyframes, modifier);
+    const modifiedSplit = splitKeyframeSegment(
+      modified,
+      segmentIndex,
+      clampedT,
+    );
+
+    // 新しいデルタを挿入して配列を拡張
+    modifier.deltas.splice(insertIndex, 0, {});
+    fitDenseDeltas(modifier.deltas, baseSplit.length, () => ({}));
+
+    const startDelta = modifier.deltas[segmentIndex] ?? {};
+    const insertedDelta = modifier.deltas[insertIndex] ?? {};
+    const endDelta = modifier.deltas[endIndex] ?? {};
+
+    // 開始点: 出力ハンドルのみ更新
+    startDelta.outDelta = diffVec2(
+      modifiedSplit[segmentIndex]?.graphOut,
+      baseSplit[segmentIndex]?.graphOut,
+      { treatUndefinedAsZero: true },
+    );
+
+    // 挿入点: 両ハンドルを更新
+    insertedDelta.inDelta = diffVec2(
+      modifiedSplit[insertIndex]?.graphIn,
+      baseSplit[insertIndex]?.graphIn,
+      { treatUndefinedAsZero: true },
+    );
+    insertedDelta.outDelta = diffVec2(
+      modifiedSplit[insertIndex]?.graphOut,
+      baseSplit[insertIndex]?.graphOut,
+      { treatUndefinedAsZero: true },
+    );
+
+    // 終点: 入力ハンドルのみ更新
+    endDelta.inDelta = diffVec2(
+      modifiedSplit[endIndex]?.graphIn,
+      baseSplit[endIndex]?.graphIn,
+      { treatUndefinedAsZero: true },
+    );
+
+    // 更新を反映
+    modifier.deltas[segmentIndex] = startDelta;
+    modifier.deltas[insertIndex] = insertedDelta;
+    modifier.deltas[endIndex] = endDelta;
+  }
 }
 
 // #region 更新・削除
@@ -221,7 +376,7 @@ function zeroVecs(length: number): { x: number; y: number }[] {
 }
 
 // デルタを累積加算
-function accumulate(
+function accumulateDelta(
   target: { x: number; y: number },
   delta: { x: number; y: number } | undefined,
   strength: number,
@@ -231,11 +386,107 @@ function accumulate(
   target.y += delta.y * strength;
 }
 
-// ベクトル差分（有意な差がある場合のみ返す）
-function diffVec(a: p5.Vector, b: p5.Vector): { x: number; y: number } | null {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return null;
+// [0,1] にクランプ
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0.5;
+  return Math.max(0, Math.min(1, value));
+}
+
+// strength=1 として SketchModifier を適用したキーフレーム配列を生成
+function computeSketchModified(
+  keyframes: Keyframe[],
+  modifier: SketchModifier,
+): Keyframe[] {
+  return keyframes.map((keyframe, idx) => {
+    const delta = modifier.deltas[idx];
+    return {
+      ...keyframe,
+      position: addPositionDelta(keyframe.position, delta?.posDelta),
+      sketchIn: addHandleDelta(
+        keyframe.sketchIn,
+        delta?.inDelta,
+        keyframe.position,
+      ),
+      sketchOut: addHandleDelta(
+        keyframe.sketchOut,
+        delta?.outDelta,
+        keyframe.position,
+      ),
+      graphIn: keyframe.graphIn?.copy(),
+      graphOut: keyframe.graphOut?.copy(),
+    };
+  });
+}
+
+// strength=1 として GraphModifier を適用したキーフレーム配列を生成
+function computeGraphModified(
+  keyframes: Keyframe[],
+  modifier: GraphModifier,
+): Keyframe[] {
+  return keyframes.map((keyframe, idx) => {
+    const delta = modifier.deltas[idx];
+    return {
+      ...keyframe,
+      position: keyframe.position.copy(),
+      sketchIn: keyframe.sketchIn?.copy(),
+      sketchOut: keyframe.sketchOut?.copy(),
+      graphIn: addHandleDelta(
+        keyframe.graphIn,
+        delta?.inDelta,
+        keyframe.position,
+      ),
+      graphOut: addHandleDelta(
+        keyframe.graphOut,
+        delta?.outDelta,
+        keyframe.position,
+      ),
+    };
+  });
+}
+
+// 密配列の長さを指定値に合わせる
+function fitDenseDeltas<T extends object>(
+  deltas: T[],
+  targetLength: number,
+  createDelta: () => T,
+): void {
+  while (deltas.length < targetLength) deltas.push(createDelta());
+  if (deltas.length > targetLength) deltas.length = targetLength;
+}
+
+// position に delta を加算した新ベクトルを作成
+function addPositionDelta(
+  position: p5.Vector,
+  delta: { x: number; y: number } | undefined,
+): p5.Vector {
+  if (!delta) return position.copy();
+  return position.copy().add(delta.x, delta.y);
+}
+
+// handle に delta を加算して正規化
+function addHandleDelta(
+  handle: p5.Vector | undefined,
+  delta: { x: number; y: number } | undefined,
+  template: p5.Vector,
+): p5.Vector | undefined {
+  const x = (handle?.x ?? 0) + (delta?.x ?? 0);
+  const y = (handle?.y ?? 0) + (delta?.y ?? 0);
+  if (Math.abs(x) < 1e-9 && Math.abs(y) < 1e-9) return undefined;
+  const base = handle ?? template;
+  return base.copy().set(x, y);
+}
+
+// 2ベクトル差分
+function diffVec2(
+  a: p5.Vector | undefined,
+  b: p5.Vector | undefined,
+  options?: { treatUndefinedAsZero?: boolean },
+): { x: number; y: number } | undefined {
+  const treatUndefinedAsZero = options?.treatUndefinedAsZero ?? false;
+  if (!treatUndefinedAsZero && (!a || !b)) return undefined;
+  const dx = (a?.x ?? 0) - (b?.x ?? 0);
+  const dy = (a?.y ?? 0) - (b?.y ?? 0);
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return undefined;
   return { x: dx, y: dy };
 }
 
@@ -269,7 +520,12 @@ function handleDiff(
 }
 
 // ポイントにオフセットを適用
-function offsetPoint(point: p5.Vector, dx: number, dy: number, p?: p5): p5.Vector {
+function offsetPoint(
+  point: p5.Vector,
+  dx: number,
+  dy: number,
+  p?: p5,
+): p5.Vector {
   if (p) return p.createVector(point.x + dx, point.y + dy);
   if (typeof point.copy === 'function') {
     return point.copy().add(dx, dy);

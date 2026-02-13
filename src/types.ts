@@ -62,15 +62,15 @@ export interface Path {
 
 // スケッチモディファイアのキーフレーム差分
 export interface SketchKeyframeDelta {
-  positionDelta?: { x: number; y: number };
-  sketchInDelta?: { x: number; y: number };
-  sketchOutDelta?: { x: number; y: number };
+  posDelta?: { x: number; y: number };
+  inDelta?: { x: number; y: number };
+  outDelta?: { x: number; y: number };
 }
 
 // グラフモディファイアのキーフレーム差分
 export interface GraphKeyframeDelta {
-  graphInDelta?: { x: number; y: number };
-  graphOutDelta?: { x: number; y: number };
+  inDelta?: { x: number; y: number };
+  outDelta?: { x: number; y: number };
 }
 
 // スケッチモディファイア
