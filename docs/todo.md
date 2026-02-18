@@ -68,16 +68,6 @@
     - iPad Safari で保存と読込の代替導線が利用できる。
     - 既存のPC保存/読込フローに回帰がない。
 
-- [ ] モディファイア/シリアライズの回帰テストを追加する
-  - 背景: 重要ロジックに対する自動テストが薄く、分割処理などの変更で回帰検知が遅れる。
-  - 対象候補: `src/utils/modifier.ts`, `src/utils/serialization/project.ts`, テスト基盤設定
-  - 方針メモ:
-    - 選択区間適用、非選択区間不変、保存/読込の整合性を最小ケースで検証する。
-    - 将来の仕様変更に備え、壊れやすい境界条件を先に固定する。
-  - 完了条件:
-    - モディファイア適用とプロジェクトシリアライズの主要ケースが自動検証される。
-    - 既存の開発フローでテスト実行手順が明確になる。
-
 - [ ] 入力イベント基盤を Pointer Events に統一する（Sketch/Graph）
   - 背景: 現状は `mousePressed/Dragged/Released` 中心で、デバイス差分の吸収が難しい。
   - 対象候補: `src/editor/sketchEditor/editor.ts`, `src/editor/graphEditor/editor.ts`, `src/utils/input.ts`
