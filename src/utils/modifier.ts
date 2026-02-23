@@ -205,10 +205,11 @@ export function createGraphModifier(
         modifiedProgress,
         localIndex,
       );
-      const v = diffVec2(modifiedOut, originalOut, {
-        treatUndefinedAsZero: true,
-      });
-      if (v) delta.outDelta = v;
+      // 欠落セグメント時は差分を作らずスキップ（既存イージング破壊を防ぐ）
+      if (originalOut && modifiedOut) {
+        const v = diffVec2(modifiedOut, originalOut);
+        if (v) delta.outDelta = v;
+      }
     }
 
     // inデルタ（入力カーブが範囲内の場合のみ）
@@ -219,10 +220,11 @@ export function createGraphModifier(
         modifiedProgress,
         localIndex,
       );
-      const v = diffVec2(modifiedIn, originalIn, {
-        treatUndefinedAsZero: true,
-      });
-      if (v) delta.inDelta = v;
+      // 欠落セグメント時は差分を作らずスキップ（既存イージング破壊を防ぐ）
+      if (originalIn && modifiedIn) {
+        const v = diffVec2(modifiedIn, originalIn);
+        if (v) delta.inDelta = v;
+      }
     }
   }
 
