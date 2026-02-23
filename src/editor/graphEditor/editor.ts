@@ -7,13 +7,17 @@ import p5 from 'p5';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
+import { clamp } from '../../utils/number';
 import { drawBezierCurve, drawControls } from '../../utils/rendering';
 import {
   buildGraphCurves,
   buildSketchCurves,
   computeKeyframeProgress,
 } from '../../utils/keyframes';
-import { applyModifiers } from '../../utils/modifier';
+import {
+  applySketchModifiers,
+  applyGraphModifiers,
+} from '../../utils/modifier';
 import { isLeftMouseButton } from '../../utils/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
@@ -294,8 +298,9 @@ export class GraphEditor {
 
     // 空間カーブを構築（Modifier 適用）
     const originalSketchCurves = buildSketchCurves(this.activePath.keyframes);
-    const sketchCurves = applyModifiers(
+    const sketchCurves = applySketchModifiers(
       originalSketchCurves,
+      this.activePath.keyframes,
       this.activePath.sketchModifiers,
     );
 
@@ -309,8 +314,9 @@ export class GraphEditor {
     const curves = buildGraphCurves(this.activePath.keyframes, progress);
 
     // Modifier 適用後の時間カーブ
-    const effectiveCurves = applyModifiers(
+    const effectiveCurves = applyGraphModifiers(
       curves,
+      this.activePath.keyframes,
       this.activePath.graphModifiers,
     );
 
@@ -388,7 +394,7 @@ export class GraphEditor {
     // 正規化座標(セグメント内)に変換
     const normX = (correctedX - t0) / dt;
     const normY = (correctedY - v0) / dv;
-    const clampedX = Math.max(0, Math.min(1, normX));
+    const clampedX = clamp(normX, 0, 1);
 
     if (selection.type === 'GRAPH_OUT') {
       start.graphOut = start.position.copy().set(clampedX * dt, normY * dv);

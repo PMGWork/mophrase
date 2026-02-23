@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { useCallback, useState } from 'react';
 import type { Path, ToolKind } from './types';
 import { removeModifier, updateModifierStrength } from './utils/modifier';
+import { clamp } from './utils/number';
 import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';
@@ -58,10 +59,6 @@ const App = () => {
     previewProvider: getPreviewGraphCurves,
   });
 
-  // 値クランプヘルパー
-  const clamp = (value: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, value));
-
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {
     updateActivePath(updater);
@@ -95,11 +92,11 @@ const App = () => {
     (modifierId: string, type: 'sketch' | 'graph', value: number) => {
       applyPathUpdate((path) => {
         const strength = clamp(value / 100, 0, 2);
-        updateModifierStrength(
-          type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
-          modifierId,
-          strength,
-        );
+        if (type === 'sketch') {
+          updateModifierStrength(path.sketchModifiers, modifierId, strength);
+        } else {
+          updateModifierStrength(path.graphModifiers, modifierId, strength);
+        }
       });
     },
     [applyPathUpdate],
@@ -109,22 +106,21 @@ const App = () => {
   const handleModifierRemove = useCallback(
     (modifierId: string, type: 'sketch' | 'graph') => {
       applyPathUpdate((path) => {
-        const modifiers =
-          type === 'sketch' ? path.sketchModifiers : path.graphModifiers;
-        const target = modifiers?.find(
-          (modifier) => modifier.id === modifierId,
-        );
-        if (target) {
-          target.strength = 0;
-        }
-        const next = removeModifier(
-          type === 'sketch' ? path.sketchModifiers : path.graphModifiers,
-          modifierId,
-        );
         if (type === 'sketch') {
-          path.sketchModifiers = next;
+          const target = path.sketchModifiers?.find(
+            (modifier) => modifier.id === modifierId,
+          );
+          if (target) target.strength = 0;
+          path.sketchModifiers = removeModifier(
+            path.sketchModifiers,
+            modifierId,
+          );
         } else {
-          path.graphModifiers = next;
+          const target = path.graphModifiers?.find(
+            (modifier) => modifier.id === modifierId,
+          );
+          if (target) target.strength = 0;
+          path.graphModifiers = removeModifier(path.graphModifiers, modifierId);
         }
       });
     },

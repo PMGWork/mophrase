@@ -4,7 +4,8 @@
  * スケッチ（誤差ベース分割）とグラフ（分割点指定）の両方に対応。
  */
 
-import type { FitErrorResult, Vector } from '../../types';
+import type p5 from 'p5';
+import type { FitErrorResult } from '../../types';
 import { splitTangent } from '../../utils/bezier';
 import {
   computeEndTangents,
@@ -15,7 +16,7 @@ import {
   parametrizeRange,
   refineParams,
   type FitCurveResult,
-  type Range,
+  type FitRange,
   type Tangents,
 } from './segment';
 
@@ -23,13 +24,13 @@ import {
 
 // スケッチのフィッティング
 export function fitSketchCurves(
-  points: Vector[],
+  points: p5.Vector[],
   errorTol: number,
   coarseErrTol: number,
   fitError: { current: FitErrorResult },
 ): FitCurveResult {
-  const curves: Vector[][] = [];
-  const ranges: Range[] = [];
+  const curves: p5.Vector[][] = [];
+  const ranges: FitRange[] = [];
   const [tangent0, tangent1] = computeEndTangents(points);
 
   fitSketchRecursive(
@@ -48,11 +49,11 @@ export function fitSketchCurves(
 
 // イージングのフィッティング
 export function fitGraphCurves(
-  points: Vector[],
+  points: p5.Vector[],
   splitPoints: number[],
 ): FitCurveResult {
-  const curves: Vector[][] = [];
-  const ranges: Range[] = [];
+  const curves: p5.Vector[][] = [];
+  const ranges: FitRange[] = [];
   const [tangent0, tangent1] = computeEndTangents(points);
   const normalizedSplitPoints = Array.from(
     new Set(
@@ -80,20 +81,20 @@ export function fitGraphCurves(
 // 再帰的にベジェ曲線をフィットする
 // (スケッチのフィッティング用)
 function fitSketchRecursive(
-  points: Vector[],
-  curves: Vector[][],
-  range: Range,
+  points: p5.Vector[],
+  curves: p5.Vector[][],
+  range: FitRange,
   tangents: Tangents,
   errorTol: number,
   coarseErrTol: number,
   fitError: { current: FitErrorResult },
-  ranges?: Range[],
+  ranges?: FitRange[],
 ): void {
   // パラメータを計算
   const params = parametrizeRange(points, range);
 
   // 制御点を計算
-  const controls: Vector[] = new Array(4);
+  const controls: p5.Vector[] = new Array(4);
   const [p0, p3] = extractEndPoints(points, range);
   controls[0] = p0;
   controls[3] = p3;
@@ -178,16 +179,16 @@ function fitSketchRecursive(
 // 分割点を考慮してベジェ曲線をフィットする
 // (イージングのフィッティング用)
 function fitGraphRecursive(
-  points: Vector[],
-  curves: Vector[][],
-  range: Range,
+  points: p5.Vector[],
+  curves: p5.Vector[][],
+  range: FitRange,
   tangents: Tangents,
   splitPoints: number[],
-  ranges: Range[],
+  ranges: FitRange[],
 ): void {
   const params = parametrizeRange(points, range);
 
-  const controls: Vector[] = new Array(4);
+  const controls: p5.Vector[] = new Array(4);
   const [p0, p3] = extractEndPoints(points, range);
   controls[0] = p0;
   controls[3] = p3;

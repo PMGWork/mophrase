@@ -3,12 +3,14 @@
  * スケッチフィッティング→タイムスタンプ正規化→グラフフィッティングの一連のパイプラインを実行する。
  */
 
-import type { FitErrorResult, Keyframe, Vector } from '../../types';
+import type p5 from 'p5';
+import type { FitErrorResult, Keyframe } from '../../types';
+import { clamp } from '../../utils/number';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 
 // キーフレームを生成
 export function generateKeyframes(
-  points: Vector[],
+  points: p5.Vector[],
   timestamps: number[],
   errorTol: number,
   coarseErrTol: number,
@@ -52,7 +54,7 @@ export function generateKeyframes(
     const p3 = curve[3];
 
     if (i === 0) {
-      const startTime = Math.max(0, Math.min(1, timeNorm[range.start] ?? 0));
+      const startTime = clamp(timeNorm[range.start] ?? 0, 0, 1);
       keyframes.push({
         time: startTime,
         position: p0.copy(),
@@ -63,7 +65,7 @@ export function generateKeyframes(
       if (keyframe) keyframe.sketchOut = p1.copy().sub(p0);
     }
 
-    const endTime = Math.max(0, Math.min(1, timeNorm[range.end] ?? 0));
+    const endTime = clamp(timeNorm[range.end] ?? 0, 0, 1);
     keyframes.push({
       time: endTime,
       position: p3.copy(),
@@ -73,22 +75,22 @@ export function generateKeyframes(
 
   // 4. グラフをフィッティング
   // スケッチ由来の分割点のみで曲線を分割し、最大誤差の分割点から確定する
-  const timingPoints: Vector[] = [];
+  const graphPoints: p5.Vector[] = [];
   for (let i = 0; i < points.length; i++) {
     const t = timeNorm[i] ?? 0;
     const v = progressNorm[i] ?? 0;
-    timingPoints.push(points[0].copy().set(t, v));
+    graphPoints.push(points[0].copy().set(t, v));
   }
 
   const splitPoints = ranges.slice(0, -1).map((range) => range.end);
-  const { curves: timingCurves, ranges: timingRanges } = fitGraphCurves(
-    timingPoints,
+  const { curves: graphCurves, ranges: graphRanges } = fitGraphCurves(
+    graphPoints,
     splitPoints,
   );
 
-  for (let i = 0; i < timingCurves.length; i++) {
-    const range = timingRanges[i];
-    const timingCurve = timingCurves[i];
+  for (let i = 0; i < graphCurves.length; i++) {
+    const range = graphRanges[i];
+    const graphCurve = graphCurves[i];
     const startKeyframe = keyframes[i];
     const endKeyframe = keyframes[i + 1];
     if (!range || !startKeyframe || !endKeyframe) continue;
@@ -96,10 +98,10 @@ export function generateKeyframes(
     const dt = endKeyframe.time - startKeyframe.time;
     const dv =
       (progressNorm[range.end] ?? 0) - (progressNorm[range.start] ?? 0);
-    const p0 = timingCurve[0];
-    const p1 = timingCurve[1];
-    const p2 = timingCurve[2];
-    const p3 = timingCurve[3];
+    const p0 = graphCurve[0];
+    const p1 = graphCurve[1];
+    const p2 = graphCurve[2];
+    const p3 = graphCurve[3];
 
     if (p0 && p1 && p2 && p3) {
       startKeyframe.graphOut = p1.copy().sub(p0);
@@ -114,7 +116,7 @@ export function generateKeyframes(
 }
 
 // 累積距離を計算
-function cumulativeDistances(points: Vector[]): {
+function cumulativeDistances(points: p5.Vector[]): {
   distances: number[];
   totalDistance: number;
 } {

@@ -4,8 +4,17 @@
  */
 
 import type p5 from 'p5';
+import { BEZIER_T_STEP } from '../../constants';
 import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
+import { bezierCurve, refineParameter } from '../../utils/bezier';
+import { buildSketchCurves, splitKeyframeSegment } from '../../utils/keyframes';
+import {
+  applySketchModifiers,
+  splitGraphModifierDeltas,
+  splitSketchModifierDeltas,
+} from '../../utils/modifier';
+import { clamp } from '../../utils/number';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
@@ -16,6 +25,11 @@ type DraftPath = {
   fitError: { current: { maxError: number; index: number } };
 };
 
+type PathSplitHit = {
+  segmentIndex: number;
+  t: number;
+};
+
 // ペンツール
 export class PenTool {
   private draftPath: DraftPath | null = null;
@@ -23,7 +37,9 @@ export class PenTool {
   // #region メイン関数
 
   // マウス押下
-  mousePressed(p: p5): void {
+  mousePressed(p: p5, ctx: ToolContext): void {
+    if (this.trySplitExistingPath(p, ctx)) return;
+
     // 新しいパスを開始
     this.draftPath = {
       points: [p.createVector(p.mouseX, p.mouseY)],
@@ -105,5 +121,114 @@ export class PenTool {
     ctx.setActivePath(path);
     ctx.onPathCreated(path);
     ctx.onPathSelected(path);
+  }
+
+  // 既存パス上のクリックなら分割する
+  private trySplitExistingPath(p: p5, ctx: ToolContext): boolean {
+    const tolerance = Math.max(ctx.config.pointSize * 2, 10);
+    const toleranceSq = tolerance * tolerance;
+
+    for (let i = ctx.paths.length - 1; i >= 0; i--) {
+      const path = ctx.paths[i];
+      const splitHit = this.findSplitHitOnPath(
+        path,
+        p.mouseX,
+        p.mouseY,
+        toleranceSq,
+      );
+      if (!splitHit) continue;
+
+      try {
+        const baseKeyframes = path.keyframes;
+        path.keyframes = splitKeyframeSegment(
+          baseKeyframes,
+          splitHit.segmentIndex,
+          splitHit.t,
+        );
+        splitSketchModifierDeltas(
+          path.sketchModifiers,
+          baseKeyframes,
+          splitHit.segmentIndex,
+          splitHit.t,
+        );
+        splitGraphModifierDeltas(
+          path.graphModifiers,
+          baseKeyframes,
+          splitHit.segmentIndex,
+          splitHit.t,
+        );
+      } catch {
+        return false;
+      }
+
+      ctx.setActivePath(path);
+      ctx.handleManager.clearSelection();
+      ctx.onPathSelected(path);
+      return true;
+    }
+
+    return false;
+  }
+
+  // パス上の分割対象を探索（非アンカー位置のみ）
+  private findSplitHitOnPath(
+    path: Path,
+    x: number,
+    y: number,
+    toleranceSq: number,
+  ): PathSplitHit | null {
+    const curves = buildSketchCurves(path.keyframes);
+    if (curves.length === 0) return null;
+
+    const effectiveCurves = applySketchModifiers(
+      curves,
+      path.keyframes,
+      path.sketchModifiers,
+    );
+    const sampleCount = Math.max(4, Math.round(1 / BEZIER_T_STEP));
+
+    let best: {
+      segmentIndex: number;
+      t: number;
+      distSq: number;
+    } | null = null;
+
+    for (
+      let segmentIndex = 0;
+      segmentIndex < effectiveCurves.length;
+      segmentIndex++
+    ) {
+      const curve = effectiveCurves[segmentIndex];
+      for (let i = 0; i <= sampleCount; i++) {
+        const t = i / sampleCount;
+        const pt = bezierCurve(curve[0], curve[1], curve[2], curve[3], t);
+        const dx = pt.x - x;
+        const dy = pt.y - y;
+        const distSq = dx * dx + dy * dy;
+
+        if (!best || distSq < best.distSq) {
+          best = { segmentIndex, t, distSq };
+        }
+      }
+    }
+
+    if (!best || best.distSq > toleranceSq) return null;
+
+    const query = effectiveCurves[best.segmentIndex]?.[0].copy().set(x, y);
+    if (!query) return null;
+
+    const refined = refineParameter(
+      effectiveCurves[best.segmentIndex],
+      query,
+      best.t,
+    );
+    const t = Number.isFinite(refined) ? clamp(refined, 0, 1) : best.t;
+    const edgeEpsilon = Math.max(1e-3, BEZIER_T_STEP * 0.5);
+    if (t <= edgeEpsilon || t >= 1 - edgeEpsilon) return null;
+
+    return {
+      segmentIndex: best.segmentIndex,
+      t,
+    };
   }
 }

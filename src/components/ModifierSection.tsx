@@ -1,13 +1,13 @@
-import type { ModifierKind, Modifier } from '../types';
+import type { AnyModifier, ModifierKind } from '../types';
 import { ModifierItem } from './ModifierItem';
 
 // Props
 type ModifierSectionProps = {
   title: string; // セクションのタイトル
   type: ModifierKind; // モディファイアの種類
-  modifiers: Array<Modifier>; // モディファイアの配列
-  onChange: (modifier: Modifier, type: ModifierKind, value: number) => void;
-  onRemove: (modifier: Modifier, type: ModifierKind) => void;
+  modifiers: Array<AnyModifier>; // モディファイアの配列
+  onChange: (modifier: AnyModifier, type: ModifierKind, value: number) => void;
+  onRemove: (modifier: AnyModifier, type: ModifierKind) => void;
 };
 
 // コンポーネント

@@ -13,6 +13,7 @@ export default [
       '**/.vite/**',
       '**/.codex/**',
       'AGENTS.md',
+      'docs/**',
       'pnpm-lock.yaml',
       'pnpm-workspace.yaml',
       'worker/.wrangler/**',

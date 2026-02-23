@@ -14,14 +14,15 @@
 入力として、キーフレーム情報（keyframes 配列・segments 配列・bbox）と、ユーザーの自然言語指示が与えられます。
 キーフレームは空間と時間の結節点であり、以下の形式です。
 
-- keyframes[i]: `{ "x": number, "y": number, "time": number, "sketchIn"?: { angle, dist }, "sketchOut"?: { angle, dist }, "graphIn"?: { x, y }, "graphOut"?: { x, y } }`
+- keyframes[i]: `{ "x": number, "y": number, "time": number, "sketchIn"?: { angle, dist }, "sketchOut"?: { angle, dist }, "graphIn"?: { angle, dist }, "graphOut"?: { angle, dist } }`
   - `x`, `y` はパスのバウンディングボックスで正規化された座標値（0〜1付近）。**空間（パスの形状）** を表します。
   - `time` は正規化時間（0〜1）。**時間（アニメーションの進行）** を表します。
   - `sketchIn/sketchOut` は**空間ハンドル**（ベジェ曲線の形状を制御）。
     - `dist` はバウンディングボックスの対角長で正規化された距離（0〜1付近）。
     - `angle` はアンカーから見た偏角（右=0°、反時計回り正）。
   - `graphIn/graphOut` は**時間ハンドル**（イージング・タイミング曲線を制御）。
-    - `x` = 区間時間に対する比率、`y` = 区間進行度に対する比率（0〜1）。
+    - `dist` は区間の `(dt,dv)` 対角長で正規化された距離（0〜1付近）。
+    - `angle` は時間-進行度平面での偏角（右=0°、反時計回り正）。
 - `segments`: `{ "startIndex": number, "endIndex": number }` の配列で、キーフレーム間の接続順を示します（順序は変更しません）。
 - `bbox`: `{ "x", "y", "width", "height" }` は元パスのバウンディングボックス（ピクセル単位）。**LLM の出力に bbox を含める必要はなく、クライアントが元の bbox を再利用します。**
 
@@ -36,6 +37,18 @@
 - **両方が求められている場合** → 両方を編集
 
 ユーザーは必ずしも専門用語を使いません。「ふわっと」「キレよく」「弾む」といった感覚的な表現から、空間と時間のどちらを調整すべきか（または両方か）を判断してください。
+
+さらに各提案ごとに、どのモディファイアを主対象としたかを `modifierTarget` に必ず明示してください。
+
+- `modifierTarget = "sketch"`: 主に空間編集（`x/y/sketchIn/sketchOut`）を行い、時間ハンドルの変更は最小限。
+- `modifierTarget = "graph"`: 主に時間編集（`graphIn/graphOut`）を行い、空間の変更は最小限。
+- `modifierTarget = "both"`: 空間と時間の両方を明確に編集。
+
+また、判定の確からしさを `confidence`（0〜1）で返してください。
+
+- 0 に近い: 曖昧
+- 1 に近い: 明確
+- 迷う場合は `modifierTarget` を `"both"` にしてください。
 
 ## 編集ポリシー（Style Preservation）
 
@@ -84,6 +97,8 @@
   "suggestions": [
     {
       "title": "string (ユーザーの指示と同じ言語で、10文字以内のタイトル)",
+      "modifierTarget": "sketch | graph | both",
+      "confidence": 0.0,
       "keyframes": [
         {
           "x": number,
@@ -91,8 +106,8 @@
           "time": number,
           "sketchIn": { "angle": number, "dist": number } | null,
           "sketchOut": { "angle": number, "dist": number } | null,
-          "graphIn": { "x": number, "y": number } | null,
-          "graphOut": { "x": number, "y": number } | null
+          "graphIn": { "angle": number, "dist": number } | null,
+          "graphOut": { "angle": number, "dist": number } | null
         }
       ]
     }
@@ -103,6 +118,8 @@
 **重要な制約:**
 
 - `suggestions` 配列は必ず3件
+- 各提案の `modifierTarget` は必須で、`sketch | graph | both` のいずれか
+- 各提案の `confidence` は必須で、0以上1以下の有限値
 - 各キーフレームの `x`, `y` は入力値を基準に（正規化空間で扱う）
 - `time` は必須で入力値を維持すること（変更しない）
 - `sketchIn`, `sketchOut`, `graphIn`, `graphOut` は必須だが `null` で可（省略禁止）

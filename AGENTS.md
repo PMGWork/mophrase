@@ -1,6 +1,8 @@
 # エージェント運用ルール
 
 - 日本語で回答する。
+- 用語定義は `docs/terminology.md` を参照する。
+- システム構成は `docs/architecture.md` を参照する。
 
 ## Skills
 

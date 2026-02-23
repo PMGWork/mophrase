@@ -5,15 +5,15 @@
 
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
-import type { Path, Vector } from '../types';
+import type { Path } from '../types';
 import { bezierCurve } from './bezier';
-import { applyModifiers } from './modifier';
+import { applySketchModifiers } from './modifier';
 import { buildSketchCurves } from './keyframes';
 
 // 入力点の描画
 export function drawPoints(
   p: p5,
-  points: Vector[],
+  points: p5.Vector[],
   weight: number,
   size: number,
   foreground: string,
@@ -51,7 +51,7 @@ export function drawPoints(
 // ベジェ曲線の描画
 export function drawBezierCurve(
   p: p5,
-  curves: Vector[][],
+  curves: p5.Vector[][],
   weight: number,
   color: string,
 ): void {
@@ -67,7 +67,7 @@ export function drawBezierCurve(
   p.strokeJoin(p.ROUND);
 
   const step = 0.01;
-  let prevEnd: Vector | null = null;
+  let prevEnd: p5.Vector | null = null;
 
   for (let i = 0; i < curves.length; i++) {
     const curve = curves[i];
@@ -95,10 +95,10 @@ export function drawBezierCurve(
 // 制御点と制御ポリゴンの描画
 export function drawControls(
   p: p5,
-  curves: Vector[][],
+  curves: p5.Vector[][],
   size: number,
   color: string,
-  transform: (v: Vector) => Vector = (v) => v,
+  transform: (v: p5.Vector) => p5.Vector = (v) => v,
   getColor?: (curveIndex: number, pointIndex: number) => string,
 ): void {
   if (curves.length === 0) return;
@@ -148,7 +148,12 @@ export function drawSketchPath(
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
 ): void {
   const curves = buildSketchCurves(path.keyframes);
-  const effectiveCurves = applyModifiers(curves, path.sketchModifiers, p);
+  const effectiveCurves = applySketchModifiers(
+    curves,
+    path.keyframes,
+    path.sketchModifiers,
+    p,
+  );
 
   // ベジェ曲線の描画（modifiers適用後）
   const curveColor = isSelected ? colors.handle : '#4b5563';

@@ -3,33 +3,37 @@
  * パラメトライズ、制御点求解、誤差計算、ニュートン法によるパラメータ精緻化を提供。
  */
 
-import type { FitErrorResult, Vector } from '../../types';
+import type p5 from 'p5';
+import type { FitErrorResult } from '../../types';
 import {
   bernstein,
   bezierCurve,
   refineParameter,
   unitTangent,
 } from '../../utils/bezier';
+import { clamp } from '../../utils/number';
 
-// 範囲情報
-export interface Range {
+// フィッティング用の範囲情報
+export interface FitRange {
   start: number;
   end: number;
 }
 
 // 接ベクトル情報
 export interface Tangents {
-  start: Vector;
-  end: Vector;
+  start: p5.Vector;
+  end: p5.Vector;
 }
 
 export interface FitCurveResult {
-  curves: Vector[][];
-  ranges: Range[];
+  curves: p5.Vector[][];
+  ranges: FitRange[];
 }
 
 // ベジェ曲線の始点と終点の接ベクトルを計算する
-export function computeEndTangents(points: Vector[]): [Vector, Vector] {
+export function computeEndTangents(
+  points: p5.Vector[],
+): [p5.Vector, p5.Vector] {
   const n = points.length;
 
   // 始点の接ベクトル t_1 を計算
@@ -46,7 +50,10 @@ export function computeEndTangents(points: Vector[]): [Vector, Vector] {
 }
 
 // 点列に対応する曲線のパラメータの位置を計算する
-export function parametrizeRange(points: Vector[], range: Range): number[] {
+export function parametrizeRange(
+  points: p5.Vector[],
+  range: FitRange,
+): number[] {
   const params: number[] = [0];
 
   // 分割点が1つの場合はパラメータを計算しない
@@ -71,19 +78,19 @@ export function parametrizeRange(points: Vector[], range: Range): number[] {
 
 // 3次ベジェ曲線の始点と終点を定める
 export function extractEndPoints(
-  points: Vector[],
-  range: Range,
-): [Vector, Vector] {
+  points: p5.Vector[],
+  range: FitRange,
+): [p5.Vector, p5.Vector] {
   return [points[range.start].copy(), points[range.end].copy()];
 }
 
 // 始点と終点以外の2つの制御点の端点からの距離を求める
 export function fitControlPoints(
-  controls: Vector[],
+  controls: p5.Vector[],
   params: number[],
   tangents: Tangents,
-  points: Vector[],
-  range: Range,
+  points: p5.Vector[],
+  range: FitRange,
 ): void {
   const n = range.end - range.start + 1;
   if (n < 2) return;
@@ -159,10 +166,10 @@ export function fitControlPoints(
 
 // ベジェ曲線と点列との最大距離を求める
 export function computeMaxError(
-  controls: Vector[],
+  controls: p5.Vector[],
   params: number[],
-  points: Vector[],
-  range: Range,
+  points: p5.Vector[],
+  range: FitRange,
 ): FitErrorResult {
   const n = range.end - range.start + 1;
 
@@ -198,10 +205,10 @@ export function computeMaxError(
 
 // 分割点を考慮してベジェ曲線と点列との最大距離を求める
 export function computeMaxErrorAtSplitPoints(
-  controls: Vector[],
+  controls: p5.Vector[],
   params: number[],
-  points: Vector[],
-  range: Range,
+  points: p5.Vector[],
+  range: FitRange,
   splitPoints: number[],
 ): FitErrorResult {
   let maxError = -1;
@@ -230,12 +237,17 @@ export function computeMaxErrorAtSplitPoints(
 
 // ニュートン法でパラメータを1回更新する
 export function refineParams(
-  controls: Vector[],
+  controls: p5.Vector[],
   params: number[],
-  points: Vector[],
+  points: p5.Vector[],
   startIndex: number,
 ): void {
-  const cubicControls = controls as [Vector, Vector, Vector, Vector];
+  const cubicControls = controls as [
+    p5.Vector,
+    p5.Vector,
+    p5.Vector,
+    p5.Vector,
+  ];
 
   for (let i = 1; i < params.length - 1; i++) {
     const u = params[i];
@@ -243,7 +255,7 @@ export function refineParams(
 
     let newU = refineParameter(cubicControls, point, u);
     if (!Number.isFinite(newU)) continue;
-    newU = Math.max(0, Math.min(1, newU));
+    newU = clamp(newU, 0, 1);
 
     params[i] = newU;
   }
