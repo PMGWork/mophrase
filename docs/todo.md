@@ -1,6 +1,6 @@
 # MoPhrase TODO
 
-最終更新: 2026-02-13
+最終更新: 2026-02-26
 
 ## 未着手
 
@@ -46,17 +46,19 @@
     - 主要操作で適切なモディファイア候補が自動提示される。
     - 手動選択フローとの互換性を維持し、誤判定時も即座に修正できる。
 
-- [ ] タブレット（iPad）での操作に対応する
-  - 背景: 現状はマウス前提の挙動が中心で、iPadのタッチ/ペン入力で描画・選択・編集がしづらい。
-  - 対象候補: `src/components/Canvas.tsx`, `src/editor/sketchEditor/*`, `src/utils/input.ts`, 入力イベントのハンドリング箇所
+- [ ] iPad/PC両対応の入力基盤を整備する（Sketch/Graph）
+  - 背景: 現状は `mousePressed/Dragged/Released` 中心で、デバイス差分の吸収が難しく、iPadのタッチ/ペン入力で描画・選択・編集がしづらい。
+  - 対象候補: `src/components/Canvas.tsx`, `src/editor/sketchEditor/editor.ts`, `src/editor/graphEditor/editor.ts`, `src/utils/input.ts`
   - 方針メモ:
-    - Pointer Events を基準に、マウス/タッチ/ペンの入力経路を統一する。
+    - 入力取得を Pointer Events 基準に再整理し、マウス/タッチ/ペンを同一経路で処理する。
+    - Pointer capture と `pointercancel` 処理を導入し、ドラッグ中断や誤入力に強くする。
     - スクロール・ピンチズームとの競合を避けるため、必要な `touch-action` を明示する。
-    - 長押し・ドラッグ・複数指操作の誤判定を減らし、既存ショートカット依存を補完する。
+    - 既存のPC操作（左クリック中心）とショートカット前提の挙動を維持する。
   - 完了条件:
     - iPad Safari で描画・選択・ハンドル編集・再生操作が可能である。
     - 意図しないページスクロールやジェスチャ競合が発生しない。
     - PC操作（マウス）で既存挙動の回帰がない。
+    - Sketch/Graph両エディタで入力処理方針が統一される。
 
 - [ ] iPad向けのプロジェクト保存/読込フォールバックを実装する
   - 背景: `showOpenFilePicker` / `showSaveFilePicker` 非対応環境では保存・読込ができず、iPad利用時の運用が止まる。
@@ -67,13 +69,3 @@
   - 完了条件:
     - iPad Safari で保存と読込の代替導線が利用できる。
     - 既存のPC保存/読込フローに回帰がない。
-
-- [ ] 入力イベント基盤を Pointer Events に統一する（Sketch/Graph）
-  - 背景: 現状は `mousePressed/Dragged/Released` 中心で、デバイス差分の吸収が難しい。
-  - 対象候補: `src/editor/sketchEditor/editor.ts`, `src/editor/graphEditor/editor.ts`, `src/utils/input.ts`
-  - 方針メモ:
-    - 入力取得をPointer Events基準に再整理し、マウス/タッチ/ペンを同一経路で処理する。
-    - Pointer capture とキャンセル処理を導入し、ドラッグ中断や誤入力に強くする。
-  - 完了条件:
-    - Sketch/Graph両エディタで入力処理が統一される。
-    - iPadとPCで主要操作の体験差が最小化される。
