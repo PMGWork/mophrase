@@ -18,16 +18,15 @@ export class SelectTool {
   // #region メイン関数
 
   // マウス押下
-  mousePressed(p: p5, ctx: ToolContext): void {
+  mousePressed(x: number, y: number, shift: boolean, ctx: ToolContext): void {
     // ハンドルのドラッグ
     if (ctx.activePath) {
-      const shift = p.keyIsDown(p.SHIFT);
-      ctx.handleManager.startDrag(p.mouseX, p.mouseY, shift);
+      ctx.handleManager.startDrag(x, y, shift);
       if (ctx.handleManager.isDragging()) return;
     }
 
     // パスの選択
-    const clickedPath = this.findClickedPath(p.mouseX, p.mouseY, ctx);
+    const clickedPath = this.findClickedPath(x, y, ctx);
     if (clickedPath) {
       if (ctx.activePath !== clickedPath) {
         // 別のパスを選択
@@ -47,10 +46,10 @@ export class SelectTool {
     if (ctx.activePath) {
       ctx.handleManager.clearSelection();
       this.marqueeRect = {
-        startX: p.mouseX,
-        startY: p.mouseY,
-        endX: p.mouseX,
-        endY: p.mouseY,
+        startX: x,
+        startY: y,
+        endX: x,
+        endY: y,
       };
     } else {
       ctx.handleManager.clearSelection();
@@ -60,9 +59,9 @@ export class SelectTool {
   }
 
   // マウスドラッグ
-  mouseDragged(p: p5, ctx: ToolContext): void {
-    const dragMode = p.keyIsDown(p.ALT) ? 'free' : 'mirror';
-    ctx.handleManager.updateDrag(p.mouseX, p.mouseY, dragMode);
+  mouseDragged(x: number, y: number, altKey: boolean, ctx: ToolContext): void {
+    const dragMode = altKey ? 'free' : 'mirror';
+    ctx.handleManager.updateDrag(x, y, dragMode);
     if (ctx.handleManager.isDragging()) {
       const selectionRange = ctx.handleManager.getSelectionRange();
       ctx.suggestionManager.updateSelectionRange(selectionRange ?? undefined);
@@ -71,13 +70,13 @@ export class SelectTool {
 
     // 範囲選択
     if (this.marqueeRect) {
-      this.marqueeRect.endX = p.mouseX;
-      this.marqueeRect.endY = p.mouseY;
+      this.marqueeRect.endX = x;
+      this.marqueeRect.endY = y;
     }
   }
 
   // マウスリリース
-  mouseReleased(_p: p5, ctx: ToolContext): void {
+  mouseReleased(ctx: ToolContext): void {
     const wasDragging = ctx.handleManager.isDragging();
     ctx.handleManager.endDrag();
     if (wasDragging) {

@@ -21,7 +21,11 @@ import type {
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
 import { drawSketchPath } from '../../utils/rendering';
-import { isLeftMouseButton } from '../../utils/input';
+import {
+  isLeftMouseButton,
+  isPrimaryEditingPointer,
+  toEditorPointerInput,
+} from '../../utils/input';
 import { clamp } from '../../utils/number';
 import { deserializePaths } from '../../utils/serialization/project';
 import { PenTool } from './penTool';
@@ -115,6 +119,29 @@ export class SketchEditor {
 
   // p5.js インスタンス
   private p: p5 | null = null;
+  private canvasElement: HTMLCanvasElement | null = null;
+  private pointerEventsEnabled: boolean = false;
+  private activePointerId: number | null = null;
+
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    this.pointerDown(event);
+  };
+
+  private readonly handlePointerMove = (event: PointerEvent): void => {
+    this.pointerMove(event);
+  };
+
+  private readonly handlePointerUp = (event: PointerEvent): void => {
+    this.pointerEnd(event);
+  };
+
+  private readonly handlePointerCancel = (event: PointerEvent): void => {
+    this.pointerEnd(event);
+  };
+
+  private readonly handleLostPointerCapture = (event: PointerEvent): void => {
+    this.pointerLostCapture(event);
+  };
 
   // #region メイン関数
 
@@ -139,6 +166,17 @@ export class SketchEditor {
     if (!this.p) return;
     const { width, height } = this.dom.getCanvasSize();
     this.p.resizeCanvas(width, height);
+  }
+
+  public destroy(): void {
+    if (this.activePointerId !== null) {
+      this.releasePointerCapture(this.activePointerId);
+    }
+    this.removePointerListeners();
+    this.p?.remove();
+    this.p = null;
+    this.canvasElement = null;
+    this.activePointerId = null;
   }
 
   // #region DOM操作
@@ -173,13 +211,18 @@ export class SketchEditor {
 
   // p5.js 初期化
   private init(): void {
+    this.pointerEventsEnabled =
+      typeof window !== 'undefined' && 'PointerEvent' in window;
+
     const sketch = (p: p5) => {
       p.setup = () => this.setup(p);
       // p.windowResized is removed to avoid global window resize dependency
       p.draw = () => this.draw(p);
-      p.mouseDragged = () => this.mouseDragged(p);
-      p.mousePressed = () => this.mousePressed(p);
-      p.mouseReleased = () => this.mouseReleased(p);
+      if (!this.pointerEventsEnabled) {
+        p.mouseDragged = () => this.mouseDragged(p);
+        p.mousePressed = () => this.mousePressed(p);
+        p.mouseReleased = () => this.mouseReleased(p);
+      }
       p.keyPressed = () => this.keyPressed(p);
     };
 
@@ -189,8 +232,13 @@ export class SketchEditor {
   // p5.js セットアップ
   private setup(p: p5): void {
     const { width, height } = this.dom.getCanvasSize();
-    const canvas = p.createCanvas(width, height);
-    canvas.parent(this.dom.canvasContainer);
+    const renderer = p.createCanvas(width, height);
+    renderer.parent(this.dom.canvasContainer);
+    this.canvasElement = renderer.elt as HTMLCanvasElement;
+    if (this.pointerEventsEnabled && this.canvasElement) {
+      this.canvasElement.style.touchAction = 'none';
+      this.addPointerListeners();
+    }
     p.background(this.colors.background);
     p.textFont('Geist');
 
@@ -324,16 +372,21 @@ export class SketchEditor {
 
   // p5.js マウス押下
   private mousePressed(p: p5): void {
-    const target = this.getClickTarget(p);
+    const target = this.getClickTargetFromLocal(p.mouseX, p.mouseY);
     if (this.shouldIgnoreClick(target)) return;
 
     if (!isLeftMouseButton(p.mouseButton, p.LEFT)) return;
 
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
-      this.penTool.mousePressed(p, ctx);
+      this.penTool.mousePressed(p, p.mouseX, p.mouseY, ctx);
     } else {
-      this.selectTool.mousePressed(p, ctx);
+      this.selectTool.mousePressed(
+        p.mouseX,
+        p.mouseY,
+        p.keyIsDown(p.SHIFT),
+        ctx,
+      );
     }
   }
 
@@ -341,31 +394,186 @@ export class SketchEditor {
   private mouseDragged(p: p5): void {
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
-      this.penTool.mouseDragged(p);
+      this.penTool.mouseDragged(p, p.mouseX, p.mouseY);
     } else {
-      this.selectTool.mouseDragged(p, ctx);
+      this.selectTool.mouseDragged(
+        p.mouseX,
+        p.mouseY,
+        p.keyIsDown(p.ALT),
+        ctx,
+      );
     }
   }
 
   // p5.js マウスリリース
-  private mouseReleased(p: p5): void {
+  private mouseReleased(_p: p5): void {
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
       this.penTool.mouseReleased(ctx);
     } else {
-      this.selectTool.mouseReleased(p, ctx);
+      this.selectTool.mouseReleased(ctx);
+    }
+  }
+
+  // Pointer押下
+  private pointerDown(event: PointerEvent): void {
+    if (this.activePointerId !== null) return;
+    if (!this.p) return;
+    const canvas = this.canvasElement;
+    if (!canvas) return;
+
+    const input = toEditorPointerInput(event, canvas);
+    if (!isPrimaryEditingPointer(input)) return;
+
+    const target = this.getClickTargetFromClient(input.clientX, input.clientY);
+    if (this.shouldIgnoreClick(target)) return;
+
+    this.activePointerId = input.pointerId;
+    this.capturePointer(input.pointerId);
+    if (event.cancelable) event.preventDefault();
+
+    const ctx = this.getToolContext();
+    if (this.currentTool === 'pen') {
+      this.penTool.mousePressed(this.p, input.x, input.y, ctx);
+    } else {
+      this.selectTool.mousePressed(input.x, input.y, input.shiftKey, ctx);
+    }
+  }
+
+  // Pointer移動
+  private pointerMove(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId) return;
+    if (!this.p) return;
+    const canvas = this.canvasElement;
+    if (!canvas) return;
+
+    const input = toEditorPointerInput(event, canvas);
+    if (event.cancelable) event.preventDefault();
+
+    const ctx = this.getToolContext();
+    if (this.currentTool === 'pen') {
+      this.penTool.mouseDragged(this.p, input.x, input.y);
+    } else {
+      this.selectTool.mouseDragged(input.x, input.y, input.altKey, ctx);
+    }
+  }
+
+  // Pointer終了
+  private pointerEnd(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId) return;
+    if (event.cancelable) event.preventDefault();
+    const pointerId = this.activePointerId;
+    this.finishPointerInteraction();
+    if (pointerId !== null) {
+      this.releasePointerCapture(pointerId);
+    }
+  }
+
+  // Pointer capture 消失
+  private pointerLostCapture(event: PointerEvent): void {
+    if (this.activePointerId !== event.pointerId) return;
+    this.finishPointerInteraction();
+  }
+
+  private finishPointerInteraction(): void {
+    if (this.activePointerId === null) return;
+    const ctx = this.getToolContext();
+    if (this.currentTool === 'pen') {
+      this.penTool.mouseReleased(ctx);
+    } else {
+      this.selectTool.mouseReleased(ctx);
+    }
+    this.activePointerId = null;
+  }
+
+  private addPointerListeners(): void {
+    if (!this.pointerEventsEnabled || !this.canvasElement) return;
+    this.removePointerListeners();
+    const options: AddEventListenerOptions = { passive: false };
+    this.canvasElement.addEventListener(
+      'pointerdown',
+      this.handlePointerDown,
+      options,
+    );
+    this.canvasElement.addEventListener(
+      'pointermove',
+      this.handlePointerMove,
+      options,
+    );
+    this.canvasElement.addEventListener(
+      'pointerup',
+      this.handlePointerUp,
+      options,
+    );
+    this.canvasElement.addEventListener(
+      'pointercancel',
+      this.handlePointerCancel,
+      options,
+    );
+    this.canvasElement.addEventListener(
+      'lostpointercapture',
+      this.handleLostPointerCapture,
+    );
+  }
+
+  private removePointerListeners(): void {
+    if (this.canvasElement) {
+      this.canvasElement.removeEventListener(
+        'pointerdown',
+        this.handlePointerDown,
+      );
+      this.canvasElement.removeEventListener(
+        'pointermove',
+        this.handlePointerMove,
+      );
+      this.canvasElement.removeEventListener('pointerup', this.handlePointerUp);
+      this.canvasElement.removeEventListener(
+        'pointercancel',
+        this.handlePointerCancel,
+      );
+      this.canvasElement.removeEventListener(
+        'lostpointercapture',
+        this.handleLostPointerCapture,
+      );
+    }
+
+  }
+
+  private capturePointer(pointerId: number): void {
+    if (!this.canvasElement) return;
+    try {
+      this.canvasElement.setPointerCapture(pointerId);
+    } catch {
+      // ignore
+    }
+  }
+
+  private releasePointerCapture(pointerId: number): void {
+    if (!this.canvasElement) return;
+    try {
+      if (this.canvasElement.hasPointerCapture(pointerId)) {
+        this.canvasElement.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // ignore
     }
   }
 
   // #region プライベート関数
 
   // クリック対象の要素を取得
-  private getClickTarget(p: p5): Element | null {
-    const canvas = this.dom.canvasContainer.querySelector('canvas');
-    const rect = canvas?.getBoundingClientRect();
-    const windowX = (rect?.left ?? 0) + p.mouseX;
-    const windowY = (rect?.top ?? 0) + p.mouseY;
-    return document.elementFromPoint(windowX, windowY);
+  private getClickTargetFromLocal(x: number, y: number): Element | null {
+    const rect = this.canvasElement?.getBoundingClientRect();
+    const clientX = (rect?.left ?? 0) + x;
+    const clientY = (rect?.top ?? 0) + y;
+    return this.getClickTargetFromClient(clientX, clientY);
+  }
+
+  private getClickTargetFromClient(
+    clientX: number,
+    clientY: number,
+  ): Element | null {
+    return document.elementFromPoint(clientX, clientY);
   }
 
   // UI要素クリック判定

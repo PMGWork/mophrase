@@ -54,6 +54,13 @@ export const useGraphEditor = ({
     editorRef.current = editor;
   }, [config, colors]);
 
+  useEffect(() => {
+    return () => {
+      editorRef.current?.destroy();
+      editorRef.current = null;
+    };
+  }, []);
+
   // activePathが変更されたら既存エディタのパスを更新
   useEffect(() => {
     editorRef.current?.setPath(activePath ?? null);

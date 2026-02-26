@@ -14,6 +14,7 @@ import {
   splitGraphModifierDeltas,
   splitSketchModifierDeltas,
 } from '../../utils/modifier';
+import { createId } from '../../utils/id';
 import { clamp } from '../../utils/number';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
@@ -37,12 +38,12 @@ export class PenTool {
   // #region メイン関数
 
   // マウス押下
-  mousePressed(p: p5, ctx: ToolContext): void {
-    if (this.trySplitExistingPath(p, ctx)) return;
+  mousePressed(p: p5, x: number, y: number, ctx: ToolContext): void {
+    if (this.trySplitExistingPath(x, y, ctx)) return;
 
     // 新しいパスを開始
     this.draftPath = {
-      points: [p.createVector(p.mouseX, p.mouseY)],
+      points: [p.createVector(x, y)],
       timestamps: [p.millis()],
       fitError: {
         current: {
@@ -54,12 +55,9 @@ export class PenTool {
   }
 
   // マウスドラッグ
-  mouseDragged(p: p5): void {
-    if (
-      this.draftPath &&
-      isInRect(p.mouseX, p.mouseY, 0, 0, p.width, p.height)
-    ) {
-      this.draftPath.points.push(p.createVector(p.mouseX, p.mouseY));
+  mouseDragged(p: p5, x: number, y: number): void {
+    if (this.draftPath && isInRect(x, y, 0, 0, p.width, p.height)) {
+      this.draftPath.points.push(p.createVector(x, y));
       this.draftPath.timestamps.push(p.millis());
     }
   }
@@ -111,7 +109,7 @@ export class PenTool {
     const duration = Math.max(0.01, Math.round(durationMs) / 1000);
 
     const path: Path = {
-      id: crypto.randomUUID(),
+      id: createId(),
       keyframes,
       startTime: 0,
       duration,
@@ -124,18 +122,13 @@ export class PenTool {
   }
 
   // 既存パス上のクリックなら分割する
-  private trySplitExistingPath(p: p5, ctx: ToolContext): boolean {
+  private trySplitExistingPath(x: number, y: number, ctx: ToolContext): boolean {
     const tolerance = Math.max(ctx.config.pointSize * 2, 10);
     const toleranceSq = tolerance * tolerance;
 
     for (let i = ctx.paths.length - 1; i >= 0; i--) {
       const path = ctx.paths[i];
-      const splitHit = this.findSplitHitOnPath(
-        path,
-        p.mouseX,
-        p.mouseY,
-        toleranceSq,
-      );
+      const splitHit = this.findSplitHitOnPath(path, x, y, toleranceSq);
       if (!splitHit) continue;
 
       try {

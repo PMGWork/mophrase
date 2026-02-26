@@ -12,6 +12,7 @@ import type {
   SketchKeyframeDelta,
   SketchModifier,
 } from '../types';
+import { createId } from './id';
 import { splitKeyframeSegment } from './keyframes';
 import { clamp } from './number';
 
@@ -170,7 +171,7 @@ export function createSketchModifier(
     }
   }
 
-  return { id: crypto.randomUUID(), name, strength: 1.0, deltas };
+  return { id: createId(), name, strength: 1.0, deltas };
 }
 
 // LLMの出力からグラフモディファイアを作成
@@ -228,7 +229,7 @@ export function createGraphModifier(
     }
   }
 
-  return { id: crypto.randomUUID(), name, strength: 1.0, deltas };
+  return { id: createId(), name, strength: 1.0, deltas };
 }
 
 // #region 分割

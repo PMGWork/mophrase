@@ -30,6 +30,21 @@
   --color-object-3: #4ade80; /* green-400 */
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  html,
+  body,
+  #root {
+    height: 100dvh;
+  }
+}
+
 kbd {
   font-family: var(--font-mono);
 }

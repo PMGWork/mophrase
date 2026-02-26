@@ -4,6 +4,9 @@ import type { Suggestion, SuggestionStatus } from '../types';
 import { clamp } from '../utils/number';
 import { SuggestionItem } from './SuggestionItem';
 
+const TOUCH_LONG_PRESS_MS = 260;
+const TOUCH_DRAG_THRESHOLD_PX = 8;
+
 // Props
 type SketchSuggestionProps = {
   isVisible: boolean;
@@ -31,6 +34,16 @@ export const SketchSuggestion = ({
 }: SketchSuggestionProps) => {
   // 入力欄への参照
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const touchSelectionRef = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startAt: number;
+    lastStrength: number;
+    adjusting: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
 
   // ホバー状態
   const [hovered, setHovered] = useState<{
@@ -53,6 +66,8 @@ export const SketchSuggestion = ({
   useEffect(() => {
     if (!isVisible) {
       setHovered({ id: null, strength: 1 });
+      touchSelectionRef.current = null;
+      suppressClickRef.current = false;
       onHoverChange(null, 1);
     }
   }, [isVisible, onHoverChange]);
@@ -74,7 +89,7 @@ export const SketchSuggestion = ({
 
   // 影響度を計算
   const computeStrength = (clientX: number, rect: DOMRect): number =>
-    clamp(((clientX - rect.left) / rect.width) * 2, 0, 2);
+    clamp(((clientX - rect.left) / Math.max(rect.width, 1)) * 2, 0, 2);
 
   // ホバー状態更新
   const updateHover = (id: string | null, strength: number) => {
@@ -106,10 +121,91 @@ export const SketchSuggestion = ({
   // クリックハンドラ
   const handleClick =
     (id: string) => (event: React.MouseEvent<HTMLButtonElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const strength = computeStrength(event.clientX, rect);
+      if (suppressClickRef.current) return;
+      const strength =
+        hovered.id === id
+          ? hovered.strength
+          : computeStrength(
+              event.clientX,
+              event.currentTarget.getBoundingClientRect(),
+            );
       onSuggestionClick(id, strength);
     };
+
+  const handlePointerDown =
+    (id: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      touchSelectionRef.current = {
+        id,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startAt: Date.now(),
+        lastStrength: strength,
+        adjusting: false,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+  const handlePointerMove =
+    (id: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return;
+      const active = touchSelectionRef.current;
+      if (!active || active.id !== id || active.pointerId !== event.pointerId) {
+        return;
+      }
+      const moved = Math.hypot(
+        event.clientX - active.startX,
+        event.clientY - active.startY,
+      );
+      const elapsed = Date.now() - active.startAt;
+      if (
+        !active.adjusting &&
+        (moved >= TOUCH_DRAG_THRESHOLD_PX ||
+          elapsed >= TOUCH_LONG_PRESS_MS)
+      ) {
+        active.adjusting = true;
+      }
+
+      if (!active.adjusting) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      active.lastStrength = strength;
+      updateHover(id, strength);
+      suppressClickRef.current = true;
+      if (event.cancelable) event.preventDefault();
+    };
+
+  const handlePointerUp =
+    (id: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return;
+      const active = touchSelectionRef.current;
+      if (!active || active.id !== id || active.pointerId !== event.pointerId) {
+        return;
+      }
+
+      if (active.adjusting) {
+        updateHover(id, active.lastStrength);
+        suppressClickRef.current = true;
+        requestAnimationFrame(() => {
+          suppressClickRef.current = false;
+        });
+        if (event.cancelable) event.preventDefault();
+      }
+
+      touchSelectionRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    };
+
+  const handlePointerCancel = () => {
+    touchSelectionRef.current = null;
+    suppressClickRef.current = false;
+  };
 
   return (
     <div
@@ -162,6 +258,10 @@ export const SketchSuggestion = ({
               onMouseEnter={handleMouseEnter(suggestion.id)}
               onMouseMove={handleMouseMove(suggestion.id)}
               onMouseLeave={handleMouseLeave}
+              onPointerDown={handlePointerDown(suggestion.id)}
+              onPointerMove={handlePointerMove(suggestion.id)}
+              onPointerUp={handlePointerUp(suggestion.id)}
+              onPointerCancel={handlePointerCancel}
               onClick={handleClick(suggestion.id)}
             />
           ))}

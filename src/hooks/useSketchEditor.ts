@@ -237,6 +237,13 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     resolvedObjectColors,
   ]);
 
+  useEffect(() => {
+    return () => {
+      editorRef.current?.destroy();
+      editorRef.current = null;
+    };
+  }, []);
+
   // コンテナのリサイズを監視
   useEffect(() => {
     const container = canvasRef.current;
