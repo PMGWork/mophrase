@@ -5,12 +5,7 @@
 
 import type p5 from 'p5';
 import type { FitErrorResult } from '../../types';
-import {
-  bernstein,
-  bezierCurve,
-  refineParameter,
-  unitTangent,
-} from '../../utils/bezier';
+import { bernstein, bezierCurve, refineParameter } from '../../utils/bezier';
 import { clamp } from '../../utils/number';
 
 // フィッティング用の範囲情報
@@ -30,23 +25,77 @@ export interface FitCurveResult {
   ranges: FitRange[];
 }
 
+const TANGENT_EPS = 1e-6;
+const TANGENT_SAMPLE_WINDOW = 5;
+
 // ベジェ曲線の始点と終点の接ベクトルを計算する
 export function computeEndTangents(
   points: p5.Vector[],
 ): [p5.Vector, p5.Vector] {
-  const n = points.length;
+  return computeRangeEndTangents(points, { start: 0, end: points.length - 1 });
+}
 
-  // 始点の接ベクトル t_1 を計算
-  const d1 = points[0];
-  const d2 = points[1];
-  const tangent0 = unitTangent(d1, d2);
-
-  // 終点の接ベクトル t_2 を計算
-  const dn_1 = points[n - 2];
-  const dn = points[n - 1];
-  const tangent1 = unitTangent(dn_1, dn).mult(-1);
+// 指定範囲の始点と終点の接ベクトルを計算する
+export function computeRangeEndTangents(
+  points: p5.Vector[],
+  range: FitRange,
+): [p5.Vector, p5.Vector] {
+  const tangent0 = computeBoundaryTangent(points, range, 'start');
+  const tangent1 = computeBoundaryTangent(points, range, 'end');
 
   return [tangent0, tangent1];
+}
+
+function computeBoundaryTangent(
+  points: p5.Vector[],
+  range: FitRange,
+  side: 'start' | 'end',
+): p5.Vector {
+  const anchorIndex = side === 'start' ? range.start : range.end;
+  const anchor = points[anchorIndex];
+  const sum = anchor.copy().set(0, 0);
+  let weightSum = 0;
+
+  if (side === 'start') {
+    const upper = Math.min(range.end, range.start + TANGENT_SAMPLE_WINDOW);
+    for (let i = range.start + 1; i <= upper; i++) {
+      const target = points[i];
+      const toTarget = target.copy().sub(anchor);
+      if (toTarget.magSq() <= TANGENT_EPS * TANGENT_EPS) continue;
+      const weight = 1 / (i - range.start);
+      sum.add(toTarget.normalize().mult(weight));
+      weightSum += weight;
+    }
+  } else {
+    const lower = Math.max(range.start, range.end - TANGENT_SAMPLE_WINDOW);
+    for (let i = range.end - 1; i >= lower; i--) {
+      const target = points[i];
+      const toTarget = target.copy().sub(anchor);
+      if (toTarget.magSq() <= TANGENT_EPS * TANGENT_EPS) continue;
+      const weight = 1 / (range.end - i);
+      sum.add(toTarget.normalize().mult(weight));
+      weightSum += weight;
+    }
+  }
+
+  if (weightSum > 0 && sum.magSq() > TANGENT_EPS * TANGENT_EPS) {
+    return sum.normalize();
+  }
+
+  // 近傍が退化している場合は、範囲内で最初に有効な方向へフォールバック
+  if (side === 'start') {
+    for (let i = range.start + 1; i <= range.end; i++) {
+      const vec = points[i].copy().sub(anchor);
+      if (vec.magSq() > TANGENT_EPS * TANGENT_EPS) return vec.normalize();
+    }
+    return anchor.copy().set(1, 0);
+  }
+
+  for (let i = range.end - 1; i >= range.start; i--) {
+    const vec = points[i].copy().sub(anchor);
+    if (vec.magSq() > TANGENT_EPS * TANGENT_EPS) return vec.normalize();
+  }
+  return anchor.copy().set(-1, 0);
 }
 
 // 点列に対応する曲線のパラメータの位置を計算する

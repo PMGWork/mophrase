@@ -8,7 +8,7 @@ import type p5 from 'p5';
 import type { FitErrorResult } from '../../types';
 import { splitTangent } from '../../utils/bezier';
 import {
-  computeEndTangents,
+  computeRangeEndTangents,
   computeMaxError,
   computeMaxErrorAtSplitPoints,
   extractEndPoints,
@@ -20,6 +20,10 @@ import {
   type Tangents,
 } from './segment';
 
+type FitSketchOptions = {
+  forcedSplitPoints?: number[];
+};
+
 // #region パブリック関数
 
 // スケッチのフィッティング
@@ -28,21 +32,32 @@ export function fitSketchCurves(
   errorTol: number,
   coarseErrTol: number,
   fitError: { current: FitErrorResult },
+  options?: FitSketchOptions,
 ): FitCurveResult {
   const curves: p5.Vector[][] = [];
   const ranges: FitRange[] = [];
-  const [tangent0, tangent1] = computeEndTangents(points);
-
-  fitSketchRecursive(
-    points,
-    curves,
-    { start: 0, end: points.length - 1 },
-    { start: tangent0, end: tangent1 },
-    errorTol,
-    coarseErrTol,
-    fitError,
-    ranges,
+  const normalizedForcedSplits = normalizeSplitPoints(
+    options?.forcedSplitPoints ?? [],
+    points.length,
   );
+  const initialRanges = buildBoundaryRanges(
+    points.length,
+    normalizedForcedSplits,
+  );
+
+  for (const initialRange of initialRanges) {
+    const [tangent0, tangent1] = computeRangeEndTangents(points, initialRange);
+    fitSketchRecursive(
+      points,
+      curves,
+      initialRange,
+      { start: tangent0, end: tangent1 },
+      errorTol,
+      coarseErrTol,
+      fitError,
+      ranges,
+    );
+  }
 
   return { curves, ranges };
 }
@@ -54,24 +69,26 @@ export function fitGraphCurves(
 ): FitCurveResult {
   const curves: p5.Vector[][] = [];
   const ranges: FitRange[] = [];
-  const [tangent0, tangent1] = computeEndTangents(points);
-  const normalizedSplitPoints = Array.from(
-    new Set(
-      splitPoints.filter(
-        (index) =>
-          Number.isFinite(index) && index > 0 && index < points.length - 1,
-      ),
-    ),
-  ).sort((a, b) => a - b);
-
-  fitGraphRecursive(
-    points,
-    curves,
-    { start: 0, end: points.length - 1 },
-    { start: tangent0, end: tangent1 },
-    normalizedSplitPoints,
-    ranges,
+  const normalizedSplitPoints = normalizeSplitPoints(
+    splitPoints,
+    points.length,
   );
+  const initialRanges = buildBoundaryRanges(
+    points.length,
+    normalizedSplitPoints,
+  );
+
+  for (const initialRange of initialRanges) {
+    const [tangent0, tangent1] = computeRangeEndTangents(points, initialRange);
+    fitGraphRecursive(
+      points,
+      curves,
+      initialRange,
+      { start: tangent0, end: tangent1 },
+      normalizedSplitPoints,
+      ranges,
+    );
+  }
 
   return { curves, ranges };
 }
@@ -231,4 +248,39 @@ function fitGraphRecursive(
     splitPoints,
     ranges,
   );
+}
+
+function normalizeSplitPoints(
+  splitPoints: number[],
+  pointsLength: number,
+): number[] {
+  if (pointsLength < 2) return [];
+
+  const normalized = new Set<number>();
+  for (const split of splitPoints) {
+    if (!Number.isFinite(split)) continue;
+    const index = Math.trunc(split);
+    if (index <= 0 || index >= pointsLength - 1) continue;
+    normalized.add(index);
+  }
+
+  return Array.from(normalized).sort((a, b) => a - b);
+}
+
+function buildBoundaryRanges(
+  pointsLength: number,
+  splitPoints: number[],
+): FitRange[] {
+  if (pointsLength < 2) return [];
+
+  const boundaries = [0, ...splitPoints, pointsLength - 1];
+  const ranges: FitRange[] = [];
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const start = boundaries[i];
+    const end = boundaries[i + 1];
+    if (end - start < 1) continue;
+    ranges.push({ start, end });
+  }
+
+  return ranges;
 }
