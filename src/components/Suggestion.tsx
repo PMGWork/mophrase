@@ -268,8 +268,17 @@ export const SketchSuggestion = ({
         </form>
       )}
       {!showPromptInput && showLoading && (
-        <div className="text-text-subtle cursor-default select-none p-3 text-sm">
-          {testMode ? 'Testing...' : 'Generating...'}
+        <div
+          className="text-text-subtle cursor-default select-none p-3 text-sm"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{testMode ? 'Testing' : 'Generating'}</span>
+          <span className="suggestion-loading-dots" aria-hidden="true">
+            <span className="suggestion-loading-dot">.</span>
+            <span className="suggestion-loading-dot">.</span>
+            <span className="suggestion-loading-dot">.</span>
+          </span>
         </div>
       )}
       {showSuggestionList && (
