@@ -249,7 +249,7 @@ export const SketchSuggestion = ({
               onClick={closePromptComposer}
               aria-label="Back"
             >
-              <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-0.5" />
+              <ArrowLeft className="h-4 w-4" />
             </button>
           )}
           <input
@@ -286,7 +286,7 @@ export const SketchSuggestion = ({
               className="text-text-subtle hover:text-text hover:bg-panel cursor-pointer p-3 text-left text-sm transition-colors"
               onClick={openPromptComposer}
             >
-              + Add prompt...
+              Refine...
             </button>
           )}
           {/* 提案リスト */}
