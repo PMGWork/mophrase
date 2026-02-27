@@ -58,7 +58,7 @@
     - 主要操作で適切なモディファイア候補が自動提示される。
     - 手動選択フローとの互換性を維持し、誤判定時も即座に修正できる。
 
-- [ ] iPad/PC両対応の入力基盤を整備する（Sketch/Graph）
+- [x] iPad/PC両対応の入力基盤を整備する（Sketch/Graph）
   - 背景: 現状は `mousePressed/Dragged/Released` 中心で、デバイス差分の吸収が難しく、iPadのタッチ/ペン入力で描画・選択・編集がしづらい。
   - 対象候補: `src/components/Canvas.tsx`, `src/editor/sketchEditor/editor.ts`, `src/editor/graphEditor/editor.ts`, `src/utils/input.ts`
   - 方針メモ:
