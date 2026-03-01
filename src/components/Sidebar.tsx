@@ -45,7 +45,7 @@ export const Sidebar = ({
         <div
           id="graphEditorCanvas"
           ref={graphCanvasRef}
-          className="border-border relative h-full w-full"
+          className="border-border relative h-full w-full touch-none"
         />
       </div>
     </div>

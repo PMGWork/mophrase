@@ -90,7 +90,7 @@ flowchart LR
 ### 3.5 保存・読込
 
 1. `serializeProject` が `Path[] + ProjectSettings` を JSON 化（`src/utils/serialization/project.ts`）。
-2. File System Access API で保存・読込（`src/hooks/useSketchEditor.ts`）。
+2. `src/services/projectStorage.ts` が IndexedDB（`mophrase-db`）へ保存・読込する。
 3. 読込時は `deserializeProject` → `applySerializedProject` で復元。
 
 ## 4. データ境界

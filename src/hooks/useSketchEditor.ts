@@ -20,8 +20,16 @@ import { DEFAULT_PROJECT_SETTINGS } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
 import { loadConfig, saveConfig } from '../services/configStorage';
 import {
-  serializeProject,
+  deleteProject as deleteProjectFromStorage,
+  findProjectByName,
+  getProject,
+  listProjects,
+  saveProject as saveProjectToStorage,
+  type ProjectSummary,
+} from '../services/projectStorage';
+import {
   deserializeProject,
+  serializeProject,
 } from '../utils/serialization/project';
 
 // 設定更新用のパラメータ
@@ -32,34 +40,19 @@ type SketchConfigUpdate = {
   testMode: Config['testMode'];
 };
 
-// プロジェクトファイルハンドルの型
-type ProjectFileHandle = {
-  name: string;
-  getFile: () => Promise<File>;
-  createWritable: () => Promise<{
-    write: (data: string) => Promise<void>;
-    close: () => Promise<void>;
-  }>;
-};
-
-// 拡張されたウィンドウオブジェクトの型
-type WindowWithFilePicker = Window & {
-  showOpenFilePicker?: (options?: unknown) => Promise<ProjectFileHandle[]>;
-  showSaveFilePicker?: (options?: unknown) => Promise<ProjectFileHandle>;
-};
-
-const stripJsonExtension = (filename: string): string =>
-  filename.replace(/\.json$/i, '');
-
-const PROJECT_FILE_PICKER_TYPES = [
-  {
-    description: 'JSON Project',
-    accept: { 'application/json': ['.json'] },
-  },
-];
-
-const isAbortError = (error: unknown): boolean =>
-  error instanceof DOMException && error.name === 'AbortError';
+const NEW_PROJECT_CONFIRM_MESSAGE =
+  '未保存の変更があります。破棄して新規プロジェクトを作成しますか？';
+const LOAD_PROJECT_CONFIRM_MESSAGE =
+  '未保存の変更があります。破棄して別プロジェクトを読み込みますか？';
+const PROJECT_SAVE_ERROR_MESSAGE =
+  'プロジェクト保存に失敗しました。ブラウザの保存領域を確認してください。';
+const PROJECT_LOAD_ERROR_MESSAGE =
+  'プロジェクト読込に失敗しました。再度お試しください。';
+const PROJECT_DELETE_ERROR_MESSAGE =
+  'プロジェクト削除に失敗しました。再度お試しください。';
+const PROJECT_LIST_ERROR_MESSAGE =
+  'プロジェクト一覧の取得に失敗しました。再度お試しください。';
+const DELETED_PROJECT_MARKER = '__deleted_project__';
 
 // エディタの結果
 type UseSketchEditorResult = {
@@ -95,6 +88,12 @@ type UseSketchEditorResult = {
   updateProjectSettings: (next: ProjectSettings) => void;
   saveProject: () => void;
   loadProject: () => void;
+  isProjectLibraryOpen: boolean;
+  projectLibrary: ProjectSummary[];
+  closeProjectLibrary: () => void;
+  loadProjectById: (id: string) => Promise<void>;
+  deleteProjectById: (id: string, name: string) => Promise<void>;
+  createNewProject: () => Promise<void>;
 };
 
 // 初期の提案UI状態
@@ -120,13 +119,14 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     useState<SuggestionUIState>(initialSuggestionUI);
   const [isReady, setIsReady] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>(
     () => ({ ...DEFAULT_PROJECT_SETTINGS }),
   );
+  const [isProjectLibraryOpen, setIsProjectLibraryOpen] = useState(false);
+  const [projectLibrary, setProjectLibrary] = useState<ProjectSummary[]>([]);
 
-  // リファレンス（プロジェクト保存用）
-  const projectFileHandleRef = useRef<ProjectFileHandle | null>(null);
   const cleanProjectJsonRef = useRef<string | null>(null);
 
   // 解決済みの色設定
@@ -148,6 +148,12 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     },
     [],
   );
+
+  // 保存対象のプロジェクトデータを構築
+  const buildProjectData = useCallback((editor = editorRef.current) => {
+    if (!editor) return null;
+    return serializeProject(editor.getPaths(), editor.getProjectSettings());
+  }, []);
 
   // 現在のプロジェクト状態をクリーンとしてマーク
   const markCurrentProjectAsClean = useCallback(
@@ -171,19 +177,16 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     [buildProjectJson],
   );
 
-  // プロジェクトJSONを書き込み
-  const writeProjectJson = useCallback(
-    async (fileHandle: ProjectFileHandle, json: string): Promise<void> => {
-      const writable = await fileHandle.createWritable();
-      await writable.write(json);
-      await writable.close();
-      projectFileHandleRef.current = fileHandle;
-      setProjectName(stripJsonExtension(fileHandle.name));
-      cleanProjectJsonRef.current = json;
-      setHasUnsavedChanges(false);
-    },
-    [],
-  );
+  // プロジェクト一覧を更新
+  const refreshProjectLibrary = useCallback(async (): Promise<void> => {
+    try {
+      const projects = await listProjects();
+      setProjectLibrary(projects);
+    } catch (error) {
+      console.error('[projectLibrary] Failed to list projects.', error);
+      window.alert(PROJECT_LIST_ERROR_MESSAGE);
+    }
+  }, []);
 
   // 初期化
   useEffect(() => {
@@ -236,6 +239,13 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     resolvedColors,
     resolvedObjectColors,
   ]);
+
+  useEffect(() => {
+    return () => {
+      editorRef.current?.destroy();
+      editorRef.current = null;
+    };
+  }, []);
 
   // コンテナのリサイズを監視
   useEffect(() => {
@@ -321,101 +331,159 @@ export const useSketchEditor = (): UseSketchEditorResult => {
 
   // プロジェクトを保存
   const saveProject = useCallback(() => {
-    const json = buildProjectJson();
-    if (!json) return;
+    void (async () => {
+      const projectData = buildProjectData();
+      if (!projectData) return;
 
-    const pickAndSaveProjectFile = async (): Promise<void> => {
-      const savePicker = (window as WindowWithFilePicker).showSaveFilePicker;
-      if (!savePicker) {
-        console.error('[saveProject] showSaveFilePicker is not supported.');
+      try {
+        let targetId = projectId;
+        let targetName = projectName;
+
+        if (!targetId) {
+          const defaultName = targetName ?? 'Untitled';
+          const promptedName = window.prompt(
+            'プロジェクト名を入力してください',
+            defaultName,
+          );
+          if (!promptedName) return;
+
+          const trimmedName = promptedName.trim();
+          if (!trimmedName) return;
+
+          const existing = await findProjectByName(trimmedName);
+          if (existing) {
+            const shouldOverwrite = window.confirm(
+              `「${existing.name}」は既に存在します。上書きしますか？`,
+            );
+            if (!shouldOverwrite) return;
+            targetId = existing.id;
+          } else {
+            targetId = null;
+          }
+          targetName = trimmedName;
+        }
+
+        const fallbackName = targetName ?? 'Untitled';
+        const result = await saveProjectToStorage({
+          id: targetId ?? undefined,
+          name: fallbackName,
+          data: projectData,
+        });
+
+        setProjectId(result.id);
+        setProjectName(result.name);
+        markCurrentProjectAsClean();
+
+        if (isProjectLibraryOpen) {
+          await refreshProjectLibrary();
+        }
+      } catch (error) {
+        console.error('[saveProject] Failed to save project.', error);
+        window.alert(PROJECT_SAVE_ERROR_MESSAGE);
+      }
+    })();
+  }, [
+    buildProjectData,
+    isProjectLibraryOpen,
+    markCurrentProjectAsClean,
+    projectId,
+    projectName,
+    refreshProjectLibrary,
+  ]);
+
+  // プロジェクト一覧を開く
+  const loadProject = useCallback(() => {
+    void (async () => {
+      await refreshProjectLibrary();
+      setIsProjectLibraryOpen(true);
+    })();
+  }, [refreshProjectLibrary]);
+
+  const closeProjectLibrary = useCallback(() => {
+    setIsProjectLibraryOpen(false);
+  }, []);
+
+  // プロジェクトIDを指定して読み込み
+  const loadProjectById = useCallback(
+    async (id: string): Promise<void> => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      if (hasUnsavedChanges && !window.confirm(LOAD_PROJECT_CONFIRM_MESSAGE)) {
         return;
       }
 
       try {
-        const suggestedName = `${projectName ?? 'Untitled'}.json`;
-        const fileHandle = await savePicker({
-          suggestedName,
-          types: PROJECT_FILE_PICKER_TYPES,
-        });
-        await writeProjectJson(fileHandle, json);
-      } catch (error) {
-        if (isAbortError(error)) {
+        const stored = await getProject(id);
+        if (!stored) {
+          console.error('[loadProject] Target project is not found.', { id });
+          window.alert('選択したプロジェクトが見つかりませんでした。');
           return;
         }
-        console.error('[saveProject] File picker failed.', error);
-      }
-    };
 
-    const currentHandle = projectFileHandleRef.current;
-    if (currentHandle) {
-      void (async () => {
-        try {
-          await writeProjectJson(currentHandle, json);
-          return;
-        } catch (error) {
-          if (isAbortError(error)) {
-            return;
-          }
-          console.warn(
-            '[saveProject] Failed to overwrite opened project file.',
-            error,
-          );
-          projectFileHandleRef.current = null;
-          await pickAndSaveProjectFile();
-        }
-      })();
-      return;
-    }
+        const { settings, paths: serializedPaths } = deserializeProject(
+          stored.data,
+        );
 
-    void pickAndSaveProjectFile();
-  }, [buildProjectJson, projectName, writeProjectJson]);
-
-  // プロジェクトを読み込み
-  const loadProject = useCallback(() => {
-    const applyLoadedProject = (
-      text: string,
-      filename: string,
-      fileHandle: ProjectFileHandle,
-    ) => {
-      try {
-        const data = JSON.parse(text);
-        const { settings, paths: serializedPaths } = deserializeProject(data);
-
-        editorRef.current?.applySerializedProject(serializedPaths, settings);
+        editor.applySerializedProject(serializedPaths, settings);
+        setProjectId(stored.id);
+        setProjectName(stored.name);
         setProjectSettings(settings);
-        setProjectName(stripJsonExtension(filename));
-        projectFileHandleRef.current = fileHandle;
-        markCurrentProjectAsClean();
+        setIsProjectLibraryOpen(false);
+        markCurrentProjectAsClean(editor);
       } catch (error) {
-        console.error('[loadProject] Failed to load project JSON.', error);
+        console.error('[loadProject] Failed to load project from storage.', error);
+        window.alert(PROJECT_LOAD_ERROR_MESSAGE);
       }
-    };
+    },
+    [hasUnsavedChanges, markCurrentProjectAsClean],
+  );
 
-    const picker = (window as WindowWithFilePicker).showOpenFilePicker;
-    if (!picker) {
-      console.error('[loadProject] showOpenFilePicker is not supported.');
+  // プロジェクトIDを指定して削除
+  const deleteProjectById = useCallback(
+    async (id: string, name: string): Promise<void> => {
+      const shouldDelete = window.confirm(
+        `「${name}」を削除します。元に戻せません。`,
+      );
+      if (!shouldDelete) return;
+
+      try {
+        const deleted = await deleteProjectFromStorage(id);
+        if (!deleted) {
+          console.error('[deleteProject] Target project is not found.', { id });
+          window.alert('削除対象のプロジェクトが見つかりませんでした。');
+          return;
+        }
+
+        await refreshProjectLibrary();
+        if (projectId === id) {
+          setProjectId(null);
+          setProjectName(null);
+          cleanProjectJsonRef.current = DELETED_PROJECT_MARKER;
+          setHasUnsavedChanges(true);
+        }
+      } catch (error) {
+        console.error('[deleteProject] Failed to delete project.', error);
+        window.alert(PROJECT_DELETE_ERROR_MESSAGE);
+      }
+    },
+    [projectId, refreshProjectLibrary],
+  );
+
+  // 新規プロジェクトを作成
+  const createNewProject = useCallback(async (): Promise<void> => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (hasUnsavedChanges && !window.confirm(NEW_PROJECT_CONFIRM_MESSAGE)) {
       return;
     }
 
-    void (async () => {
-      try {
-        const [fileHandle] = await picker({
-          multiple: false,
-          types: PROJECT_FILE_PICKER_TYPES,
-        });
-        if (!fileHandle) return;
-
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        applyLoadedProject(text, file.name, fileHandle);
-      } catch (error) {
-        if (isAbortError(error)) {
-          return;
-        }
-        console.error('[loadProject] File picker failed.', error);
-      }
-    })();
-  }, [markCurrentProjectAsClean]);
+    editor.applyProject([], { ...DEFAULT_PROJECT_SETTINGS });
+    setProjectId(null);
+    setProjectName(null);
+    setProjectSettings({ ...DEFAULT_PROJECT_SETTINGS });
+    markCurrentProjectAsClean(editor);
+    setIsProjectLibraryOpen(false);
+  }, [hasUnsavedChanges, markCurrentProjectAsClean]);
 
   // プレイバックコントローラー
   const playbackController = useMemo<PlaybackController>(
@@ -478,5 +546,11 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     updateProjectSettings,
     saveProject,
     loadProject,
+    isProjectLibraryOpen,
+    projectLibrary,
+    closeProjectLibrary,
+    loadProjectById,
+    deleteProjectById,
+    createNewProject,
   };
 };

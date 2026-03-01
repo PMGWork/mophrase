@@ -6,6 +6,7 @@ import { clamp } from './utils/number';
 import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';
+import { ProjectLibraryModal } from './components/ProjectLibraryModal';
 import { Settings } from './components/Settings';
 import { Sidebar } from './components/Sidebar';
 import { SketchSuggestion } from './components/Suggestion';
@@ -50,6 +51,12 @@ const App = () => {
     updateProjectSettings,
     saveProject,
     loadProject,
+    isProjectLibraryOpen,
+    projectLibrary,
+    closeProjectLibrary,
+    loadProjectById,
+    deleteProjectById,
+    createNewProject,
   } = useSketchEditor();
 
   const { graphCanvasRef } = useGraphEditor({
@@ -138,7 +145,7 @@ const App = () => {
   const hasGraphPath = (activePath?.keyframes?.length ?? 0) >= 2;
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <Header
         projectName={projectName}
         hasUnsavedChanges={hasUnsavedChanges}
@@ -149,7 +156,7 @@ const App = () => {
         onLoad={loadProject}
       />
 
-      <div className="mx-3 mb-3 flex flex-1 gap-2.5 overflow-hidden">
+      <div className="mx-3 flex min-h-0 flex-1 gap-2.5 overflow-hidden pb-3">
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <Canvas canvasRef={sketchCanvasRef} />
           <Playback
@@ -191,6 +198,20 @@ const App = () => {
         config={config}
         onClose={() => setIsSettingsOpen(false)}
         onChange={handleConfigChange}
+      />
+      <ProjectLibraryModal
+        isOpen={isProjectLibraryOpen}
+        projects={projectLibrary}
+        onClose={closeProjectLibrary}
+        onLoadProject={(id) => {
+          void loadProjectById(id);
+        }}
+        onDeleteProject={(id, name) => {
+          void deleteProjectById(id, name);
+        }}
+        onCreateNewProject={() => {
+          void createNewProject();
+        }}
       />
     </div>
   );
