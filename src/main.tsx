@@ -6,6 +6,7 @@ import { clamp } from './utils/number';
 import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';
+import { ProjectLibraryModal } from './components/ProjectLibraryModal';
 import { Settings } from './components/Settings';
 import { Sidebar } from './components/Sidebar';
 import { SketchSuggestion } from './components/Suggestion';
@@ -50,6 +51,11 @@ const App = () => {
     updateProjectSettings,
     saveProject,
     loadProject,
+    isProjectLibraryOpen,
+    projectLibrary,
+    closeProjectLibrary,
+    loadProjectById,
+    createNewProject,
   } = useSketchEditor();
 
   const { graphCanvasRef } = useGraphEditor({
@@ -191,6 +197,17 @@ const App = () => {
         config={config}
         onClose={() => setIsSettingsOpen(false)}
         onChange={handleConfigChange}
+      />
+      <ProjectLibraryModal
+        isOpen={isProjectLibraryOpen}
+        projects={projectLibrary}
+        onClose={closeProjectLibrary}
+        onLoadProject={(id) => {
+          void loadProjectById(id);
+        }}
+        onCreateNewProject={() => {
+          void createNewProject();
+        }}
       />
     </div>
   );
