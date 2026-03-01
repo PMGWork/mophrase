@@ -163,7 +163,7 @@ function fitSketchRecursive(
   }
 
   // 分割点の接ベクトルを計算
-  const tangent = splitTangent(points, splitIndex);
+  const tangent = splitTangent(points, splitIndex, range);
   if (tangent === null) {
     curves.push(controls);
     ranges?.push({ start: range.start, end: range.end });
@@ -225,7 +225,7 @@ function fitGraphRecursive(
     return;
   }
 
-  const tangent = splitTangent(points, splitIndex);
+  const tangent = splitTangent(points, splitIndex, range);
   if (tangent === null) {
     curves.push(controls);
     ranges.push({ start: range.start, end: range.end });
