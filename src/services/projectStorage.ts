@@ -168,3 +168,20 @@ export const saveProject = async (input: {
     updatedAt: record.updatedAt,
   };
 };
+
+export const deleteProject = async (id: string): Promise<boolean> => {
+  const db = await openDatabase();
+  const transaction = db.transaction(PROJECT_STORE, 'readwrite');
+  const store = transaction.objectStore(PROJECT_STORE);
+  const existing = (await requestToPromise(
+    store.get(id),
+  )) as StoredProjectRecord | undefined;
+  if (!existing) {
+    await transactionDone(transaction);
+    return false;
+  }
+
+  store.delete(id);
+  await transactionDone(transaction);
+  return true;
+};

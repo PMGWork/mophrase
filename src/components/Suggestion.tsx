@@ -245,7 +245,7 @@ export const SketchSuggestion = ({
           {useCompactPromptEntry && (
             <button
               type="button"
-              className="text-text-subtle hover:text-text hover:bg-panel cursor-pointer border-border flex items-center justify-center border-r px-3 py-3 transition-colors"
+              className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer border-border flex items-center justify-center border-r px-3 py-3 transition-colors"
               onClick={closePromptComposer}
               aria-label="Back"
             >
@@ -261,7 +261,7 @@ export const SketchSuggestion = ({
           />
           <button
             type="submit"
-            className="text-text-muted hover:text-text cursor-pointer p-3"
+            className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-3 transition-colors"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -292,7 +292,7 @@ export const SketchSuggestion = ({
             <button
               type="button"
               data-role="open-prompt-composer"
-              className="text-text-subtle hover:text-text hover:bg-panel cursor-pointer p-3 text-left text-sm transition-colors"
+              className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-3 text-left text-sm transition-colors"
               onClick={openPromptComposer}
             >
               Refine...

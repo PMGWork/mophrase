@@ -55,6 +55,7 @@ const App = () => {
     projectLibrary,
     closeProjectLibrary,
     loadProjectById,
+    deleteProjectById,
     createNewProject,
   } = useSketchEditor();
 
@@ -204,6 +205,9 @@ const App = () => {
         onClose={closeProjectLibrary}
         onLoadProject={(id) => {
           void loadProjectById(id);
+        }}
+        onDeleteProject={(id, name) => {
+          void deleteProjectById(id, name);
         }}
         onCreateNewProject={() => {
           void createNewProject();

@@ -60,7 +60,7 @@ export const Settings = ({
           </div>
           <button
             id="closeSettingsButton"
-            className="corner-md text-text-muted hover:bg-panel-elevated hover:text-text cursor-pointer p-1.5 transition-colors"
+            className="corner-md text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-1.5 transition-colors"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -84,7 +84,7 @@ export const Settings = ({
               <div className="relative">
                 <select
                   id="settingsLlmModelSelect"
-                  className="corner-md bg-panel-elevated text-text hover:bg-panel focus:ring-border h-10 w-full cursor-pointer appearance-none py-2 pr-10 pl-4 text-sm transition-colors focus:ring-1 focus:outline-none"
+                  className="corner-md bg-gray-800 text-gray-100 hover:bg-gray-700 focus:ring-border h-10 w-full cursor-pointer appearance-none py-2 pr-10 pl-4 text-sm transition-colors focus:ring-1 focus:outline-none"
                   value={currentValue}
                   onChange={(event) => {
                     try {
@@ -119,7 +119,7 @@ export const Settings = ({
               </div>
             </div>
             <div
-              className="group border-border bg-panel/60 hover:bg-panel-elevated/80 flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 transition-colors"
+              className="group border-border bg-gray-800/40 hover:bg-gray-700/70 flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 transition-colors"
               onClick={() =>
                 onChange({
                   llmProvider: selectedProvider,
@@ -189,7 +189,7 @@ export const Settings = ({
                     testMode,
                   });
                 }}
-                className="corner-md bg-panel-elevated [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-full cursor-pointer appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
+                className="corner-md bg-gray-800 [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-full cursor-pointer appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
               />
             </div>
           </div>

@@ -20,6 +20,7 @@ import { DEFAULT_PROJECT_SETTINGS } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
 import { loadConfig, saveConfig } from '../services/configStorage';
 import {
+  deleteProject as deleteProjectFromStorage,
   findProjectByName,
   getProject,
   listProjects,
@@ -43,6 +44,14 @@ const NEW_PROJECT_CONFIRM_MESSAGE =
   '未保存の変更があります。破棄して新規プロジェクトを作成しますか？';
 const LOAD_PROJECT_CONFIRM_MESSAGE =
   '未保存の変更があります。破棄して別プロジェクトを読み込みますか？';
+const PROJECT_SAVE_ERROR_MESSAGE =
+  'プロジェクト保存に失敗しました。ブラウザの保存領域を確認してください。';
+const PROJECT_LOAD_ERROR_MESSAGE =
+  'プロジェクト読込に失敗しました。再度お試しください。';
+const PROJECT_DELETE_ERROR_MESSAGE =
+  'プロジェクト削除に失敗しました。再度お試しください。';
+const PROJECT_LIST_ERROR_MESSAGE =
+  'プロジェクト一覧の取得に失敗しました。再度お試しください。';
 
 // エディタの結果
 type UseSketchEditorResult = {
@@ -82,6 +91,7 @@ type UseSketchEditorResult = {
   projectLibrary: ProjectSummary[];
   closeProjectLibrary: () => void;
   loadProjectById: (id: string) => Promise<void>;
+  deleteProjectById: (id: string, name: string) => Promise<void>;
   createNewProject: () => Promise<void>;
 };
 
@@ -173,6 +183,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
       setProjectLibrary(projects);
     } catch (error) {
       console.error('[projectLibrary] Failed to list projects.', error);
+      window.alert(PROJECT_LIST_ERROR_MESSAGE);
     }
   }, []);
 
@@ -367,6 +378,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         }
       } catch (error) {
         console.error('[saveProject] Failed to save project.', error);
+        window.alert(PROJECT_SAVE_ERROR_MESSAGE);
       }
     })();
   }, [
@@ -403,6 +415,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         const stored = await getProject(id);
         if (!stored) {
           console.error('[loadProject] Target project is not found.', { id });
+          window.alert('選択したプロジェクトが見つかりませんでした。');
           return;
         }
 
@@ -418,9 +431,39 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         markCurrentProjectAsClean(editor);
       } catch (error) {
         console.error('[loadProject] Failed to load project from storage.', error);
+        window.alert(PROJECT_LOAD_ERROR_MESSAGE);
       }
     },
     [hasUnsavedChanges, markCurrentProjectAsClean],
+  );
+
+  // プロジェクトIDを指定して削除
+  const deleteProjectById = useCallback(
+    async (id: string, name: string): Promise<void> => {
+      const shouldDelete = window.confirm(
+        `「${name}」を削除します。元に戻せません。`,
+      );
+      if (!shouldDelete) return;
+
+      try {
+        const deleted = await deleteProjectFromStorage(id);
+        if (!deleted) {
+          console.error('[deleteProject] Target project is not found.', { id });
+          window.alert('削除対象のプロジェクトが見つかりませんでした。');
+          return;
+        }
+
+        await refreshProjectLibrary();
+        if (projectId === id) {
+          setProjectId(null);
+          setProjectName(null);
+        }
+      } catch (error) {
+        console.error('[deleteProject] Failed to delete project.', error);
+        window.alert(PROJECT_DELETE_ERROR_MESSAGE);
+      }
+    },
+    [projectId, refreshProjectLibrary],
   );
 
   // 新規プロジェクトを作成
@@ -504,6 +547,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     projectLibrary,
     closeProjectLibrary,
     loadProjectById,
+    deleteProjectById,
     createNewProject,
   };
 };
