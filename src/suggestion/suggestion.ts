@@ -15,6 +15,7 @@ import type {
   Suggestion,
   SuggestionStatus,
 } from '../types';
+import { createId } from '../utils/id';
 import { buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
 import { createSketchModifier, createGraphModifier } from '../utils/modifier';
 import { getSelectionReference, slicePath } from '../utils/path';
@@ -222,7 +223,7 @@ export class SuggestionManager {
       );
 
       const suggestions: Suggestion[] = items.map((item) => ({
-        id: crypto.randomUUID(),
+        id: createId(),
         title: item.title,
         modifierTarget: item.modifierTarget,
         confidence: item.confidence,

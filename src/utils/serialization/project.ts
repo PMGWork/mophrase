@@ -18,6 +18,7 @@ import type {
   SketchModifier,
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS } from '../../types';
+import { createId } from '../id';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
 import { clamp } from '../number';
 import {
@@ -160,7 +161,7 @@ function parseModifierMeta(value: Record<string, unknown>): ModifierMeta {
     id:
       typeof value.id === 'string' && value.id.trim() !== ''
         ? value.id
-        : crypto.randomUUID(),
+        : createId(),
     name: typeof value.name === 'string' ? value.name : 'modifier',
     strength: isFiniteNumber(value.strength) ? value.strength : 1,
   };
@@ -373,7 +374,7 @@ export function deserializePaths(
     }
 
     return {
-      id: serializedPath.id || crypto.randomUUID(),
+      id: serializedPath.id || createId(),
       keyframes,
       startTime: serializedPath.startTime,
       duration: serializedPath.duration,

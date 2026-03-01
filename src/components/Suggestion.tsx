@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import type { Suggestion, SuggestionStatus } from '../types';
 import { clamp } from '../utils/number';
 import { SuggestionItem } from './SuggestionItem';
+
+const TOUCH_LONG_PRESS_MS = 260;
+const TOUCH_DRAG_THRESHOLD_PX = 8;
 
 // Props
 type SketchSuggestionProps = {
@@ -31,6 +34,17 @@ export const SketchSuggestion = ({
 }: SketchSuggestionProps) => {
   // 入力欄への参照
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const touchSelectionRef = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startAt: number;
+    lastStrength: number;
+    adjusting: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+  const [isPromptComposerOpen, setIsPromptComposerOpen] = useState(false);
 
   // ホバー状態
   const [hovered, setHovered] = useState<{
@@ -40,19 +54,30 @@ export const SketchSuggestion = ({
 
   // ローディング表示
   const showLoading = status === 'generating';
+  const hasSuggestions = suggestions.length > 0;
+  const useCompactPromptEntry = showLoading || hasSuggestions;
+  const showPromptInput = !useCompactPromptEntry || isPromptComposerOpen;
+  const showSuggestionList =
+    !useCompactPromptEntry || (!showPromptInput && !showLoading);
 
   // 入力欄にフォーカス
   useEffect(() => {
     if (!isVisible) return;
+    if (!showPromptInput) {
+      return;
+    }
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
-  }, [isVisible]);
+  }, [isVisible, showPromptInput]);
 
   // 非表示時にホバー状態をリセット
   useEffect(() => {
     if (!isVisible) {
       setHovered({ id: null, strength: 1 });
+      touchSelectionRef.current = null;
+      suppressClickRef.current = false;
+      setIsPromptComposerOpen(false);
       onHoverChange(null, 1);
     }
   }, [isVisible, onHoverChange]);
@@ -67,6 +92,9 @@ export const SketchSuggestion = ({
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt) return;
     onSubmit(trimmedPrompt);
+    if (useCompactPromptEntry) {
+      setIsPromptComposerOpen(false);
+    }
 
     // 入力欄をクリア
     if (inputRef.current) inputRef.current.value = '';
@@ -74,7 +102,7 @@ export const SketchSuggestion = ({
 
   // 影響度を計算
   const computeStrength = (clientX: number, rect: DOMRect): number =>
-    clamp(((clientX - rect.left) / rect.width) * 2, 0, 2);
+    clamp(((clientX - rect.left) / Math.max(rect.width, 1)) * 2, 0, 2);
 
   // ホバー状態更新
   const updateHover = (id: string | null, strength: number) => {
@@ -106,66 +134,190 @@ export const SketchSuggestion = ({
   // クリックハンドラ
   const handleClick =
     (id: string) => (event: React.MouseEvent<HTMLButtonElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const strength = computeStrength(event.clientX, rect);
+      if (suppressClickRef.current) return;
+      const strength =
+        hovered.id === id
+          ? hovered.strength
+          : computeStrength(
+              event.clientX,
+              event.currentTarget.getBoundingClientRect(),
+            );
       onSuggestionClick(id, strength);
     };
+
+  const handlePointerDown =
+    (id: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      touchSelectionRef.current = {
+        id,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startAt: Date.now(),
+        lastStrength: strength,
+        adjusting: false,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+  const handlePointerMove =
+    (id: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return;
+      const active = touchSelectionRef.current;
+      if (!active || active.id !== id || active.pointerId !== event.pointerId) {
+        return;
+      }
+      const moved = Math.hypot(
+        event.clientX - active.startX,
+        event.clientY - active.startY,
+      );
+      const elapsed = Date.now() - active.startAt;
+      if (
+        !active.adjusting &&
+        (moved >= TOUCH_DRAG_THRESHOLD_PX ||
+          elapsed >= TOUCH_LONG_PRESS_MS)
+      ) {
+        active.adjusting = true;
+      }
+
+      if (!active.adjusting) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const strength = computeStrength(event.clientX, rect);
+      active.lastStrength = strength;
+      updateHover(id, strength);
+      suppressClickRef.current = true;
+    };
+
+  const handlePointerUp =
+    (id: string) => (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse') return;
+      const active = touchSelectionRef.current;
+      if (!active || active.id !== id || active.pointerId !== event.pointerId) {
+        return;
+      }
+
+      if (active.adjusting) {
+        updateHover(id, active.lastStrength);
+        suppressClickRef.current = true;
+        requestAnimationFrame(() => {
+          suppressClickRef.current = false;
+        });
+      }
+
+      touchSelectionRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    };
+
+  const handlePointerCancel = () => {
+    touchSelectionRef.current = null;
+    suppressClickRef.current = false;
+  };
+
+  const openPromptComposer = () => {
+    setIsPromptComposerOpen(true);
+  };
+
+  const closePromptComposer = () => {
+    setIsPromptComposerOpen(false);
+  };
 
   return (
     <div
       id="sketchSuggestionContainer"
-      className="corner-lg border-border bg-panel fixed z-50 flex min-w-60 flex-col overflow-hidden border shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
+      className="corner-lg border-border bg-panel fixed z-50 flex w-60 max-w-[calc(100vw-2rem)] flex-col overflow-hidden border shadow-[0_0_15px_0_rgba(16,24,40,0.5)]"
       style={{
         display: isVisible ? 'flex' : 'none',
         left: position?.left,
         top: position?.top,
       }}
     >
-      <form
-        id="sketchPromptForm"
-        className="flex items-center"
-        onSubmit={handleSubmit}
-      >
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder={placeholder}
-          autoComplete="off"
-          className="text-text placeholder:text-text-subtle flex-1 p-3 text-sm focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="text-text-muted hover:text-text cursor-pointer p-3"
+      {showPromptInput && (
+        <form
+          id="sketchPromptForm"
+          className="flex w-full items-center"
+          onSubmit={handleSubmit}
         >
-          <Send className="h-4 w-4" />
-        </button>
-      </form>
-      <div
-        id="sketchSuggestionList"
-        className="*:border-border flex max-h-60 flex-col overflow-y-auto *:border-t empty:hidden"
-      >
-        {/* ローディング表示 */}
-        {showLoading && (
-          <div className="suggestion-loading text-text-muted px-3 py-2 text-sm">
-            {testMode ? 'Testing...' : 'Generating...'}
-          </div>
-        )}
-
-        {/* 提案リスト */}
-        {!showLoading &&
-          suggestions.map((suggestion) => (
-            <SuggestionItem
-              key={suggestion.id}
-              suggestion={suggestion}
-              isHovered={hovered.id === suggestion.id}
-              strength={hovered.strength}
-              onMouseEnter={handleMouseEnter(suggestion.id)}
-              onMouseMove={handleMouseMove(suggestion.id)}
-              onMouseLeave={handleMouseLeave}
-              onClick={handleClick(suggestion.id)}
-            />
-          ))}
-      </div>
+          {useCompactPromptEntry && (
+            <button
+              type="button"
+              className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer border-border flex items-center justify-center border-r px-3 py-3 transition-colors"
+              onClick={closePromptComposer}
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder={placeholder}
+            autoComplete="off"
+            className="text-text placeholder:text-text-subtle min-w-0 flex-1 p-3 text-sm focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-3 transition-colors"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
+      )}
+      {!showPromptInput && showLoading && (
+        <div
+          className="text-text-subtle cursor-default select-none p-3 text-sm"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{testMode ? 'Testing' : 'Generating'}</span>
+          <span className="suggestion-loading-dots" aria-hidden="true">
+            <span className="suggestion-loading-dot">.</span>
+            <span className="suggestion-loading-dot">.</span>
+            <span className="suggestion-loading-dot">.</span>
+          </span>
+        </div>
+      )}
+      {showSuggestionList && (
+        <div
+          id="sketchSuggestionList"
+          className={`*:border-border flex max-h-60 flex-col overflow-y-auto *:border-t empty:hidden ${
+            showPromptInput ? 'mt-1' : '[&>*:first-child]:border-t-0'
+          }`}
+        >
+          {!showPromptInput && !showLoading && (
+            <button
+              type="button"
+              data-role="open-prompt-composer"
+              className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-3 text-left text-sm transition-colors"
+              onClick={openPromptComposer}
+            >
+              Refine...
+            </button>
+          )}
+          {/* 提案リスト */}
+          {!showLoading &&
+            suggestions.map((suggestion) => (
+              <SuggestionItem
+                key={suggestion.id}
+                suggestion={suggestion}
+                isHovered={hovered.id === suggestion.id}
+                strength={hovered.strength}
+                onMouseEnter={handleMouseEnter(suggestion.id)}
+                onMouseMove={handleMouseMove(suggestion.id)}
+                onMouseLeave={handleMouseLeave}
+                onPointerDown={handlePointerDown(suggestion.id)}
+                onPointerMove={handlePointerMove(suggestion.id)}
+                onPointerUp={handlePointerUp(suggestion.id)}
+                onPointerCancel={handlePointerCancel}
+                onClick={handleClick(suggestion.id)}
+              />
+            ))}
+        </div>
+      )}
     </div>
   );
 };

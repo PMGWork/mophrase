@@ -34,7 +34,7 @@ export const ProjectSettings = ({
           </div>
           <button
             id="closeProjectSettingsButton"
-            className="corner-md text-text-muted hover:bg-panel-elevated hover:text-text cursor-pointer p-1.5 transition-colors"
+            className="corner-md text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-1.5 transition-colors"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -69,7 +69,7 @@ export const ProjectSettings = ({
                   playbackDuration: next,
                 });
               }}
-              className="corner-md bg-panel-elevated text-text hover:bg-panel focus:ring-border h-10 w-full px-3 text-sm transition-colors focus:ring-1 focus:outline-none"
+              className="corner-md bg-gray-800 text-gray-100 hover:bg-gray-700 focus:ring-border h-10 w-full px-3 text-sm transition-colors focus:ring-1 focus:outline-none"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -94,7 +94,7 @@ export const ProjectSettings = ({
                   playbackFrameRate: next,
                 });
               }}
-              className="corner-md bg-panel-elevated text-text hover:bg-panel focus:ring-border h-10 w-full px-3 text-sm transition-colors focus:ring-1 focus:outline-none"
+              className="corner-md bg-gray-800 text-gray-100 hover:bg-gray-700 focus:ring-border h-10 w-full px-3 text-sm transition-colors focus:ring-1 focus:outline-none"
             />
           </div>
         </div>

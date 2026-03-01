@@ -33,7 +33,7 @@ export const TimeSection = ({
           onChange={(event) =>
             onChange('startTime', Number(event.target.value))
           }
-          className="corner-md bg-panel-elevated text-text focus:ring-border w-full appearance-none py-1.5 pr-6 pl-7 text-xs focus:ring-1 focus:outline-none"
+          className="corner-md bg-gray-800 text-gray-100 hover:bg-gray-700 focus:ring-border w-full appearance-none py-1.5 pr-6 pl-7 text-xs transition-colors focus:ring-1 focus:outline-none"
         />
         <span className="text-text-subtle pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs">
           s
@@ -50,7 +50,7 @@ export const TimeSection = ({
           step="0.01"
           defaultValue={duration}
           onChange={(event) => onChange('duration', Number(event.target.value))}
-          className="corner-md bg-panel-elevated text-text focus:ring-border w-full appearance-none py-1.5 pr-6 pl-7 text-xs focus:ring-1 focus:outline-none"
+          className="corner-md bg-gray-800 text-gray-100 hover:bg-gray-700 focus:ring-border w-full appearance-none py-1.5 pr-6 pl-7 text-xs transition-colors focus:ring-1 focus:outline-none"
         />
         <span className="text-text-subtle pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs">
           s
