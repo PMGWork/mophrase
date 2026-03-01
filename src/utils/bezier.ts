@@ -153,18 +153,48 @@ export function refineParameter(
 export function splitTangent(
   points: p5.Vector[],
   splitIndex: number,
+  bounds?: { start: number; end: number },
 ): p5.Vector | null {
   const n = points.length;
   if (n < 3) return null;
+  const rangeStart = Math.max(0, bounds?.start ?? 0);
+  const rangeEnd = Math.min(n - 1, bounds?.end ?? n - 1);
 
-  // 分割点が端点の場合は接ベクトルを定義できない
-  if (splitIndex <= 0 || splitIndex >= n - 1) return null;
+  if (rangeEnd - rangeStart < 2) return null;
 
+  // 分割レンジの端点では接ベクトルを定義できない
+  if (splitIndex <= rangeStart || splitIndex >= rangeEnd) return null;
+
+  const EPS = 1e-6;
+  const SAMPLE_WINDOW = 5; // segment.ts の境界接線計算と同じ窓幅
+  const anchor = points[splitIndex];
+  const forward = anchor.copy().set(0, 0);
+  let weightSum = 0;
+
+  // splitIndex の前後ペアを複数見ることでノイズに強い方向を推定する
+  for (let d = 1; d <= SAMPLE_WINDOW; d++) {
+    const leftIndex = splitIndex - d;
+    const rightIndex = splitIndex + d;
+    if (leftIndex < rangeStart || rightIndex > rangeEnd) break;
+
+    const pair = points[rightIndex].copy().sub(points[leftIndex]);
+    if (pair.magSq() <= EPS * EPS) continue;
+
+    const weight = 1 / d;
+    forward.add(pair.normalize().mult(weight));
+    weightSum += weight;
+  }
+
+  if (weightSum > 0 && forward.magSq() > EPS * EPS) {
+    // 既存実装との向き互換: 左区間終端向き（backward）を返す
+    return forward.normalize().mult(-1);
+  }
+
+  // 退化時は従来どおり前後1点の差分にフォールバック
+  if (splitIndex - 1 < rangeStart || splitIndex + 1 > rangeEnd) return null;
   const prev = points[splitIndex - 1];
   const next = points[splitIndex + 1];
-
-  // 前後の点が非常に近い場合は単位ベクトルを定義できない
-  if (prev.dist(next) < 1e-6) return null;
+  if (prev.dist(next) < EPS) return null;
 
   return unitTangent(next, prev);
 }

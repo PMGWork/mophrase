@@ -6,6 +6,7 @@
 import type p5 from 'p5';
 import type { FitErrorResult, Keyframe } from '../../types';
 import { clamp } from '../../utils/number';
+import { detectDiscontinuitySplitPoints } from './discontinuity';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 
 // キーフレームを生成
@@ -17,6 +18,11 @@ export function generateKeyframes(
   fitError: { current: FitErrorResult },
 ): Keyframe[] {
   if (points.length < 2 || timestamps.length < 2) return [];
+  const discontinuitySplitPoints = detectDiscontinuitySplitPoints(
+    points,
+    timestamps,
+    errorTol,
+  );
 
   // 1. スケッチをフィッティング
   // 手書きの点群を許容誤差の範囲内でベジェ曲線のリストに変換
@@ -25,6 +31,7 @@ export function generateKeyframes(
     errorTol,
     coarseErrTol,
     fitError,
+    { forcedSplitPoints: discontinuitySplitPoints },
   );
   if (curves.length === 0) return [];
 
@@ -82,7 +89,12 @@ export function generateKeyframes(
     graphPoints.push(points[0].copy().set(t, v));
   }
 
-  const splitPoints = ranges.slice(0, -1).map((range) => range.end);
+  const splitPoints = Array.from(
+    new Set([
+      ...ranges.slice(0, -1).map((range) => range.end),
+      ...discontinuitySplitPoints,
+    ]),
+  ).sort((a, b) => a - b);
   const { curves: graphCurves, ranges: graphRanges } = fitGraphCurves(
     graphPoints,
     splitPoints,
