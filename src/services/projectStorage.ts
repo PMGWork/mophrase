@@ -42,7 +42,7 @@ const transactionDone = (transaction: IDBTransaction): Promise<void> =>
 const openDatabase = (): Promise<IDBDatabase> => {
   if (dbPromise) return dbPromise;
 
-  dbPromise = new Promise((resolve, reject) => {
+  const openingPromise = new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
@@ -72,9 +72,14 @@ const openDatabase = (): Promise<IDBDatabase> => {
     request.onerror = () => reject(request.error);
     request.onblocked = () =>
       reject(new Error('[projectStorage] Failed to open database: blocked.'));
+  }).catch((error) => {
+    // 一時エラー時に再試行できるよう、失敗したPromiseキャッシュを破棄する
+    dbPromise = null;
+    throw error;
   });
 
-  return dbPromise;
+  dbPromise = openingPromise;
+  return openingPromise;
 };
 
 const toProjectSummary = (record: StoredProjectRecord): ProjectSummary => ({

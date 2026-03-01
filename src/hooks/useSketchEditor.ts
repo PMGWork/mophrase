@@ -52,6 +52,7 @@ const PROJECT_DELETE_ERROR_MESSAGE =
   'プロジェクト削除に失敗しました。再度お試しください。';
 const PROJECT_LIST_ERROR_MESSAGE =
   'プロジェクト一覧の取得に失敗しました。再度お試しください。';
+const DELETED_PROJECT_MARKER = '__deleted_project__';
 
 // エディタの結果
 type UseSketchEditorResult = {
@@ -457,6 +458,8 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         if (projectId === id) {
           setProjectId(null);
           setProjectName(null);
+          cleanProjectJsonRef.current = DELETED_PROJECT_MARKER;
+          setHasUnsavedChanges(true);
         }
       } catch (error) {
         console.error('[deleteProject] Failed to delete project.', error);
