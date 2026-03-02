@@ -9,12 +9,9 @@ const EPS = 1e-6;
 const MIN_TIME_DELTA_MS = 8;
 const MIN_INDEX_GAP = 2;
 
-const STRONG_TURN_DEG = 70;
-const DISTANCE_TURN_DEG = 45;
-const SPEED_TURN_DEG = 35;
-
-const DISTANCE_RATIO_THRESHOLD = 2.4;
-const SPEED_RATIO_THRESHOLD = 2.8;
+const CORNER_ANGLE_DEG = 80;
+const ASSISTED_ANGLE_DEG = 45;
+const RATIO_THRESHOLD = 2.5;
 
 // 不連続候補を検出
 export function detectDiscontinuitySplitPoints(
@@ -55,10 +52,9 @@ export function detectDiscontinuitySplitPoints(
 
     const maxStep = Math.max(prevLen, nextLen);
     const isCandidate =
-      (turnAngleDeg >= STRONG_TURN_DEG && maxStep >= minStepPx) ||
-      (turnAngleDeg >= DISTANCE_TURN_DEG &&
-        distanceRatio >= DISTANCE_RATIO_THRESHOLD) ||
-      (turnAngleDeg >= SPEED_TURN_DEG && speedRatio >= SPEED_RATIO_THRESHOLD);
+      (turnAngleDeg >= CORNER_ANGLE_DEG && maxStep >= minStepPx) ||
+      (turnAngleDeg >= ASSISTED_ANGLE_DEG &&
+        (distanceRatio >= RATIO_THRESHOLD || speedRatio >= RATIO_THRESHOLD));
 
     if (!isCandidate) continue;
 
@@ -88,6 +84,7 @@ export function detectDiscontinuitySplitPoints(
   return filtered.map((candidate) => candidate.index);
 }
 
+// 前後ベクトルのなす角（度）を返す
 function computeTurnAngleDeg(
   prevVec: p5.Vector,
   nextVec: p5.Vector,
@@ -99,12 +96,14 @@ function computeTurnAngleDeg(
   return (Math.acos(clamped) * 180) / Math.PI;
 }
 
+// 大きい方 / 小さい方の比率を返す（ゼロ除算防止付き）
 function ratio(a: number, b: number): number {
   const maxValue = Math.max(a, b);
   const minValue = Math.min(a, b);
   return maxValue / Math.max(minValue, EPS);
 }
 
+// 2点間の経過時間（ms）を返す。最小値 MIN_TIME_DELTA_MS でクランプ
 function clampedTimeDeltaMs(
   timestamps: number[],
   startIndex: number,
@@ -116,6 +115,7 @@ function clampedTimeDeltaMs(
   return Math.max(MIN_TIME_DELTA_MS, delta);
 }
 
+// 有限値ならそのまま、そうでなければ fallback を返す
 function finiteOr(value: number, fallback: number): number {
   return Number.isFinite(value) ? value : fallback;
 }

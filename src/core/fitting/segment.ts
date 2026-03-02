@@ -5,7 +5,13 @@
 
 import type p5 from 'p5';
 import type { FitErrorResult } from '../../types';
-import { bernstein, bezierCurve, refineParameter } from '../../utils/bezier';
+import {
+  bernstein,
+  bezierCurve,
+  refineParameter,
+  TANGENT_SAMPLE_WINDOW,
+  MIN_TANGENT_DIST_SQ,
+} from '../../utils/bezier';
 import { clamp } from '../../utils/number';
 
 // フィッティング用の範囲情報
@@ -26,7 +32,6 @@ export interface FitCurveResult {
 }
 
 const TANGENT_EPS = 1e-6;
-const TANGENT_SAMPLE_WINDOW = 5;
 
 // ベジェ曲線の始点と終点の接ベクトルを計算する
 export function computeEndTangents(
@@ -61,7 +66,9 @@ function computeBoundaryTangent(
     for (let i = range.start + 1; i <= upper; i++) {
       const target = points[i];
       const toTarget = target.copy().sub(anchor);
-      if (toTarget.magSq() <= TANGENT_EPS * TANGENT_EPS) continue;
+      const distSq = toTarget.magSq();
+      if (distSq <= TANGENT_EPS * TANGENT_EPS) continue;
+      if (distSq < MIN_TANGENT_DIST_SQ) continue; // 手ブレ範囲をスキップ
       const weight = 1 / (i - range.start);
       sum.add(toTarget.normalize().mult(weight));
       weightSum += weight;
@@ -71,7 +78,9 @@ function computeBoundaryTangent(
     for (let i = range.end - 1; i >= lower; i--) {
       const target = points[i];
       const toTarget = target.copy().sub(anchor);
-      if (toTarget.magSq() <= TANGENT_EPS * TANGENT_EPS) continue;
+      const distSq = toTarget.magSq();
+      if (distSq <= TANGENT_EPS * TANGENT_EPS) continue;
+      if (distSq < MIN_TANGENT_DIST_SQ) continue; // 手ブレ範囲をスキップ
       const weight = 1 / (range.end - i);
       sum.add(toTarget.normalize().mult(weight));
       weightSum += weight;

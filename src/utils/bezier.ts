@@ -5,6 +5,10 @@
 
 import type p5 from 'p5';
 
+// 接線サンプリングの共通パラメータ
+export const TANGENT_SAMPLE_WINDOW = 12;
+export const MIN_TANGENT_DIST_SQ = 4;
+
 // #region 基礎数学
 // バーンスタイン多項式
 export function bernstein(i: number, n: number, t: number): number {
@@ -166,19 +170,20 @@ export function splitTangent(
   if (splitIndex <= rangeStart || splitIndex >= rangeEnd) return null;
 
   const EPS = 1e-6;
-  const SAMPLE_WINDOW = 5; // segment.ts の境界接線計算と同じ窓幅
   const anchor = points[splitIndex];
   const forward = anchor.copy().set(0, 0);
   let weightSum = 0;
 
   // splitIndex の前後ペアを複数見ることでノイズに強い方向を推定する
-  for (let d = 1; d <= SAMPLE_WINDOW; d++) {
+  for (let d = 1; d <= TANGENT_SAMPLE_WINDOW; d++) {
     const leftIndex = splitIndex - d;
     const rightIndex = splitIndex + d;
     if (leftIndex < rangeStart || rightIndex > rangeEnd) break;
 
     const pair = points[rightIndex].copy().sub(points[leftIndex]);
-    if (pair.magSq() <= EPS * EPS) continue;
+    const distSq = pair.magSq();
+    if (distSq <= EPS * EPS) continue;
+    if (distSq < MIN_TANGENT_DIST_SQ) continue; // 手ブレ範囲をスキップ
 
     const weight = 1 / d;
     forward.add(pair.normalize().mult(weight));
