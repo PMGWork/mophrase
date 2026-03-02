@@ -9,10 +9,11 @@ import type { Config } from '../config';
 import { generateStructured } from '../services/llm';
 import type {
   SerializedPath,
+  SuggestionBatchResponse,
   SuggestionItem,
   SuggestionResponse,
 } from '../types';
-import { suggestionResponseSchema } from '../types';
+import { suggestionBatchResponseSchema, suggestionResponseSchema } from '../types';
 
 // 提案を取得する際のオプション
 type FetchSuggestionsOptions = {
@@ -31,12 +32,20 @@ export async function fetchSuggestions(
     ? config.suggestionPromptParallel
     : config.suggestionPrompt;
   const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
-  const suggestionCount = 3;
+  const requestCount = 3;
   const benchmarkRuns = 5;
-  const requestOnce = (): Promise<SuggestionResponse> =>
+  const requestSingleOnce = (): Promise<SuggestionResponse> =>
     generateStructured<SuggestionResponse>(
       prompt,
       suggestionResponseSchema,
+      config.llmProvider,
+      config.llmModel,
+      config.llmReasoningEffort,
+    );
+  const requestBatchOnce = (): Promise<SuggestionBatchResponse> =>
+    generateStructured<SuggestionBatchResponse>(
+      prompt,
+      suggestionBatchResponseSchema,
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
@@ -45,12 +54,12 @@ export async function fetchSuggestions(
   if (config.testMode) {
     if (parallelGeneration) {
       await Promise.all(
-        Array.from({ length: benchmarkRuns }, () => requestOnce()),
+        Array.from({ length: benchmarkRuns }, () => requestSingleOnce()),
       );
     } else {
-      for (let i = 0; i < benchmarkRuns; i += 1) {
-        await requestOnce();
-      }
+      await Promise.all(
+        Array.from({ length: benchmarkRuns }, () => requestBatchOnce()),
+      );
     }
 
     // テストモードの場合は結果を返さない（UIに反映しない）
@@ -58,72 +67,77 @@ export async function fetchSuggestions(
   }
 
   const suggestions = parallelGeneration
-    ? await fetchSuggestionsInParallel(
-        requestOnce,
-        suggestionCount,
+    ? await fetchSingleSuggestionsInParallel(
+        requestSingleOnce,
+        requestCount,
         options.onSuggestion,
       )
-    : await fetchSuggestionsInSeries(
-        requestOnce,
-        suggestionCount,
+    : await fetchBatchedSuggestionsInParallel(
+        requestBatchOnce,
+        requestCount,
         options.onSuggestion,
       );
 
   console.log('[llm] result:', suggestions);
 
-  return suggestions.map(
-    (suggestion): SuggestionItem => ({
-      title: suggestion.title,
-      modifierTarget: suggestion.modifierTarget,
-      confidence: suggestion.confidence,
-      keyframes: suggestion.keyframes,
-    }),
-  );
+  return suggestions.map(toSuggestionItem);
 }
 
-// シリーズで提案を取得
-const fetchSuggestionsInSeries = async (
+// 1件レスポンスを並列取得
+const fetchSingleSuggestionsInParallel = async (
   requestOnce: () => Promise<SuggestionResponse>,
   count: number,
   onSuggestion?: (suggestion: SuggestionItem) => void,
 ): Promise<SuggestionResponse[]> => {
-  const results: SuggestionResponse[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const result = await requestOnce();
-    results.push(result);
+  return fetchInParallel(requestOnce, count, (result) => {
     onSuggestion?.(toSuggestionItem(result));
-  }
-  return results;
+  });
 };
 
-// 並列で提案を取得
-const fetchSuggestionsInParallel = async (
-  requestOnce: () => Promise<SuggestionResponse>,
+// 3件レスポンスを並列取得
+const fetchBatchedSuggestionsInParallel = async (
+  requestOnce: () => Promise<SuggestionBatchResponse>,
   count: number,
   onSuggestion?: (suggestion: SuggestionItem) => void,
 ): Promise<SuggestionResponse[]> => {
+  const batches = await fetchInParallel(requestOnce, count, (batch) => {
+    batch.suggestions.forEach((suggestion) => {
+      onSuggestion?.(toSuggestionItem(suggestion));
+    });
+  });
+
+  return batches.flatMap((batch) => batch.suggestions);
+};
+
+// count 件を並列実行して成功分を返す
+const fetchInParallel = async <T>(
+  requestOnce: () => Promise<T>,
+  count: number,
+  onFulfilled?: (result: T) => void,
+): Promise<T[]> => {
   const settled = await Promise.allSettled(
     Array.from({ length: count }, () =>
       requestOnce().then((result) => {
-        onSuggestion?.(toSuggestionItem(result));
+        onFulfilled?.(result);
         return result;
       }),
     ),
   );
-  const fulfilled = settled
-    .filter(
-      (result): result is PromiseFulfilledResult<SuggestionResponse> =>
-        result.status === 'fulfilled',
-    )
-    .map((result) => result.value);
+  const fulfilled: T[] = [];
+  let firstRejectedReason: unknown;
+  settled.forEach((result) => {
+    if (result.status === 'fulfilled') {
+      fulfilled.push(result.value);
+      return;
+    }
+    if (firstRejectedReason === undefined) {
+      firstRejectedReason = result.reason;
+    }
+  });
 
   if (fulfilled.length === 0) {
-    const firstRejected = settled.find(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
-    );
     throw (
-      firstRejected?.reason ??
-      new Error('Parallel suggestion generation failed.')
+      firstRejectedReason ?? new Error('提案の並列生成に失敗しました。')
     );
   }
 

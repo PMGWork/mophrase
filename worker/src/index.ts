@@ -68,6 +68,22 @@ const isGoogleReasoningEffort = (
 ): value is GoogleReasoningEffort =>
   value === 'none' || value === 'low' || value === 'medium' || value === 'high';
 
+const isGoogleGemini3FlashModel = (model: string): boolean =>
+  model.startsWith('gemini-3') && model.includes('flash');
+
+const resolveGoogleThinkingConfig = (
+  model: string,
+  reasoningEffort?: GoogleReasoningEffort,
+): Record<string, unknown> | null => {
+  if (isGoogleGemini3FlashModel(model)) {
+    return {
+      // Gemini 3 Flash は thinkingLevel を利用する。
+      thinkingLevel: reasoningEffort === 'none' ? 'minimal' : 'medium',
+    };
+  }
+  return null;
+};
+
 const isOpenRouterReasoningEffort = (
   value: unknown,
 ): value is OpenRouterReasoningEffort =>
@@ -75,8 +91,110 @@ const isOpenRouterReasoningEffort = (
 
 const isOpenRouterAnthropicModel = (model: string): boolean =>
   model.startsWith('anthropic/');
-const isOpenRouterGoogleModel = (model: string): boolean =>
-  model.startsWith('google/');
+
+// OpenAI Responses APIからテキスト出力を安全に抽出
+const extractOpenAIOutputText = (data: unknown): string => {
+  if (!data || typeof data !== 'object') return '';
+
+  const root = data as {
+    output_text?: unknown;
+    output?: unknown;
+  };
+
+  if (typeof root.output_text === 'string' && root.output_text.length > 0) {
+    return root.output_text;
+  }
+  if (Array.isArray(root.output_text)) {
+    const joined = root.output_text
+      .map((value) => (typeof value === 'string' ? value : ''))
+      .join('');
+    if (joined.length > 0) {
+      return joined;
+    }
+  }
+
+  if (!Array.isArray(root.output)) return '';
+
+  const textParts: string[] = [];
+
+  root.output.forEach((outputItem) => {
+    if (!outputItem || typeof outputItem !== 'object') return;
+    const content = (outputItem as { content?: unknown }).content;
+    if (!Array.isArray(content)) return;
+
+    content.forEach((contentItem) => {
+      if (!contentItem || typeof contentItem !== 'object') return;
+
+      const outputText = (contentItem as { output_text?: unknown }).output_text;
+      if (typeof outputText === 'string' && outputText.length > 0) {
+        textParts.push(outputText);
+        return;
+      }
+
+      const text = (contentItem as { text?: unknown }).text;
+      if (typeof text === 'string' && text.length > 0) {
+        textParts.push(text);
+        return;
+      }
+
+      const parsed = (contentItem as { parsed?: unknown }).parsed;
+      if (parsed && typeof parsed === 'object') {
+        textParts.push(JSON.stringify(parsed));
+      }
+    });
+  });
+
+  return textParts.join('');
+};
+
+// 出力欠落時のデバッグ情報を作成
+const summarizeOpenAIOutput = (
+  data: unknown,
+): {
+  responseStatus?: string;
+  outputItemTypes: string[];
+  contentItemTypes: string[];
+} => {
+  if (!data || typeof data !== 'object') {
+    return { outputItemTypes: [], contentItemTypes: [] };
+  }
+
+  const root = data as {
+    status?: unknown;
+    output?: unknown;
+  };
+
+  const outputItemTypes = new Set<string>();
+  const contentItemTypes = new Set<string>();
+
+  if (Array.isArray(root.output)) {
+    root.output.forEach((outputItem) => {
+      if (!outputItem || typeof outputItem !== 'object') return;
+
+      const outputType = (outputItem as { type?: unknown }).type;
+      if (typeof outputType === 'string') {
+        outputItemTypes.add(outputType);
+      }
+
+      const content = (outputItem as { content?: unknown }).content;
+      if (!Array.isArray(content)) return;
+
+      content.forEach((contentItem) => {
+        if (!contentItem || typeof contentItem !== 'object') return;
+        const contentType = (contentItem as { type?: unknown }).type;
+        if (typeof contentType === 'string') {
+          contentItemTypes.add(contentType);
+        }
+      });
+    });
+  }
+
+  return {
+    responseStatus: typeof root.status === 'string' ? root.status : undefined,
+    outputItemTypes: Array.from(outputItemTypes),
+    contentItemTypes: Array.from(contentItemTypes),
+  };
+};
 
 // OpenAIによる生成
 const generateWithOpenAI = async (
@@ -128,15 +246,15 @@ const generateWithOpenAI = async (
     };
   }
 
-  const outputText =
-    data.output_text ??
-    data.output?.[0]?.content?.[0]?.text ??
-    data.output?.[0]?.content?.[0]?.output_text;
+  const outputText = extractOpenAIOutputText(data);
 
   if (!outputText) {
     return {
       status: 500,
-      body: { error: 'OpenAI response has no output text.' },
+      body: {
+        error: 'OpenAI response has no output text.',
+        details: summarizeOpenAIOutput(data),
+      },
     };
   }
 
@@ -257,14 +375,17 @@ const generateWithCerebras = async (
     requestBody.reasoning_effort = 'medium';
 
     const t0 = nowMs();
-    const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      'https://api.cerebras.ai/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       },
-      body: JSON.stringify(requestBody),
-    });
+    );
     const t1 = nowMs();
     const data = await response.json();
     const t2 = nowMs();
@@ -284,16 +405,13 @@ const generateWithCerebras = async (
     result.data &&
     typeof result.data === 'object' &&
     Array.isArray((result.data as { choices?: unknown[] }).choices)
-      ? (
-          (
-            result.data as {
-              choices: Array<{ message?: { content?: unknown } }>;
-            }
-          ).choices[0]?.message?.content ?? ''
-        )
+      ? ((
+          result.data as {
+            choices: Array<{ message?: { content?: unknown } }>;
+          }
+        ).choices[0]?.message?.content ?? '')
       : '';
-  const outputText =
-    typeof rawOutputText === 'string' ? rawOutputText : '';
+  const outputText = typeof rawOutputText === 'string' ? rawOutputText : '';
   if (!outputText) {
     return {
       status: 500,
@@ -362,11 +480,6 @@ const generateWithOpenRouter = async (
         effort: reasoningEffort ?? 'medium',
       };
     }
-  } else if (isOpenRouterGoogleModel(model)) {
-    requestBody.provider = {
-      only: ['google'],
-      require_parameters: true,
-    };
   }
 
   const t0 = nowMs();
@@ -441,14 +554,20 @@ const generateWithGoogle = async (
   }
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-  const buildRequestBody = (withSchema: boolean): Record<string, unknown> => {
+  const resolvedThinkingConfig = resolveGoogleThinkingConfig(
+    model,
+    reasoningEffort,
+  );
+  const buildRequestBody = (
+    withSchema: boolean,
+    withThinking: boolean,
+  ): Record<string, unknown> => {
     const generationConfig: Record<string, unknown> = {
       responseMimeType: 'application/json',
-      thinkingConfig:
-        reasoningEffort === 'none'
-          ? { thinkingLevel: 'minimal' }
-          : { thinkingLevel: reasoningEffort ?? 'medium' },
     };
+    if (withThinking && resolvedThinkingConfig) {
+      generationConfig.thinkingConfig = resolvedThinkingConfig;
+    }
     if (withSchema) {
       generationConfig.responseJsonSchema = schema;
     }
@@ -465,6 +584,7 @@ const generateWithGoogle = async (
 
   const runRequest = async (
     withSchema: boolean,
+    withThinking: boolean,
   ): Promise<{
     response: Response;
     data: unknown;
@@ -479,7 +599,7 @@ const generateWithGoogle = async (
         'x-goog-api-key': apiKey,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(buildRequestBody(withSchema)),
+      body: JSON.stringify(buildRequestBody(withSchema, withThinking)),
     });
     const t1 = nowMs();
     const data = await response.json();
@@ -487,8 +607,10 @@ const generateWithGoogle = async (
     return { response, data, t0, t1, t2 };
   };
 
-  let result = await runRequest(true);
-  if (!result.response.ok) {
+  let withSchema = true;
+  let withThinking = resolvedThinkingConfig !== null;
+  let result = await runRequest(withSchema, withThinking);
+  for (let i = 0; i < 2 && !result.response.ok; i += 1) {
     const errorMessage =
       result.data &&
       typeof result.data === 'object' &&
@@ -499,11 +621,30 @@ const generateWithGoogle = async (
     const isSchemaDepthError =
       result.response.status === 400 &&
       errorMessage.includes('maximum allowed nesting depth');
+    const isThinkingUnsupportedError =
+      result.response.status === 400 &&
+      (errorMessage.includes(
+        'Thinking level is not supported for this model.',
+      ) ||
+        errorMessage.includes(
+          'thinking level is not supported for this model',
+        ));
 
-    if (isSchemaDepthError) {
+    let shouldRetry = false;
+    if (isSchemaDepthError && withSchema) {
       // Googleのスキーマ深度制限に当たった場合は、schema指定なしで再試行する。
-      result = await runRequest(false);
+      withSchema = false;
+      shouldRetry = true;
     }
+    if (isThinkingUnsupportedError && withThinking) {
+      // Thinking非対応モデルの場合は、thinkingConfigを外して再試行する。
+      withThinking = false;
+      shouldRetry = true;
+    }
+    if (!shouldRetry) {
+      break;
+    }
+    result = await runRequest(withSchema, withThinking);
   }
   if (!result.response.ok) {
     return {

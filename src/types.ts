@@ -210,7 +210,13 @@ const suggestionItemSchema = z.object({
 
 // 提案レスポンス
 export const suggestionResponseSchema = suggestionItemSchema;
+export const suggestionBatchResponseSchema = z.object({
+  suggestions: z.array(suggestionItemSchema).length(3),
+});
 
 // Typescriptの型に変換
 export type SuggestionItem = z.infer<typeof suggestionItemSchema>;
 export type SuggestionResponse = z.infer<typeof suggestionResponseSchema>;
+export type SuggestionBatchResponse = z.infer<
+  typeof suggestionBatchResponseSchema
+>;

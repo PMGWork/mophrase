@@ -90,12 +90,8 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   },
 
   OpenRouter: {
-    defaultModel: 'anthropic/claude-sonnet-4.6',
+    defaultModel: 'anthropic/claude-opus-4.6',
     models: [
-      {
-        id: 'anthropic/claude-sonnet-4.6',
-        name: 'Claude Sonnet 4.6',
-      },
       {
         id: 'anthropic/claude-opus-4.6',
         name: 'Claude Opus 4.6',

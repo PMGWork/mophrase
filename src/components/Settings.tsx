@@ -19,10 +19,10 @@ const OPENAI_REASONING_OPTIONS: LLMReasoningEffort[] = [
 const isOpenAIGpt52Model = (provider: LLMProvider, modelId: string): boolean =>
   provider === 'OpenAI' && modelId.startsWith('gpt-5.2');
 
-const isGoogleGemini3Model = (
+const isGoogleGeminiFlashModel = (
   provider: LLMProvider,
   modelId: string,
-): boolean => provider === 'Google' && modelId.startsWith('gemini-3');
+): boolean => provider === 'Google' && modelId.includes('flash');
 
 const isOpenRouterClaudeModel = (
   provider: LLMProvider,
@@ -54,7 +54,7 @@ const resolveReasoningEffort = (
   }
   if (
     isOpenAIGpt52Model(provider, modelId) ||
-    isGoogleGemini3Model(provider, modelId) ||
+    isGoogleGeminiFlashModel(provider, modelId) ||
     isOpenRouterClaudeModel(provider, modelId)
   ) {
     return effort === 'none' ? 'none' : 'medium';
@@ -99,7 +99,7 @@ export const Settings = ({
   const isReasoningToggleVisible =
     isReasoningLockedOn ||
     isOpenAIGpt52Model(selectedProvider, selectedModel) ||
-    isGoogleGemini3Model(selectedProvider, selectedModel) ||
+    isGoogleGeminiFlashModel(selectedProvider, selectedModel) ||
     isOpenRouterClaudeModel(selectedProvider, selectedModel);
   const isReasoningEnabled = isReasoningLockedOn
     ? true

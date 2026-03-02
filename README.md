@@ -45,7 +45,7 @@ VITE_PROVIDER=cerebras
 # Model name (optional)
 # OpenAI: gpt-4o, gpt-4o-mini など
 # Cerebras: llama3.1-8b, llama3.1-70b など
-# OpenRouter: anthropic/claude-sonnet-4.6 / anthropic/claude-opus-4.6 など
+# OpenRouter: anthropic/claude-opus-4.6 など
 # Google AI Studio: gemini-3-flash-preview など
 VITE_MODEL=llama3.1-8b
 ```

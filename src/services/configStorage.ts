@@ -29,6 +29,17 @@ const migrateConfig = (
       : {}),
   };
 
+  if (
+    next.llmProvider === 'OpenRouter' &&
+    next.llmModel === 'anthropic/claude-sonnet-4.6'
+  ) {
+    next.llmModel = 'anthropic/claude-opus-4.6';
+  }
+
+  if (next.llmProvider === 'Google' && next.llmModel === 'gemini-2.5-flash') {
+    next.llmModel = 'gemini-3-flash-preview';
+  }
+
   if (next.llmProvider === 'Cerebras') {
     return {
       ...next,
@@ -38,12 +49,13 @@ const migrateConfig = (
 
   if (
     next.llmProvider === 'OpenRouter' &&
-    next.llmModel === 'google/gemini-3-flash-preview'
+    typeof next.llmModel === 'string' &&
+    next.llmModel.startsWith('google/gemini-')
   ) {
     return {
       ...next,
       llmProvider: 'Google',
-      llmModel: 'gemini-3-flash-preview',
+      llmModel: next.llmModel.replace('google/', ''),
     };
   }
 
