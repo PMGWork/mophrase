@@ -3,6 +3,7 @@
  */
 
 import type { Path, SelectionRange } from '../types';
+import { buildSketchCurves, computeKeyframeProgress } from './keyframes';
 
 // 部分パスを作成
 export function slicePath(path: Path, range?: SelectionRange): Path {
@@ -34,9 +35,11 @@ export function getSelectionReference(
   const start = Math.max(0, range.startCurveIndex);
   const end = Math.min(path.keyframes.length - 2, range.endCurveIndex);
   if (start <= end) {
+    const curves = buildSketchCurves(sliced.keyframes);
+    const slicedProgress = computeKeyframeProgress(sliced.keyframes, curves);
     return {
       keyframes: sliced.keyframes,
-      progress: progress.slice(start, end + 2),
+      progress: slicedProgress,
     };
   }
   return { keyframes: sliced.keyframes, progress };
