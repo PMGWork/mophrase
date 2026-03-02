@@ -3,7 +3,7 @@
  * エディタの初期化、状態管理を担当する。
  */
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
@@ -23,6 +23,7 @@ type UseGraphEditorParams = {
 // グラフエディタの結果
 type UseGraphEditorResult = {
   graphCanvasRef: RefObject<HTMLDivElement | null>; // グラフエディタのキャンバス参照
+  captureGraphCanvas: () => string | null; // グラフキャンバスを PNG data URL としてキャプチャ
 };
 
 // グラフエディタを管理するカスタムフック
@@ -86,5 +87,10 @@ export const useGraphEditor = ({
     return () => observer.disconnect();
   }, []);
 
-  return { graphCanvasRef };
+  // グラフキャンバスをキャプチャ
+  const captureGraphCanvas = useCallback((): string | null => {
+    return editorRef.current?.captureCanvas() ?? null;
+  }, []);
+
+  return { graphCanvasRef, captureGraphCanvas };
 };

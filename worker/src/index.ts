@@ -28,6 +28,7 @@ type LlmGenerateRequest = {
   prompt: string;
   schema: Record<string, unknown>;
   reasoningEffort?: ReasoningEffort;
+  imageDataUrl?: string;
 };
 
 // プロバイダのレスポンス型定義
@@ -455,6 +456,15 @@ const summarizeOpenRouterOutput = (
   };
 };
 
+// data URL から base64 データと MIME タイプを抽出するユーティリティ
+const parseDataUrl = (
+  dataUrl: string,
+): { mimeType: string; base64: string } | null => {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mimeType: match[1], base64: match[2] };
+};
+
 // OpenAIによる生成
 const generateWithOpenAI = async (
   env: Env,
@@ -462,6 +472,7 @@ const generateWithOpenAI = async (
   prompt: string,
   schema: Record<string, unknown>,
   reasoningEffort?: OpenAIReasoningEffort,
+  imageDataUrl?: string,
 ): Promise<ProviderResult> => {
   const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -474,7 +485,6 @@ const generateWithOpenAI = async (
     model.startsWith('o1') || model.startsWith('gpt-5.2');
   const requestBody: Record<string, unknown> = {
     model,
-    input: prompt,
     text: {
       format: {
         type: 'json_schema',
@@ -484,6 +494,20 @@ const generateWithOpenAI = async (
       },
     },
   };
+  // 画像がある場合はマルチモーダル入力を構築
+  if (imageDataUrl) {
+    requestBody.input = [
+      {
+        role: 'user',
+        content: [
+          { type: 'input_text', text: prompt },
+          { type: 'input_image', image_url: imageDataUrl },
+        ],
+      },
+    ];
+  } else {
+    requestBody.input = prompt;
+  }
   if (supportsReasoningEffort) {
     requestBody.reasoning = { effort: reasoningEffort ?? 'none' };
   }
@@ -600,6 +624,7 @@ const generateWithCerebras = async (
   model: string,
   prompt: string,
   schema: Record<string, unknown>,
+  _imageDataUrl?: string,
 ): Promise<ProviderResult> => {
   const apiKey = env.CEREBRAS_API_KEY;
   if (!apiKey) {
@@ -704,6 +729,7 @@ const generateWithOpenRouter = async (
   prompt: string,
   schema: Record<string, unknown>,
   reasoningEffort?: OpenRouterReasoningEffort,
+  imageDataUrl?: string,
 ): Promise<ProviderResult> => {
   const apiKey = env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -711,9 +737,16 @@ const generateWithOpenRouter = async (
   }
 
   const sanitizedSchema = sanitizeSchemaForOpenRouter(schema);
+  // 画像がある場合はマルチモーダルメッセージを構築
+  const userContent: unknown = imageDataUrl
+    ? [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: imageDataUrl } },
+      ]
+    : prompt;
   const requestBody: Record<string, unknown> = {
     model,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content: userContent }],
     response_format: {
       type: 'json_schema',
       json_schema: {
@@ -815,6 +848,7 @@ const generateWithGoogle = async (
   prompt: string,
   schema: Record<string, unknown>,
   reasoningEffort?: GoogleReasoningEffort,
+  imageDataUrl?: string,
 ): Promise<ProviderResult> => {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -839,11 +873,24 @@ const generateWithGoogle = async (
     if (withSchema) {
       generationConfig.responseJsonSchema = schema;
     }
+    // 画像がある場合はマルチモーダルパーツを構築
+    const parts: Record<string, unknown>[] = [{ text: prompt }];
+    if (imageDataUrl) {
+      const imageInfo = parseDataUrl(imageDataUrl);
+      if (imageInfo) {
+        parts.push({
+          inline_data: {
+            mime_type: imageInfo.mimeType,
+            data: imageInfo.base64,
+          },
+        });
+      }
+    }
     return {
       contents: [
         {
           role: 'user',
-          parts: [{ text: prompt }],
+          parts,
         },
       ],
       generationConfig,
@@ -977,7 +1024,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.post('/api/llm/generate', async (c) => {
   const requestStart = nowMs();
   const body = await c.req.json<LlmGenerateRequest>();
-  const { provider, model, prompt, schema, reasoningEffort } = body;
+  const { provider, model, prompt, schema, reasoningEffort, imageDataUrl } = body;
   const resolvedOpenAIReasoningEffort = isOpenAIReasoningEffort(reasoningEffort)
     ? reasoningEffort
     : undefined;
@@ -1005,6 +1052,7 @@ app.post('/api/llm/generate', async (c) => {
         prompt,
         schema,
         resolvedOpenAIReasoningEffort,
+        imageDataUrl,
       );
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
@@ -1024,7 +1072,7 @@ app.post('/api/llm/generate', async (c) => {
     }
 
     if (provider === 'Cerebras') {
-      const result = await generateWithCerebras(c.env, model, prompt, schema);
+      const result = await generateWithCerebras(c.env, model, prompt, schema, imageDataUrl);
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
         c.header('x-llm-provider', result.meta.provider);
@@ -1049,6 +1097,7 @@ app.post('/api/llm/generate', async (c) => {
         prompt,
         schema,
         resolvedOpenRouterReasoningEffort,
+        imageDataUrl,
       );
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
@@ -1074,6 +1123,7 @@ app.post('/api/llm/generate', async (c) => {
         prompt,
         schema,
         resolvedGoogleReasoningEffort,
+        imageDataUrl,
       );
       const totalMs = nowMs() - requestStart;
       if (result.meta) {

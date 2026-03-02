@@ -13,6 +13,7 @@ export interface Config {
   llmModel: string; // LLMモデル名
   llmReasoningEffort: LLMReasoningEffort; // 推論強度
   parallelGeneration: boolean; // 提案生成を並列で実行するか
+  graphImageEnabled: boolean; // グラフ画像をLLMに送信するか
   testMode: boolean; // テストモード（5回生成してベンチマーク）
   suggestionPrompt: string; // 直列生成用キーフレーム補正プロンプト
   suggestionPromptParallel: string; // 並列生成用キーフレーム補正プロンプト
@@ -52,6 +53,7 @@ export const DEFAULT_CONFIG: Config = {
   llmModel: 'gpt-5.2',
   llmReasoningEffort: 'medium',
   parallelGeneration: false,
+  graphImageEnabled: false,
   testMode: false,
   suggestionPrompt: composePrompt(keyframePromptCommon, suggestionPrompt),
   suggestionPromptParallel: composePrompt(

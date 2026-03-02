@@ -109,6 +109,16 @@ export class GraphEditor {
     this.p.resizeCanvas(size, size);
   }
 
+  // キャンバスを PNG data URL としてキャプチャ
+  public captureCanvas(): string | null {
+    if (!this.canvasElement) return null;
+    try {
+      return this.canvasElement.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  }
+
   public destroy(): void {
     if (this.activePointerId !== null) {
       this.releasePointerCapture(this.activePointerId);

@@ -21,6 +21,7 @@ import {
 // 提案を取得する際のオプション
 type FetchSuggestionsOptions = {
   onSuggestion?: (suggestion: SuggestionItem) => void;
+  graphImageDataUrl?: string;
 };
 
 // 提案を取得
@@ -36,6 +37,7 @@ export async function fetchSuggestions(
     ? config.suggestionPromptParallel
     : config.suggestionPrompt;
   const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
+  const imageDataUrl = options.graphImageDataUrl;
   const parallelRequestCount = 3;
   const benchmarkRuns = 5;
   const requestSingleWithSlot = (slotIndex: number): Promise<SuggestionResponse> => {
@@ -51,6 +53,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
+      imageDataUrl,
     );
   };
   const requestSingleOnce = (): Promise<SuggestionResponse> =>
@@ -60,6 +63,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
+      imageDataUrl,
     );
   const requestBatchOnce = (): Promise<SuggestionBatchResponse> =>
     generateStructured<SuggestionBatchResponse>(
@@ -68,6 +72,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
+      imageDataUrl,
     );
 
   if (config.testMode) {

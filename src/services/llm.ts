@@ -22,17 +22,22 @@ async function requestServer<T>(
   prompt: string,
   schema: z.ZodType<T>,
   reasoningEffort?: LLMReasoningEffort,
+  imageDataUrl?: string,
 ): Promise<T> {
+  const body: Record<string, unknown> = {
+    provider,
+    model,
+    prompt,
+    schema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
+    reasoningEffort,
+  };
+  if (imageDataUrl) {
+    body.imageDataUrl = imageDataUrl;
+  }
   const response = await fetch(`${window.location.origin}/api/llm/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      provider,
-      model,
-      prompt,
-      schema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
-      reasoningEffort,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -94,6 +99,7 @@ export async function generateStructured<T>(
   provider: LLMProvider,
   model?: string,
   reasoningEffort?: LLMReasoningEffort,
+  imageDataUrl?: string,
 ): Promise<T> {
   const config = PROVIDERS[provider];
   if (!config) {
@@ -101,7 +107,7 @@ export async function generateStructured<T>(
   }
 
   const actualModel = model ?? config.defaultModel;
-  return requestServer(provider, actualModel, prompt, schema, reasoningEffort);
+  return requestServer(provider, actualModel, prompt, schema, reasoningEffort, imageDataUrl);
 }
 
 // 利用可能なモデルのリストを取得

@@ -39,6 +39,7 @@ type SketchConfigUpdate = {
   llmModel: Config['llmModel'];
   llmReasoningEffort: Config['llmReasoningEffort'];
   parallelGeneration: Config['parallelGeneration'];
+  graphImageEnabled: Config['graphImageEnabled'];
   fitTolerance: Config['fitTolerance'];
   testMode: Config['testMode'];
 };
@@ -84,6 +85,7 @@ type UseSketchEditorResult = {
   submitPrompt: (prompt: string) => void;
   setSuggestionHover: (id: string | null, strength: number) => void;
   selectSuggestion: (id: string, strength: number) => void;
+  setGraphImageProvider: (provider: () => string | null) => void;
   getPreviewGraphCurves: (
     p: p5,
   ) => { curves: p5.Vector[][]; strength: number } | null;
@@ -332,6 +334,14 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const selectSuggestion = useCallback((id: string, strength: number) => {
     editorRef.current?.getSuggestionManager().selectSuggestion(id, strength);
   }, []);
+
+  // グラフ画像プロバイダーを設定
+  const setGraphImageProvider = useCallback(
+    (provider: () => string | null) => {
+      editorRef.current?.getSuggestionManager().setGraphImageProvider(provider);
+    },
+    [],
+  );
 
   // 提案のグラフ曲線を取得
   const getPreviewGraphCurves = useCallback(
@@ -672,6 +682,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     submitPrompt,
     setSuggestionHover,
     selectSuggestion,
+    setGraphImageProvider,
     getPreviewGraphCurves,
 
     // 設定

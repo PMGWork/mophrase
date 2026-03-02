@@ -142,16 +142,16 @@ export function createSketchModifier(
     const pos = diffVec2(modified.position, original.position);
     if (pos) delta.posDelta = pos;
 
-    // outデルタ（キーフレーム自身の out ハンドルを更新）
-    if (i < keyframes.length - 1) {
+    // outデルタ（範囲内セグメントに属する out ハンドルのみ更新）
+    if (i <= endIndex && i < keyframes.length - 1) {
       const v = diffVec2(modified.sketchOut, original.sketchOut, {
         treatUndefinedAsZero: true,
       });
       if (v) delta.outDelta = v;
     }
 
-    // inデルタ（キーフレーム自身の in ハンドルを更新）
-    if (i > 0) {
+    // inデルタ（範囲内セグメントに属する in ハンドルのみ更新）
+    if (i > startIndex && i > 0) {
       const v = diffVec2(modified.sketchIn, original.sketchIn, {
         treatUndefinedAsZero: true,
       });

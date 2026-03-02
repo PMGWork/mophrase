@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Path } from './types';
 import { removeModifier, updateModifierStrength } from './utils/modifier';
 import { clamp } from './utils/number';
@@ -36,6 +36,7 @@ const App = () => {
     submitPrompt,
     setSuggestionHover,
     selectSuggestion,
+    setGraphImageProvider,
 
     // 設定
     config,
@@ -63,12 +64,17 @@ const App = () => {
     createNewProject,
   } = useSketchEditor();
 
-  const { graphCanvasRef } = useGraphEditor({
+  const { graphCanvasRef, captureGraphCanvas } = useGraphEditor({
     activePath,
     config,
     colors,
     previewProvider: getPreviewGraphCurves,
   });
+
+  // グラフ画像プロバイダーをSuggestionManagerに接続
+  useEffect(() => {
+    setGraphImageProvider(captureGraphCanvas);
+  }, [captureGraphCanvas, setGraphImageProvider]);
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {

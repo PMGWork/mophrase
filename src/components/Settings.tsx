@@ -75,6 +75,7 @@ export type SettingsChangePayload = {
   llmModel: string;
   llmReasoningEffort: LLMReasoningEffort;
   parallelGeneration: boolean;
+  graphImageEnabled: boolean;
   fitTolerance: number;
   testMode: boolean;
 };
@@ -174,6 +175,7 @@ export const Settings = ({
   const shouldShowReasoningEffortSelect =
     reasoningOptions.length > 0 && !isReasoningToggleVisible;
   const parallelGeneration = config?.parallelGeneration ?? false;
+  const graphImageEnabled = config?.graphImageEnabled ?? false;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
 
@@ -184,6 +186,7 @@ export const Settings = ({
       llmModel: selectedModel,
       llmReasoningEffort: resolvedReasoningEffort,
       parallelGeneration,
+      graphImageEnabled,
       fitTolerance: tolerance,
       testMode,
       ...patch,
@@ -335,6 +338,12 @@ export const Settings = ({
               description="Run all requests concurrently"
               checked={parallelGeneration}
               onChange={() => emit({ parallelGeneration: !parallelGeneration })}
+            />
+            <ToggleRow
+              label="Graph Image"
+              description="Send easing curve screenshot to LLM"
+              checked={graphImageEnabled}
+              onChange={() => emit({ graphImageEnabled: !graphImageEnabled })}
             />
             <ToggleRow
               label="Test Mode"

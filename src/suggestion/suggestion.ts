@@ -47,6 +47,9 @@ export type SuggestionUIState = {
   position: { left: number; top: number } | null;
 };
 
+// グラフ画像プロバイダーの型
+export type GraphImageProvider = () => string | null;
+
 // 提案マネージャー
 export class SuggestionManager {
   private config: Config;
@@ -61,6 +64,7 @@ export class SuggestionManager {
   private onSelect?: (path: Path, targetPath?: Path) => void;
   private onUIStateChange?: (state: SuggestionUIState) => void;
   private selectionRange?: SelectionRange;
+  private graphImageProvider?: GraphImageProvider;
 
   // コンストラクタ
   constructor(config: Config, options: SuggestionManagerOptions = {}) {
@@ -74,6 +78,11 @@ export class SuggestionManager {
   // 設定を更新
   updateConfig(config: Config): void {
     this.config = config;
+  }
+
+  // グラフ画像プロバイダーを設定
+  setGraphImageProvider(provider: GraphImageProvider): void {
+    this.graphImageProvider = provider;
   }
 
   // 提案UIを開く
@@ -275,6 +284,11 @@ export class SuggestionManager {
     const serializedPaths = serializePaths([partialPath]);
     const serializedPath = serializedPaths[0];
 
+    // グラフキャンバスをキャプチャ（設定で有効な場合のみ）
+    const graphImageDataUrl = this.config.graphImageEnabled
+      ? (this.graphImageProvider?.() ?? undefined)
+      : undefined;
+
     // プロンプトの保存
     const trimmedPrompt = prompt?.trim() ?? '';
     if (trimmedPrompt) this.prompts.push(trimmedPrompt);
@@ -317,7 +331,7 @@ export class SuggestionManager {
         serializedPaths,
         this.config,
         this.prompts,
-        { onSuggestion: pushSuggestion },
+        { onSuggestion: pushSuggestion, graphImageDataUrl },
       );
 
       // 選択/クローズなどで世代が進んでいた場合、完了処理を行わない。
