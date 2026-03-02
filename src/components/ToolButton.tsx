@@ -16,11 +16,14 @@ export const ToolButton = ({
   onClick,
 }: ToolButtonProps) => {
   const baseClass =
-    'corner-md focus-visible:ring-border flex h-9 w-9 cursor-pointer items-center justify-center transition-colors focus-visible:ring-1 focus-visible:outline-none';
+    'corner-md focus-visible:ring-border flex h-9 w-9 items-center justify-center transition-colors focus-visible:ring-1 focus-visible:outline-none';
   const selectedClass =
-    'bg-gray-50 text-gray-950 ring-border ring-1 hover:bg-gray-200';
+    'bg-gray-50 text-gray-950 ring-border ring-1';
   const idleClass =
-    'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100';
+    'bg-gray-800 text-gray-300';
+  const interactiveClass =
+    'cursor-pointer hover:bg-gray-700 hover:text-gray-100';
+  const selectedInteractiveClass = 'hover:bg-gray-200';
   const disabledClass = 'cursor-not-allowed opacity-40';
 
   return (
@@ -28,7 +31,9 @@ export const ToolButton = ({
       type="button"
       title={title}
       className={`${baseClass} ${isSelected ? selectedClass : idleClass} ${
-        disabled ? disabledClass : ''
+        disabled
+          ? disabledClass
+          : `${interactiveClass} ${isSelected ? selectedInteractiveClass : ''}`
       }`}
       onClick={onClick}
       disabled={disabled}
