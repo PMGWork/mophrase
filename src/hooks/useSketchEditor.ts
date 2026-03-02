@@ -24,6 +24,7 @@ import {
   findProjectByName,
   getProject,
   listProjects,
+  renameProject as renameProjectInStorage,
   saveProject as saveProjectToStorage,
   type ProjectSummary,
 } from '../services/projectStorage';
@@ -52,6 +53,8 @@ const PROJECT_LOAD_ERROR_MESSAGE =
   'Failed to load the project. Please try again.';
 const PROJECT_DELETE_ERROR_MESSAGE =
   'Failed to delete the project. Please try again.';
+const PROJECT_RENAME_ERROR_MESSAGE =
+  'Failed to rename the project. Please try again.';
 const PROJECT_LIST_ERROR_MESSAGE =
   'Failed to fetch the project list. Please try again.';
 const DELETED_PROJECT_MARKER = '__deleted_project__';
@@ -95,6 +98,7 @@ type UseSketchEditorResult = {
   closeProjectLibrary: () => void;
   loadProjectById: (id: string) => Promise<void>;
   deleteProjectById: (id: string, name: string) => Promise<void>;
+  renameProjectById: (id: string, name: string) => Promise<void>;
   createNewProject: () => Promise<void>;
 };
 
@@ -474,6 +478,46 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     [projectId, refreshProjectLibrary],
   );
 
+  // プロジェクトIDを指定してリネーム
+  const renameProjectById = useCallback(
+    async (id: string, currentName: string): Promise<void> => {
+      const promptedName = window.prompt('Rename project', currentName);
+      if (promptedName === null) return;
+
+      const nextName = promptedName.trim();
+      if (!nextName) return;
+      if (nextName === currentName) return;
+
+      try {
+        const renamed = await renameProjectInStorage({
+          id,
+          name: nextName,
+        });
+        if (!renamed) {
+          console.error('[renameProject] Target project is not found.', { id });
+          window.alert('The project to rename was not found.');
+          return;
+        }
+
+        await refreshProjectLibrary();
+        if (projectId === id) {
+          setProjectName(renamed.name);
+        }
+      } catch (error) {
+        console.error('[renameProject] Failed to rename project.', error);
+        if (
+          error instanceof Error &&
+          error.message === '[projectStorage] Project name already exists.'
+        ) {
+          window.alert('A project with the same name already exists.');
+          return;
+        }
+        window.alert(PROJECT_RENAME_ERROR_MESSAGE);
+      }
+    },
+    [projectId, refreshProjectLibrary],
+  );
+
   // 新規プロジェクトを作成
   const createNewProject = useCallback(async (): Promise<void> => {
     const editor = editorRef.current;
@@ -556,6 +600,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     closeProjectLibrary,
     loadProjectById,
     deleteProjectById,
+    renameProjectById,
     createNewProject,
   };
 };

@@ -194,3 +194,49 @@ export const deleteProject = async (id: string): Promise<boolean> => {
   await transactionDone(transaction);
   return true;
 };
+
+export const renameProject = async (input: {
+  id: string;
+  name: string;
+}): Promise<{ id: string; name: string; updatedAt: number } | null> => {
+  const trimmedName = input.name.trim();
+  if (!trimmedName) {
+    throw new Error('[projectStorage] Project name is required.');
+  }
+
+  const db = await openDatabase();
+  const transaction = db.transaction(PROJECT_STORE, 'readwrite');
+  const store = transaction.objectStore(PROJECT_STORE);
+  const existing = (await requestToPromise(store.get(input.id))) as
+    | StoredProjectRecord
+    | undefined;
+  if (!existing) {
+    await transactionDone(transaction);
+    return null;
+  }
+
+  const normalizedName = normalizeProjectName(trimmedName);
+  const nameIndex = store.index(INDEX_BY_NAME);
+  const conflict = (await requestToPromise(
+    nameIndex.get(normalizedName),
+  )) as StoredProjectRecord | undefined;
+  if (conflict && conflict.id !== input.id) {
+    transaction.abort();
+    throw new Error('[projectStorage] Project name already exists.');
+  }
+
+  const updated: StoredProjectRecord = {
+    ...existing,
+    name: trimmedName,
+    nameNormalized: normalizedName,
+    updatedAt: Date.now(),
+  };
+
+  store.put(updated);
+  await transactionDone(transaction);
+  return {
+    id: updated.id,
+    name: updated.name,
+    updatedAt: updated.updatedAt,
+  };
+};

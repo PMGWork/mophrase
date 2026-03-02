@@ -56,6 +56,7 @@ const App = () => {
     closeProjectLibrary,
     loadProjectById,
     deleteProjectById,
+    renameProjectById,
     createNewProject,
   } = useSketchEditor();
 
@@ -205,6 +206,9 @@ const App = () => {
         onClose={closeProjectLibrary}
         onLoadProject={(id) => {
           void loadProjectById(id);
+        }}
+        onRenameProject={(id, name) => {
+          void renameProjectById(id, name);
         }}
         onDeleteProject={(id, name) => {
           void deleteProjectById(id, name);
