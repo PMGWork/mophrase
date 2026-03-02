@@ -17,12 +17,6 @@ export type ReasoningCapability =
       description: string;
       resolve: (current: LLMReasoningEffort) => LLMReasoningEffort;
     }
-  | {
-      mode: 'select';
-      description: string;
-      options: LLMReasoningEffort[];
-      resolve: (current: LLMReasoningEffort) => LLMReasoningEffort;
-    }
   | { mode: 'hidden'; resolve: (current: LLMReasoningEffort) => LLMReasoningEffort };
 
 // LLMの推論能力に関する情報を提供する関数

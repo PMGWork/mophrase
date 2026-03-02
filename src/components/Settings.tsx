@@ -237,35 +237,6 @@ export const Settings = ({
                 }}
               />
             )}
-            {reasoning.mode === 'select' && (
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="settingsLlmReasoningEffortSelect"
-                  className="text-text-muted text-sm"
-                >
-                  Reasoning Effort
-                </label>
-                <div className="relative">
-                  <select
-                    id="settingsLlmReasoningEffortSelect"
-                    className="corner-md focus:ring-border h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-100 transition-colors hover:bg-gray-700 focus:ring-1 focus:outline-none"
-                    value={resolvedEffort}
-                    onChange={(event) => {
-                      const next = event.target.value as LLMReasoningEffort;
-                      if (!reasoning.options.includes(next)) return;
-                      emit({ llmReasoningEffort: next });
-                    }}
-                  >
-                    {reasoning.options.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="text-text-muted pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                </div>
-              </div>
-            )}
             <ToggleRow
               label="Curve Image"
               description={
