@@ -51,6 +51,8 @@ const App = () => {
     updateProjectSettings,
     saveProject,
     loadProject,
+    exportProjectAsJson,
+    importProjectFromJson,
     isProjectLibraryOpen,
     projectLibrary,
     closeProjectLibrary,
@@ -155,6 +157,8 @@ const App = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSave={saveProject}
         onLoad={loadProject}
+        onExportJson={exportProjectAsJson}
+        onImportJson={importProjectFromJson}
       />
 
       <div className="mx-3 flex min-h-0 flex-1 gap-2.5 overflow-hidden pb-3">

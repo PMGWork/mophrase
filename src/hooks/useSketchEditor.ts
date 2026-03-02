@@ -47,10 +47,16 @@ const NEW_PROJECT_CONFIRM_MESSAGE =
   'You have unsaved changes. Discard them and create a new project?';
 const LOAD_PROJECT_CONFIRM_MESSAGE =
   'You have unsaved changes. Discard them and load another project?';
+const IMPORT_PROJECT_CONFIRM_MESSAGE =
+  'You have unsaved changes. Discard them and import a project JSON?';
 const PROJECT_SAVE_ERROR_MESSAGE =
   'Failed to save the project. Please check available browser storage.';
 const PROJECT_LOAD_ERROR_MESSAGE =
   'Failed to load the project. Please try again.';
+const PROJECT_IMPORT_ERROR_MESSAGE =
+  'Failed to import the project JSON. Please check the file format.';
+const PROJECT_EXPORT_ERROR_MESSAGE =
+  'Failed to export the project JSON. Please try again.';
 const PROJECT_DELETE_ERROR_MESSAGE =
   'Failed to delete the project. Please try again.';
 const PROJECT_RENAME_ERROR_MESSAGE =
@@ -93,6 +99,8 @@ type UseSketchEditorResult = {
   updateProjectSettings: (next: ProjectSettings) => void;
   saveProject: () => void;
   loadProject: () => void;
+  exportProjectAsJson: () => void;
+  importProjectFromJson: () => void;
   isProjectLibraryOpen: boolean;
   projectLibrary: ProjectSummary[];
   closeProjectLibrary: () => void;
@@ -109,6 +117,18 @@ const initialSuggestionUI: SuggestionUIState = {
   isVisible: false,
   suggestions: [],
   position: null,
+};
+
+const sanitizeProjectFileName = (name: string): string => {
+  const sanitized = name.replace(/[\\/:*?"<>|]/g, '_').trim();
+  return sanitized || 'Untitled';
+};
+
+const toImportedProjectName = (fileName: string): string => {
+  const withoutJson = fileName.replace(/\.json$/i, '');
+  const withoutSuffix = withoutJson.replace(/\.mophrase$/i, '');
+  const trimmed = withoutSuffix.trim();
+  return trimmed || 'Imported Project';
 };
 
 // スケッチエディタを管理するカスタムフック
@@ -409,6 +429,70 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     setIsProjectLibraryOpen(false);
   }, []);
 
+  // 現在のプロジェクトをJSONとして書き出し
+  const exportProjectAsJson = useCallback((): void => {
+    const projectData = buildProjectData();
+    if (!projectData) return;
+
+    try {
+      const json = JSON.stringify(projectData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const fileName = sanitizeProjectFileName(projectName ?? 'Untitled');
+      anchor.href = url;
+      anchor.download = `${fileName}.mophrase.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('[exportProject] Failed to export project JSON.', error);
+      window.alert(PROJECT_EXPORT_ERROR_MESSAGE);
+    }
+  }, [buildProjectData, projectName]);
+
+  // JSONファイルからプロジェクトを読み込み
+  const importProjectFromJson = useCallback((): void => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (
+      hasUnsavedChanges &&
+      !window.confirm(IMPORT_PROJECT_CONFIRM_MESSAGE)
+    ) {
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      void (async () => {
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text) as unknown;
+          const { settings, paths: serializedPaths } = deserializeProject(
+            parsed,
+          );
+          editor.applySerializedProject(serializedPaths, settings);
+          setProjectId(null);
+          setProjectName(toImportedProjectName(file.name));
+          setProjectSettings(settings);
+          setIsProjectLibraryOpen(false);
+          markCurrentProjectAsClean(editor);
+        } catch (error) {
+          console.error('[importProject] Failed to import project JSON.', error);
+          window.alert(PROJECT_IMPORT_ERROR_MESSAGE);
+        }
+      })();
+    };
+
+    input.click();
+  }, [hasUnsavedChanges, markCurrentProjectAsClean]);
+
   // プロジェクトIDを指定して読み込み
   const loadProjectById = useCallback(
     async (id: string): Promise<void> => {
@@ -595,6 +679,8 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     updateProjectSettings,
     saveProject,
     loadProject,
+    exportProjectAsJson,
+    importProjectFromJson,
     isProjectLibraryOpen,
     projectLibrary,
     closeProjectLibrary,
