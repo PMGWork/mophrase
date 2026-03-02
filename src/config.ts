@@ -1,5 +1,7 @@
-import keyframePrompt from './prompts/keyframePrompt.md?raw';
-import type { LLMProvider } from './types';
+import keyframePromptCommon from './prompts/keyframePrompt.common.md?raw';
+import suggestionPromptParallel from './prompts/keyframePrompt.parallel.md?raw';
+import suggestionPrompt from './prompts/keyframePrompt.serial.md?raw';
+import type { LLMProvider, LLMReasoningEffort } from './types';
 
 // スキーマ定義
 export interface Config {
@@ -9,9 +11,19 @@ export interface Config {
   pointSize: number; // 制御点のサイズ
   llmProvider: LLMProvider; // LLMプロバイダ名
   llmModel: string; // LLMモデル名
+  llmReasoningEffort: LLMReasoningEffort; // 推論強度
+  parallelGeneration: boolean; // 提案生成を並列で実行するか
   testMode: boolean; // テストモード（5回生成してベンチマーク）
-  keyframePrompt: string; // キーフレーム補正プロンプト
+  suggestionPrompt: string; // 直列生成用キーフレーム補正プロンプト
+  suggestionPromptParallel: string; // 並列生成用キーフレーム補正プロンプト
 }
+
+const composePrompt = (common: string, modeSpecific: string): string => {
+  const parts = [common.trim(), modeSpecific.trim()].filter(
+    (part) => part.length > 0,
+  );
+  return parts.join('\n\n');
+};
 
 export interface Colors {
   handle: string; // 制御点の色
@@ -31,8 +43,14 @@ export const DEFAULT_CONFIG: Config = {
   pointSize: 6,
   llmProvider: 'OpenAI',
   llmModel: 'gpt-5.2',
+  llmReasoningEffort: 'medium',
+  parallelGeneration: false,
   testMode: false,
-  keyframePrompt: keyframePrompt,
+  suggestionPrompt: composePrompt(keyframePromptCommon, suggestionPrompt),
+  suggestionPromptParallel: composePrompt(
+    keyframePromptCommon,
+    suggestionPromptParallel,
+  ),
 };
 
 export const DEFAULT_COLORS: Colors = {

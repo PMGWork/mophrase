@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import type { LLMProvider } from '../types';
+import type { LLMProvider, LLMReasoningEffort } from '../types';
 
 // LLMプロバイダの設定
 type ProviderConfig = {
@@ -10,6 +10,7 @@ type ProviderConfig = {
     prompt: string,
     schema: z.ZodType<T>,
     model: string,
+    reasoningEffort?: LLMReasoningEffort,
   ) => Promise<T>;
 };
 
@@ -26,6 +27,7 @@ async function requestServer<T>(
   model: string,
   prompt: string,
   schema: z.ZodType<T>,
+  reasoningEffort?: LLMReasoningEffort,
 ): Promise<T> {
   const response = await fetch(`${window.location.origin}/api/llm/generate`, {
     method: 'POST',
@@ -35,6 +37,7 @@ async function requestServer<T>(
       model,
       prompt,
       schema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
+      reasoningEffort,
     }),
   });
 
@@ -74,23 +77,40 @@ async function requestServer<T>(
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
     defaultModel: 'gpt-5.2',
-    models: [
-      { id: 'gpt-5.2', name: 'GPT-5.2' },
-      { id: 'gpt-4.1', name: 'GPT-4.1' },
-      { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
-    ],
-    generate: (prompt, schema, model) =>
-      requestServer('OpenAI', model, prompt, schema),
+    models: [{ id: 'gpt-5.2', name: 'GPT-5.2' }],
+    generate: (prompt, schema, model, reasoningEffort) =>
+      requestServer('OpenAI', model, prompt, schema, reasoningEffort),
   },
 
   Cerebras: {
-    defaultModel: 'zai-glm-4.7',
+    defaultModel: 'gpt-oss-120b',
+    models: [{ id: 'gpt-oss-120b', name: 'GPT OSS 120B' }],
+    generate: (prompt, schema, model, reasoningEffort) =>
+      requestServer('Cerebras', model, prompt, schema, reasoningEffort),
+  },
+
+  OpenRouter: {
+    defaultModel: 'anthropic/claude-opus-4.6',
     models: [
-      { id: 'zai-glm-4.7', name: 'GLM 4.7' },
-      { id: 'gpt-oss-120b', name: 'GPT OSS 120B' },
+      {
+        id: 'anthropic/claude-opus-4.6',
+        name: 'Claude Opus 4.6',
+      },
     ],
-    generate: (prompt, schema, model) =>
-      requestServer('Cerebras', model, prompt, schema),
+    generate: (prompt, schema, model, reasoningEffort) =>
+      requestServer('OpenRouter', model, prompt, schema, reasoningEffort),
+  },
+
+  Google: {
+    defaultModel: 'gemini-3-flash-preview',
+    models: [
+      {
+        id: 'gemini-3-flash-preview',
+        name: 'Gemini 3 Flash Preview',
+      },
+    ],
+    generate: (prompt, schema, model, reasoningEffort) =>
+      requestServer('Google', model, prompt, schema, reasoningEffort),
   },
 };
 
@@ -100,14 +120,15 @@ export async function generateStructured<T>(
   schema: z.ZodType<T>,
   provider: LLMProvider,
   model?: string,
+  reasoningEffort?: LLMReasoningEffort,
 ): Promise<T> {
   const config = PROVIDERS[provider];
   if (!config) {
-    throw new Error(`サポートされていないLLMプロバイダ: ${provider}`);
+    throw new Error(`Unsupported LLM provider: ${provider}`);
   }
 
   const actualModel = model ?? config.defaultModel;
-  return config.generate(prompt, schema, actualModel);
+  return config.generate(prompt, schema, actualModel, reasoningEffort);
 }
 
 // 利用可能なモデルのリストを取得

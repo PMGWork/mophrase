@@ -6,3 +6,5 @@ compatibility_date = "2026-01-12"
 # 本番では `wrangler secret put` を使って設定してください
 # OPENAI_API_KEY = ""
 # CEREBRAS_API_KEY = ""
+# OPENROUTER_API_KEY = ""
+# GEMINI_API_KEY = ""

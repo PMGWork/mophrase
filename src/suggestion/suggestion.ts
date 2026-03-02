@@ -52,6 +52,7 @@ export class SuggestionManager {
   private config: Config;
   private status: SuggestionStatus = 'idle';
   private suggestions: Suggestion[] = [];
+  private generationId: number = 0;
   private hoveredId: string | null = null;
   private hoveredStrength: number = 1;
   private pInstance: p5 | null = null;
@@ -77,6 +78,7 @@ export class SuggestionManager {
 
   // 提案UIを開く
   open(targetPath?: Path): void {
+    this.cancelInFlightGeneration();
     this.clearSuggestions();
     this.prompts = [];
     this.targetPath = targetPath;
@@ -86,6 +88,7 @@ export class SuggestionManager {
 
   // 提案UIを閉じる
   close(): void {
+    this.cancelInFlightGeneration();
     this.clearSuggestions();
     this.prompts = [];
     this.targetPath = undefined;
@@ -172,6 +175,16 @@ export class SuggestionManager {
     this.status = state;
   }
 
+  // 進行中の生成を無効化
+  private cancelInFlightGeneration(): void {
+    this.generationId += 1;
+  }
+
+  // 指定IDの生成が有効か判定
+  private isGenerationActive(generationId: number): boolean {
+    return this.generationId === generationId;
+  }
+
   // UIの更新
   private updateUI(): void {
     const showLoading = this.status === 'generating';
@@ -212,34 +225,69 @@ export class SuggestionManager {
     this.clearSuggestions();
     this.setState('generating');
     this.updateUI();
+    // この submit に対応する生成世代を払い出して、古い非同期結果を無効化する。
+    const currentGenerationId = this.generationId + 1;
+    this.generationId = currentGenerationId;
 
     // 提案の生成
     try {
+      const streamedSuggestions: Suggestion[] = [];
+      const pushSuggestion = (item: {
+        title: string;
+        modifierTarget: ModifierTarget;
+        confidence: number;
+        keyframes: Suggestion['path']['keyframes'];
+      }): void => {
+        // 既に別世代へ切り替わっていたら更新を破棄する。
+        if (!this.isGenerationActive(currentGenerationId)) return;
+        const suggestion: Suggestion = {
+          id: createId(),
+          title: item.title,
+          modifierTarget: item.modifierTarget,
+          confidence: item.confidence,
+          path: {
+            keyframes: item.keyframes,
+            bbox: serializedPath.bbox,
+          },
+        };
+        streamedSuggestions.push(suggestion);
+        this.setSuggestions([...streamedSuggestions]);
+        this.updateUI();
+      };
+
       const items = await fetchSuggestions(
         serializedPaths,
-        this.config.keyframePrompt,
         this.config,
         this.prompts,
+        { onSuggestion: pushSuggestion },
       );
 
-      const suggestions: Suggestion[] = items.map((item) => ({
-        id: createId(),
-        title: item.title,
-        modifierTarget: item.modifierTarget,
-        confidence: item.confidence,
-        path: {
-          keyframes: item.keyframes,
-          bbox: serializedPath.bbox,
-        },
-      }));
+      // 選択/クローズなどで世代が進んでいた場合、完了処理を行わない。
+      if (!this.isGenerationActive(currentGenerationId)) return;
 
-      this.setSuggestions(suggestions);
+      if (streamedSuggestions.length === 0) {
+        const suggestions: Suggestion[] = items.map((item) => ({
+          id: createId(),
+          title: item.title,
+          modifierTarget: item.modifierTarget,
+          confidence: item.confidence,
+          path: {
+            keyframes: item.keyframes,
+            bbox: serializedPath.bbox,
+          },
+        }));
+        this.setSuggestions(suggestions);
+      }
       this.setState('idle');
     } catch (error) {
+      // 現在の生成がキャンセル済みなら、エラー表示を上書きしない。
+      if (!this.isGenerationActive(currentGenerationId)) return;
       console.error(error);
       this.setState('error');
     }
 
+    // 最終描画直前にも世代を確認し、遅延UI更新を防ぐ。
+    if (!this.isGenerationActive(currentGenerationId)) return;
     this.updateUI();
   }
 
@@ -327,6 +375,8 @@ export class SuggestionManager {
 
     this.onSelect?.(this.targetPath, this.targetPath);
 
+    // 提案が確定したので、進行中のストリーミング更新を止める。
+    this.cancelInFlightGeneration();
     this.clearSuggestions();
     this.setState('input');
     this.updateUI();
@@ -366,6 +416,7 @@ export class SuggestionManager {
 
   private resolveModifierTarget(suggestion: Suggestion): ModifierTarget {
     const confidence = suggestion.confidence;
+    // 信頼度が低い提案は単一ターゲットを避けて、両方へ安全側に倒す。
     if (!Number.isFinite(confidence)) return 'both';
     if (confidence < SINGLE_TARGET_CONFIDENCE_THRESHOLD) return 'both';
     return suggestion.modifierTarget;

@@ -24,7 +24,8 @@ export type ProjectSummary = {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
-const normalizeProjectName = (name: string): string => name.trim().toLowerCase();
+const normalizeProjectName = (name: string): string =>
+  name.trim().toLowerCase();
 
 const requestToPromise = <T>(request: IDBRequest<T>): Promise<T> =>
   new Promise((resolve, reject) => {
@@ -90,7 +91,10 @@ const toProjectSummary = (record: StoredProjectRecord): ProjectSummary => ({
 });
 
 export const createNewProjectId = (): string => {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+  if (
+    typeof crypto !== 'undefined' &&
+    typeof crypto.randomUUID === 'function'
+  ) {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -115,9 +119,9 @@ export const getProject = async (
   const db = await openDatabase();
   const transaction = db.transaction(PROJECT_STORE, 'readonly');
   const store = transaction.objectStore(PROJECT_STORE);
-  const record = (await requestToPromise(
-    store.get(id),
-  )) as StoredProjectRecord | undefined;
+  const record = (await requestToPromise(store.get(id))) as
+    | StoredProjectRecord
+    | undefined;
   await transactionDone(transaction);
   return record ?? null;
 };
@@ -151,9 +155,9 @@ export const saveProject = async (input: {
   const store = transaction.objectStore(PROJECT_STORE);
   const now = Date.now();
   const targetId = input.id ?? createNewProjectId();
-  const existing = (await requestToPromise(
-    store.get(targetId),
-  )) as StoredProjectRecord | undefined;
+  const existing = (await requestToPromise(store.get(targetId))) as
+    | StoredProjectRecord
+    | undefined;
 
   const record: StoredProjectRecord = {
     id: targetId,
@@ -178,9 +182,9 @@ export const deleteProject = async (id: string): Promise<boolean> => {
   const db = await openDatabase();
   const transaction = db.transaction(PROJECT_STORE, 'readwrite');
   const store = transaction.objectStore(PROJECT_STORE);
-  const existing = (await requestToPromise(
-    store.get(id),
-  )) as StoredProjectRecord | undefined;
+  const existing = (await requestToPromise(store.get(id))) as
+    | StoredProjectRecord
+    | undefined;
   if (!existing) {
     await transactionDone(transaction);
     return false;

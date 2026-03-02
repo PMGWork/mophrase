@@ -396,8 +396,14 @@ export class GraphEditor {
 
   private removePointerListeners(): void {
     if (!this.canvasElement) return;
-    this.canvasElement.removeEventListener('pointerdown', this.handlePointerDown);
-    this.canvasElement.removeEventListener('pointermove', this.handlePointerMove);
+    this.canvasElement.removeEventListener(
+      'pointerdown',
+      this.handlePointerDown,
+    );
+    this.canvasElement.removeEventListener(
+      'pointermove',
+      this.handlePointerMove,
+    );
     this.canvasElement.removeEventListener('pointerup', this.handlePointerUp);
     this.canvasElement.removeEventListener(
       'pointercancel',
