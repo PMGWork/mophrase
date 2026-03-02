@@ -36,6 +36,8 @@ import {
 type SketchConfigUpdate = {
   llmProvider: Config['llmProvider'];
   llmModel: Config['llmModel'];
+  llmReasoningEffort: Config['llmReasoningEffort'];
+  parallelGeneration: Config['parallelGeneration'];
   fitTolerance: Config['fitTolerance'];
   testMode: Config['testMode'];
 };

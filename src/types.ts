@@ -138,7 +138,12 @@ export interface SerializedProjectPath extends SerializedPath {
 // #region 4. 提案/LLM関連
 
 // LLMプロバイダの種類
-export type LLMProvider = 'OpenAI' | 'Cerebras';
+export type LLMProvider =
+  | 'OpenAI'
+  | 'Cerebras'
+  | 'OpenRouter'
+  | 'Google';
+export type LLMReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 
 // 提案情報
 export interface Suggestion {
@@ -208,9 +213,7 @@ const suggestionItemSchema = z.object({
 });
 
 // 提案レスポンス
-export const suggestionResponseSchema = z.object({
-  suggestions: z.array(suggestionItemSchema).max(3).min(3),
-});
+export const suggestionResponseSchema = suggestionItemSchema;
 
 // Typescriptの型に変換
 export type SuggestionItem = z.infer<typeof suggestionItemSchema>;

@@ -91,7 +91,7 @@
 ## 10. 参照
 
 - 論文: `/Users/yuto/Downloads/interaction2026_last.pdf`
-- プロンプト: `src/prompts/keyframePrompt.md`
+- プロンプト: `src/prompts/keyframePrompt.common.md`（共通） + `src/prompts/keyframePrompt.serial.md`（直列差分） / `src/prompts/keyframePrompt.parallel.md`（並列差分）
 - 型: `src/types.ts`
 - シリアライズ: `src/utils/serialization/curves.ts`
 - 提案処理: `src/suggestion/suggestionService.ts`

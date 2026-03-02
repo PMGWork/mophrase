@@ -57,8 +57,7 @@ export const SketchSuggestion = ({
   const hasSuggestions = suggestions.length > 0;
   const useCompactPromptEntry = showLoading || hasSuggestions;
   const showPromptInput = !useCompactPromptEntry || isPromptComposerOpen;
-  const showSuggestionList =
-    !useCompactPromptEntry || (!showPromptInput && !showLoading);
+  const showSuggestionList = !useCompactPromptEntry || !showPromptInput;
 
   // 入力欄にフォーカス
   useEffect(() => {
@@ -245,7 +244,7 @@ export const SketchSuggestion = ({
           {useCompactPromptEntry && (
             <button
               type="button"
-              className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer border-border flex items-center justify-center border-r px-3 py-3 transition-colors"
+              className="text-gray-400 cursor-pointer border-border flex items-center justify-center border-r px-3 py-3"
               onClick={closePromptComposer}
               aria-label="Back"
             >
@@ -261,13 +260,13 @@ export const SketchSuggestion = ({
           />
           <button
             type="submit"
-            className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-3 transition-colors"
+            className="text-gray-400 cursor-pointer p-3"
           >
             <Send className="h-4 w-4" />
           </button>
         </form>
       )}
-      {!showPromptInput && showLoading && (
+      {!showPromptInput && showLoading && !hasSuggestions && (
         <div
           className="text-text-subtle cursor-default select-none p-3 text-sm"
           role="status"
@@ -288,7 +287,7 @@ export const SketchSuggestion = ({
             showPromptInput ? 'mt-1' : '[&>*:first-child]:border-t-0'
           }`}
         >
-          {!showPromptInput && !showLoading && (
+          {!showPromptInput && hasSuggestions && (
             <button
               type="button"
               data-role="open-prompt-composer"
@@ -299,23 +298,22 @@ export const SketchSuggestion = ({
             </button>
           )}
           {/* 提案リスト */}
-          {!showLoading &&
-            suggestions.map((suggestion) => (
-              <SuggestionItem
-                key={suggestion.id}
-                suggestion={suggestion}
-                isHovered={hovered.id === suggestion.id}
-                strength={hovered.strength}
-                onMouseEnter={handleMouseEnter(suggestion.id)}
-                onMouseMove={handleMouseMove(suggestion.id)}
-                onMouseLeave={handleMouseLeave}
-                onPointerDown={handlePointerDown(suggestion.id)}
-                onPointerMove={handlePointerMove(suggestion.id)}
-                onPointerUp={handlePointerUp(suggestion.id)}
-                onPointerCancel={handlePointerCancel}
-                onClick={handleClick(suggestion.id)}
-              />
-            ))}
+          {suggestions.map((suggestion) => (
+            <SuggestionItem
+              key={suggestion.id}
+              suggestion={suggestion}
+              isHovered={hovered.id === suggestion.id}
+              strength={hovered.strength}
+              onMouseEnter={handleMouseEnter(suggestion.id)}
+              onMouseMove={handleMouseMove(suggestion.id)}
+              onMouseLeave={handleMouseLeave}
+              onPointerDown={handlePointerDown(suggestion.id)}
+              onPointerMove={handlePointerMove(suggestion.id)}
+              onPointerUp={handlePointerUp(suggestion.id)}
+              onPointerCancel={handlePointerCancel}
+              onClick={handleClick(suggestion.id)}
+            />
+          ))}
         </div>
       )}
     </div>

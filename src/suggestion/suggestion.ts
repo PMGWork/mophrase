@@ -215,25 +215,48 @@ export class SuggestionManager {
 
     // 提案の生成
     try {
+      const streamedSuggestions: Suggestion[] = [];
+      const pushSuggestion = (item: {
+        title: string;
+        modifierTarget: ModifierTarget;
+        confidence: number;
+        keyframes: Suggestion['path']['keyframes'];
+      }): void => {
+        const suggestion: Suggestion = {
+          id: createId(),
+          title: item.title,
+          modifierTarget: item.modifierTarget,
+          confidence: item.confidence,
+          path: {
+            keyframes: item.keyframes,
+            bbox: serializedPath.bbox,
+          },
+        };
+        streamedSuggestions.push(suggestion);
+        this.setSuggestions([...streamedSuggestions]);
+        this.updateUI();
+      };
+
       const items = await fetchSuggestions(
         serializedPaths,
-        this.config.keyframePrompt,
         this.config,
         this.prompts,
+        { onSuggestion: pushSuggestion },
       );
 
-      const suggestions: Suggestion[] = items.map((item) => ({
-        id: createId(),
-        title: item.title,
-        modifierTarget: item.modifierTarget,
-        confidence: item.confidence,
-        path: {
-          keyframes: item.keyframes,
-          bbox: serializedPath.bbox,
-        },
-      }));
-
-      this.setSuggestions(suggestions);
+      if (streamedSuggestions.length === 0) {
+        const suggestions: Suggestion[] = items.map((item) => ({
+          id: createId(),
+          title: item.title,
+          modifierTarget: item.modifierTarget,
+          confidence: item.confidence,
+          path: {
+            keyframes: item.keyframes,
+            bbox: serializedPath.bbox,
+          },
+        }));
+        this.setSuggestions(suggestions);
+      }
       this.setState('idle');
     } catch (error) {
       console.error(error);

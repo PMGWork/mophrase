@@ -28,7 +28,7 @@
 
 ## 出力のゴール
 
-ユーザーの指示に基づいて、キーフレームを編集し、3つの提案を返してください。
+ユーザーの指示に基づいて、キーフレームを編集し、1つの提案を返してください。
 
 **重要**: ユーザーの指示の意図を解釈し、適切な属性を編集してください：
 
@@ -38,7 +38,7 @@
 
 ユーザーは必ずしも専門用語を使いません。「ふわっと」「キレよく」「弾む」といった感覚的な表現から、空間と時間のどちらを調整すべきか（または両方か）を判断してください。
 
-さらに各提案ごとに、どのモディファイアを主対象としたかを `modifierTarget` に必ず明示してください。
+この提案で、どのモディファイアを主対象としたかを `modifierTarget` に必ず明示してください。
 
 - `modifierTarget = "sketch"`: 主に空間編集（`x/y/sketchIn/sketchOut`）を行い、時間ハンドルの変更は最小限。
 - `modifierTarget = "graph"`: 主に時間編集（`graphIn/graphOut`）を行い、空間の変更は最小限。
@@ -66,8 +66,8 @@
    - `time` の値は変更しないでください。
    - ループ（交差）の有無は、指示がない限り元のパスに従う。
 
-4. **バリエーション**:
-   - 3つの提案は明確に異なるアプローチを取ること。
+4. **提案の明確さ**:
+   - 1つの提案として、意図と編集方針が明確に伝わる内容にすること。
 
 ## ユーザー指示の解釈ガイド
 
@@ -85,7 +85,6 @@
 
 - keyframes 配列の要素数と並びは入力と同じ
 - すべての数値は有限値（NaN/Infinity/null/undefined禁止）
-- 3つの提案は異なる内容とし、単なるコピーにしない
 - `time` フィールドは入力値を維持すること（変更しない）
 
 ## 出力フォーマット
@@ -94,22 +93,18 @@
 
 ```json
 {
-  "suggestions": [
+  "title": "string (ユーザーの指示と同じ言語で、10文字以内のタイトル)",
+  "modifierTarget": "sketch | graph | both",
+  "confidence": 0.0,
+  "keyframes": [
     {
-      "title": "string (ユーザーの指示と同じ言語で、10文字以内のタイトル)",
-      "modifierTarget": "sketch | graph | both",
-      "confidence": 0.0,
-      "keyframes": [
-        {
-          "x": number,
-          "y": number,
-          "time": number,
-          "sketchIn": { "angle": number, "dist": number } | null,
-          "sketchOut": { "angle": number, "dist": number } | null,
-          "graphIn": { "angle": number, "dist": number } | null,
-          "graphOut": { "angle": number, "dist": number } | null
-        }
-      ]
+      "x": number,
+      "y": number,
+      "time": number,
+      "sketchIn": { "angle": number, "dist": number } | null,
+      "sketchOut": { "angle": number, "dist": number } | null,
+      "graphIn": { "angle": number, "dist": number } | null,
+      "graphOut": { "angle": number, "dist": number } | null
     }
   ]
 }
@@ -117,9 +112,8 @@
 
 **重要な制約:**
 
-- `suggestions` 配列は必ず3件
-- 各提案の `modifierTarget` は必須で、`sketch | graph | both` のいずれか
-- 各提案の `confidence` は必須で、0以上1以下の有限値
+- `modifierTarget` は必須で、`sketch | graph | both` のいずれか
+- `confidence` は必須で、0以上1以下の有限値
 - 各キーフレームの `x`, `y` は入力値を基準に（正規化空間で扱う）
 - `time` は必須で入力値を維持すること（変更しない）
 - `sketchIn`, `sketchOut`, `graphIn`, `graphOut` は必須だが `null` で可（省略禁止）
