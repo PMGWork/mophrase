@@ -3,72 +3,14 @@ import { useMemo } from 'react';
 import { ChevronDown, Settings as SettingsIcon, X } from 'lucide-react';
 import {
   FIT_TOLERANCE_DEFAULT,
-  FIT_TOLERANCE_MAX,
-  FIT_TOLERANCE_MIN,
   type Config,
 } from '../config';
 import type { LLMProvider, LLMReasoningEffort } from '../types';
 import { getModels } from '../services/llm';
-
-type ModelOption = {
-  provider: LLMProvider;
-  modelId: string;
-  name: string;
-};
-
-const OPENAI_REASONING_OPTIONS: LLMReasoningEffort[] = [
-  'none',
-  'low',
-  'medium',
-];
-
-const isOpenAIGpt52Model = (provider: LLMProvider, modelId: string): boolean =>
-  provider === 'OpenAI' && modelId.startsWith('gpt-5.2');
-
-const isGoogleGeminiFlashModel = (
-  provider: LLMProvider,
-  modelId: string,
-): boolean => provider === 'Google' && modelId.includes('flash');
-
-const isOpenRouterClaudeModel = (
-  provider: LLMProvider,
-  modelId: string,
-): boolean =>
-  provider === 'OpenRouter' && modelId.startsWith('anthropic/claude-');
-
-const isCerebrasModel = (
-  provider: LLMProvider,
-): boolean => provider === 'Cerebras';
-
-const getReasoningOptions = (
-  provider: LLMProvider,
-  modelId: string,
-): LLMReasoningEffort[] => {
-  if (provider === 'OpenAI' && modelId.startsWith('gpt-5.2')) {
-    return OPENAI_REASONING_OPTIONS;
-  }
-  return [];
-};
-
-const resolveReasoningEffort = (
-  provider: LLMProvider,
-  modelId: string,
-  effort: LLMReasoningEffort,
-): LLMReasoningEffort => {
-  if (isCerebrasModel(provider)) {
-    return 'medium';
-  }
-  if (
-    isOpenAIGpt52Model(provider, modelId) ||
-    isGoogleGeminiFlashModel(provider, modelId) ||
-    isOpenRouterClaudeModel(provider, modelId)
-  ) {
-    return effort === 'none' ? 'none' : 'medium';
-  }
-  const options = getReasoningOptions(provider, modelId);
-  if (options.length === 0) return effort;
-  return options.includes(effort) ? effort : options[0];
-};
+import {
+  getReasoningCapability,
+  isGraphImageSupported,
+} from '../utils/llmCapabilities';
 
 export type SettingsChangePayload = {
   llmProvider: LLMProvider;
@@ -147,50 +89,43 @@ export const Settings = ({
   onClose,
   onChange,
 }: SettingsProps) => {
-  const models = useMemo<ModelOption[]>(() => getModels(), []);
+  const models = useMemo(() => getModels(), []);
 
   const selectedProvider = config?.llmProvider ?? 'OpenAI';
   const selectedModel = config?.llmModel ?? '';
   const reasoningEffort = config?.llmReasoningEffort ?? 'medium';
-  const reasoningOptions = getReasoningOptions(selectedProvider, selectedModel);
-  const resolvedReasoningEffort = resolveReasoningEffort(
-    selectedProvider,
-    selectedModel,
-    reasoningEffort,
-  );
-  const isReasoningLockedOn = isCerebrasModel(selectedProvider);
-  const isReasoningToggleVisible =
-    isReasoningLockedOn ||
-    isOpenAIGpt52Model(selectedProvider, selectedModel) ||
-    isGoogleGeminiFlashModel(selectedProvider, selectedModel) ||
-    isOpenRouterClaudeModel(selectedProvider, selectedModel);
-  const isReasoningEnabled = isReasoningLockedOn
-    ? true
-    : isReasoningToggleVisible && resolvedReasoningEffort !== 'none';
-  const reasoningDescription = isReasoningLockedOn
-    ? selectedProvider === 'Cerebras'
-      ? 'Always enabled (fixed to medium for Cerebras)'
-      : 'Always enabled for this model'
-    : 'Enable advanced reasoning';
-  const shouldShowReasoningEffortSelect =
-    reasoningOptions.length > 0 && !isReasoningToggleVisible;
+  const reasoning = getReasoningCapability(selectedProvider, selectedModel);
+  const resolvedEffort =
+    reasoning.mode === 'locked'
+      ? reasoning.resolve()
+      : reasoning.resolve(reasoningEffort);
   const parallelGeneration = config?.parallelGeneration ?? false;
-  const graphImageEnabled = config?.graphImageEnabled ?? false;
+  const graphImageSupported = isGraphImageSupported(selectedProvider, selectedModel);
+  const resolvedGraphImageEnabled = graphImageSupported
+    ? (config?.graphImageEnabled ?? false)
+    : false;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
 
   // onChange ヘルパー: 変更対象のフィールドだけ渡せば残りはデフォルト値で補完
-  const emit = (patch: Partial<SettingsChangePayload>) =>
-    onChange({
+  const emit = (patch: Partial<SettingsChangePayload>) => {
+    const next: SettingsChangePayload = {
       llmProvider: selectedProvider,
       llmModel: selectedModel,
-      llmReasoningEffort: resolvedReasoningEffort,
+      llmReasoningEffort: resolvedEffort,
       parallelGeneration,
-      graphImageEnabled,
+      graphImageEnabled: resolvedGraphImageEnabled,
       fitTolerance: tolerance,
       testMode,
       ...patch,
-    });
+    };
+
+    if (!isGraphImageSupported(next.llmProvider, next.llmModel)) {
+      next.graphImageEnabled = false;
+    }
+
+    onChange(next);
+  };
 
   const currentValue = JSON.stringify({
     provider: selectedProvider,
@@ -228,7 +163,7 @@ export const Settings = ({
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center gap-2">
               <span className="text-text-subtle text-xs font-medium tracking-wider uppercase">
-                AI
+                LLM
               </span>
             </div>
             <div className="flex flex-col gap-2">
@@ -236,7 +171,7 @@ export const Settings = ({
                 htmlFor="settingsLlmModelSelect"
                 className="text-text-muted text-sm"
               >
-                LLM Model
+                Model
               </label>
               <div className="relative">
                 <select
@@ -249,13 +184,17 @@ export const Settings = ({
                         provider: LLMProvider;
                         modelId: string;
                       };
+                      const cap = getReasoningCapability(parsed.provider, parsed.modelId);
+                      const effort = cap.mode === 'locked'
+                        ? cap.resolve()
+                        : cap.resolve('none');
                       emit({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
-                        llmReasoningEffort: resolveReasoningEffort(
+                        llmReasoningEffort: effort,
+                        graphImageEnabled: isGraphImageSupported(
                           parsed.provider,
                           parsed.modelId,
-                          'none',
                         ),
                       });
                     } catch {
@@ -278,24 +217,27 @@ export const Settings = ({
                 <ChevronDown className="text-text-muted pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
               </div>
             </div>
-            {isReasoningToggleVisible && (
+            {reasoning.mode === 'locked' && (
               <ToggleRow
                 label="Reasoning"
-                description={reasoningDescription}
-                checked={isReasoningEnabled}
-                disabled={isReasoningLockedOn}
+                description={reasoning.description}
+                checked
+                disabled
+                onChange={() => {}}
+              />
+            )}
+            {reasoning.mode === 'toggle' && (
+              <ToggleRow
+                label="Reasoning"
+                description={reasoning.description}
+                checked={resolvedEffort !== 'none'}
                 onChange={() => {
-                  if (isReasoningLockedOn) return;
-                  const nextEffort = isReasoningEnabled
-                    ? 'none'
-                    : resolvedReasoningEffort === 'none'
-                      ? 'medium'
-                      : resolvedReasoningEffort;
-                  emit({ llmReasoningEffort: nextEffort });
+                  const next = resolvedEffort === 'none' ? 'medium' : 'none';
+                  emit({ llmReasoningEffort: next });
                 }}
               />
             )}
-            {shouldShowReasoningEffortSelect && (
+            {reasoning.mode === 'select' && (
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="settingsLlmReasoningEffortSelect"
@@ -307,15 +249,14 @@ export const Settings = ({
                   <select
                     id="settingsLlmReasoningEffortSelect"
                     className="corner-md focus:ring-border h-10 w-full cursor-pointer appearance-none bg-gray-800 py-2 pr-10 pl-4 text-sm text-gray-100 transition-colors hover:bg-gray-700 focus:ring-1 focus:outline-none"
-                    value={resolvedReasoningEffort}
+                    value={resolvedEffort}
                     onChange={(event) => {
-                      const nextEffort = event.target
-                        .value as LLMReasoningEffort;
-                      if (!reasoningOptions.includes(nextEffort)) return;
-                      emit({ llmReasoningEffort: nextEffort });
+                      const next = event.target.value as LLMReasoningEffort;
+                      if (!reasoning.options.includes(next)) return;
+                      emit({ llmReasoningEffort: next });
                     }}
                   >
-                    {reasoningOptions.map((option) => (
+                    {reasoning.options.map((option) => (
                       <option key={option} value={option}>
                         {option}
                       </option>
@@ -325,6 +266,19 @@ export const Settings = ({
                 </div>
               </div>
             )}
+            <ToggleRow
+              label="Curve Image"
+              description={
+                graphImageSupported
+                  ? 'Send easing curve screenshot to LLM'
+                  : 'Unavailable for GPT OSS models'
+              }
+              checked={resolvedGraphImageEnabled}
+              disabled={!graphImageSupported}
+              onChange={() =>
+                emit({ graphImageEnabled: !resolvedGraphImageEnabled })
+              }
+            />
           </div>
 
           <div className="flex flex-col gap-3 p-5">
@@ -340,12 +294,6 @@ export const Settings = ({
               onChange={() => emit({ parallelGeneration: !parallelGeneration })}
             />
             <ToggleRow
-              label="Graph Image"
-              description="Send easing curve screenshot to LLM"
-              checked={graphImageEnabled}
-              onChange={() => emit({ graphImageEnabled: !graphImageEnabled })}
-            />
-            <ToggleRow
               label="Test Mode"
               description="Generate 5 times for benchmarking"
               checked={testMode}
@@ -353,43 +301,6 @@ export const Settings = ({
             />
           </div>
 
-          <div className="flex flex-col gap-3 p-5">
-            <div className="flex items-center gap-2">
-              <span className="text-text-subtle text-xs font-medium tracking-wider uppercase">
-                Sketch
-              </span>
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="settingsSketchTolerance"
-                  className="text-text-muted text-sm"
-                >
-                  Tolerance
-                </label>
-                <span
-                  id="settingsSketchToleranceLabel"
-                  className="bg-panel-elevated text-text rounded px-2 py-0.5 font-mono text-xs"
-                >
-                  {tolerance}px
-                </span>
-              </div>
-              <input
-                id="settingsSketchTolerance"
-                type="range"
-                min={FIT_TOLERANCE_MIN}
-                max={FIT_TOLERANCE_MAX}
-                step="1"
-                value={tolerance}
-                onChange={(event) => {
-                  const next = Number(event.target.value);
-                  if (!Number.isFinite(next)) return;
-                  emit({ fitTolerance: next });
-                }}
-                className="corner-md [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-full cursor-pointer appearance-none bg-gray-800 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
-              />
-            </div>
-          </div>
         </div>
       </div>
     </div>

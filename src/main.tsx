@@ -129,6 +129,20 @@ const App = () => {
   );
 
   const hasGraphPath = (activePath?.keyframes?.length ?? 0) >= 2;
+  const handleFitToleranceChange = useCallback(
+    (fitTolerance: number) => {
+      updateConfig({
+        llmProvider: config.llmProvider,
+        llmModel: config.llmModel,
+        llmReasoningEffort: config.llmReasoningEffort,
+        parallelGeneration: config.parallelGeneration,
+        graphImageEnabled: config.graphImageEnabled,
+        fitTolerance,
+        testMode: config.testMode,
+      });
+    },
+    [config, updateConfig],
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -136,8 +150,10 @@ const App = () => {
         projectName={projectName}
         hasUnsavedChanges={hasUnsavedChanges}
         selectedTool={selectedTool}
+        fitTolerance={config.fitTolerance}
         canDeleteActivePath={activePath !== null}
         onSelectTool={setSketchTool}
+        onChangeFitTolerance={handleFitToleranceChange}
         onDeleteActivePath={deleteActivePath}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSave={saveProject}

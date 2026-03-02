@@ -8,6 +8,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { FIT_TOLERANCE_MAX, FIT_TOLERANCE_MIN } from '../config';
 import type { ToolKind } from '../types';
 import { ToolButton } from './ToolButton';
 
@@ -16,8 +17,10 @@ type HeaderProps = {
   projectName: string | null;
   hasUnsavedChanges: boolean;
   selectedTool: ToolKind; // 選択されているツール
+  fitTolerance: number;
   canDeleteActivePath: boolean; // 削除可能か
   onSelectTool: (tool: ToolKind) => void; // ツールを選択する関数
+  onChangeFitTolerance: (next: number) => void;
   onDeleteActivePath: () => void; // 選択中パスを削除
   onOpenSettings: () => void; // 設定モーダルを開く
   onSave: () => void; // プロジェクトを保存
@@ -31,8 +34,10 @@ export const Header = ({
   projectName,
   hasUnsavedChanges,
   selectedTool,
+  fitTolerance,
   canDeleteActivePath,
   onSelectTool,
+  onChangeFitTolerance,
   onDeleteActivePath,
   onOpenSettings,
   onSave,
@@ -68,6 +73,30 @@ export const Header = ({
           isSelected={selectedTool === 'pen'}
           onClick={() => onSelectTool('pen')}
         />
+        <div className="bg-border mx-1 h-6 w-px" />
+        <div className="corner-md flex h-9 items-center gap-2.5 bg-gray-800 px-3 transition-colors hover:bg-gray-700">
+          <span className="text-text-subtle shrink-0 text-[11px] font-medium tracking-wider uppercase">
+            Smooth
+          </span>
+          <input
+            type="range"
+            min={FIT_TOLERANCE_MIN}
+            max={FIT_TOLERANCE_MAX}
+            step="1"
+            value={fitTolerance}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (!Number.isFinite(next)) return;
+              onChangeFitTolerance(next);
+            }}
+            className="corner-md [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-16 cursor-pointer appearance-none bg-gray-600/90 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
+            title={`Sketch Smooth: ${fitTolerance}px`}
+            aria-label="Sketch smooth"
+          />
+          <span className="text-text w-9 text-right font-mono text-xs tabular-nums">
+            {fitTolerance}
+          </span>
+        </div>
         <ToolButton
           title="Delete Active Path"
           icon={Trash2}

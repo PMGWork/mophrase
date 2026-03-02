@@ -4,6 +4,7 @@ import {
   FIT_TOLERANCE_MAX,
   FIT_TOLERANCE_MIN,
 } from '../config';
+import { isGraphImageSupported } from '../utils/llmCapabilities';
 
 // localStorageのキー
 const STORAGE_KEY = 'mophrase:config';
@@ -82,6 +83,12 @@ const migrateConfig = (
   ) {
     next.llmProvider = 'Google';
     next.llmModel = next.llmModel.replace('google/', '');
+  }
+
+  const provider = next.llmProvider ?? DEFAULT_CONFIG.llmProvider;
+  const model = next.llmModel ?? DEFAULT_CONFIG.llmModel;
+  if (!isGraphImageSupported(provider, model)) {
+    next.graphImageEnabled = false;
   }
 
   return next;

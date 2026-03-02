@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { LLMProvider, LLMReasoningEffort } from '../types';
+import { isGraphImageSupported } from '../utils/llmCapabilities';
 
 // LLMプロバイダの設定
 type ProviderConfig = {
@@ -107,7 +108,17 @@ export async function generateStructured<T>(
   }
 
   const actualModel = model ?? config.defaultModel;
-  return requestServer(provider, actualModel, prompt, schema, reasoningEffort, imageDataUrl);
+  const allowedImageDataUrl = isGraphImageSupported(provider, actualModel)
+    ? imageDataUrl
+    : undefined;
+  return requestServer(
+    provider,
+    actualModel,
+    prompt,
+    schema,
+    reasoningEffort,
+    allowedImageDataUrl,
+  );
 }
 
 // 利用可能なモデルのリストを取得
