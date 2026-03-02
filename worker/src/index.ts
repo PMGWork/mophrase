@@ -6,6 +6,7 @@ type Env = {
   OPENAI_API_KEY?: string;
   CEREBRAS_API_KEY?: string;
   GEMINI_API_KEY?: string;
+  ASSETS?: Fetcher;
 };
 
 // サポートするLLMプロバイダの型定義
@@ -666,6 +667,32 @@ const generateWithGoogle = async (
 // Honoアプリケーションの作成
 const app = new Hono<{ Bindings: Env }>();
 
+const isStaticMethod = (method: string): boolean =>
+  method === 'GET' || method === 'HEAD';
+
+const toIndexRequest = (request: Request): Request =>
+  new Request(new URL('/index.html', request.url), request);
+
+const serveAssetOrSpaIndex = async (
+  request: Request,
+  assets?: Fetcher,
+): Promise<Response | null> => {
+  if (!assets || !isStaticMethod(request.method)) return null;
+
+  const response = await assets.fetch(request);
+  if (response.status !== 404) {
+    return response;
+  }
+
+  const accept = request.headers.get('accept') ?? '';
+  const wantsHtml = accept.includes('text/html') || accept.includes('*/*');
+  if (!wantsHtml) {
+    return response;
+  }
+
+  return assets.fetch(toIndexRequest(request));
+};
+
 // LLM生成エンドポイント
 app.post('/api/llm/generate', async (c) => {
   const requestStart = nowMs();
@@ -769,6 +796,17 @@ app.post('/api/llm/generate', async (c) => {
 });
 
 // 404ハンドリング
-app.notFound((c) => c.text('Not Found', 404));
+app.notFound(async (c) => {
+  if (c.req.path.startsWith('/api/')) {
+    return c.text('Not Found', 404);
+  }
+
+  const assetResponse = await serveAssetOrSpaIndex(c.req.raw, c.env.ASSETS);
+  if (assetResponse) {
+    return assetResponse;
+  }
+
+  return c.text('Not Found', 404);
+});
 
 export default app;

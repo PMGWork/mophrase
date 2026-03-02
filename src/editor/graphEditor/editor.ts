@@ -25,6 +25,15 @@ import {
 } from '../../utils/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
+type P5WithErrorToggles = typeof p5 & {
+  disableFriendlyErrors?: boolean;
+  disableSketchChecker?: boolean;
+};
+
+const p5WithErrorToggles = p5 as P5WithErrorToggles;
+p5WithErrorToggles.disableFriendlyErrors = true;
+p5WithErrorToggles.disableSketchChecker = true;
+
 // グラフエディタ
 export class GraphEditor {
   // データ

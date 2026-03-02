@@ -47,7 +47,7 @@ export const Header = ({
   onImportJson,
 }: HeaderProps) => {
   const displayProjectName = projectName ?? 'Untitled';
-  const smoothPercent = (fitTolerance * 100).toFixed(1);
+  const smoothPercent = Math.round(fitTolerance * 100);
 
   return (
     <header className="flex w-full flex-col gap-4 px-5 py-3 md:flex-row md:items-center md:justify-between">

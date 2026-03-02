@@ -42,9 +42,9 @@ export interface Colors {
 export const FIT_TOLERANCE_BASE_CANVAS_HEIGHT = 720;
 
 // フィット許容誤差の最小値、最大値、デフォルト値（キャンバス縦幅に対する比率）
-export const FIT_TOLERANCE_MIN = 20 / FIT_TOLERANCE_BASE_CANVAS_HEIGHT;
-export const FIT_TOLERANCE_MAX = 80 / FIT_TOLERANCE_BASE_CANVAS_HEIGHT;
-export const FIT_TOLERANCE_DEFAULT = 40 / FIT_TOLERANCE_BASE_CANVAS_HEIGHT;
+export const FIT_TOLERANCE_MIN = 0.01;
+export const FIT_TOLERANCE_MAX = 0.1;
+export const FIT_TOLERANCE_DEFAULT = 36 / FIT_TOLERANCE_BASE_CANVAS_HEIGHT;
 
 // 比率から実際の許容誤差(px)を解決
 export const resolveFitToleranceFromCanvasHeight = (

@@ -32,6 +32,15 @@ import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
 import type { SketchDomRefs, ToolContext } from './types';
 
+type P5WithErrorToggles = typeof p5 & {
+  disableFriendlyErrors?: boolean;
+  disableSketchChecker?: boolean;
+};
+
+const p5WithErrorToggles = p5 as P5WithErrorToggles;
+p5WithErrorToggles.disableFriendlyErrors = true;
+p5WithErrorToggles.disableSketchChecker = true;
+
 // スケッチエディタ
 export class SketchEditor {
   // データ構造

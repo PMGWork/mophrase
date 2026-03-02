@@ -22,9 +22,7 @@ const MODEL_MIGRATIONS: [string, string, string, string][] = [
 ];
 
 // プロバイダリネームテーブル: [fromProvider, toProvider]
-const PROVIDER_RENAMES: [string, string][] = [
-  ['GoogleAIStudio', 'Google'],
-];
+const PROVIDER_RENAMES: [string, string][] = [['GoogleAIStudio', 'Google']];
 
 // 旧バージョンの設定を現行スキーマに移行
 const migrateConfig = (
@@ -52,10 +50,11 @@ const migrateConfig = (
         ? (next.fitTolerance ?? FIT_TOLERANCE_MIN) /
           FIT_TOLERANCE_BASE_CANVAS_HEIGHT
         : (next.fitTolerance ?? FIT_TOLERANCE_MIN);
-    next.fitTolerance = Math.min(
+    const normalizedTolerance = Math.min(
       FIT_TOLERANCE_MAX,
       Math.max(FIT_TOLERANCE_MIN, tolerance),
     );
+    next.fitTolerance = normalizedTolerance;
   } else {
     next.fitTolerance = undefined;
   }
