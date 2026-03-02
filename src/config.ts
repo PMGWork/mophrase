@@ -19,7 +19,9 @@ export interface Config {
 }
 
 const composePrompt = (common: string, modeSpecific: string): string => {
-  const parts = [common.trim(), modeSpecific.trim()].filter((part) => part.length > 0);
+  const parts = [common.trim(), modeSpecific.trim()].filter(
+    (part) => part.length > 0,
+  );
   return parts.join('\n\n');
 };
 

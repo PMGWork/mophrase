@@ -138,11 +138,7 @@ export interface SerializedProjectPath extends SerializedPath {
 // #region 4. 提案/LLM関連
 
 // LLMプロバイダの種類
-export type LLMProvider =
-  | 'OpenAI'
-  | 'Cerebras'
-  | 'OpenRouter'
-  | 'Google';
+export type LLMProvider = 'OpenAI' | 'Cerebras' | 'OpenRouter' | 'Google';
 export type LLMReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 
 // 提案情報

@@ -34,7 +34,7 @@ export const SuggestionItem = ({
   return (
     <button
       type="button"
-      className="suggestion-item text-gray-200 px-3 py-2 text-left text-sm"
+      className="suggestion-item px-3 py-2 text-left text-sm text-gray-200"
       style={{ position: 'relative', overflow: 'hidden' }}
       onMouseEnter={onMouseEnter}
       onMouseMove={onMouseMove}

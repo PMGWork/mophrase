@@ -13,8 +13,8 @@ type PersistentConfigFields = Omit<
 const migrateConfig = (
   parsed: Partial<PersistentConfigFields>,
 ): Partial<PersistentConfigFields> => {
-  const legacyParallelRequests =
-    (parsed as { parallelRequests?: unknown }).parallelRequests;
+  const legacyParallelRequests = (parsed as { parallelRequests?: unknown })
+    .parallelRequests;
   const normalizedParallelGeneration =
     typeof parsed.parallelGeneration === 'boolean'
       ? parsed.parallelGeneration

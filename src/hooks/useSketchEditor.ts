@@ -433,7 +433,10 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         setIsProjectLibraryOpen(false);
         markCurrentProjectAsClean(editor);
       } catch (error) {
-        console.error('[loadProject] Failed to load project from storage.', error);
+        console.error(
+          '[loadProject] Failed to load project from storage.',
+          error,
+        );
         window.alert(PROJECT_LOAD_ERROR_MESSAGE);
       }
     },

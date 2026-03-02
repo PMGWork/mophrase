@@ -44,7 +44,9 @@ export async function fetchSuggestions(
 
   if (config.testMode) {
     if (parallelGeneration) {
-      await Promise.all(Array.from({ length: benchmarkRuns }, () => requestOnce()));
+      await Promise.all(
+        Array.from({ length: benchmarkRuns }, () => requestOnce()),
+      );
     } else {
       for (let i = 0; i < benchmarkRuns; i += 1) {
         await requestOnce();
@@ -119,9 +121,7 @@ const fetchSuggestionsInParallel = async (
     const firstRejected = settled.find(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
     );
-    throw (
-      firstRejected?.reason ?? new Error('提案の並列生成に失敗しました。')
-    );
+    throw firstRejected?.reason ?? new Error('提案の並列生成に失敗しました。');
   }
 
   return fulfilled;

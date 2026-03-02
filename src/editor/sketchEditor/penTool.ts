@@ -122,7 +122,11 @@ export class PenTool {
   }
 
   // 既存パス上のクリックなら分割する
-  private trySplitExistingPath(x: number, y: number, ctx: ToolContext): boolean {
+  private trySplitExistingPath(
+    x: number,
+    y: number,
+    ctx: ToolContext,
+  ): boolean {
     const tolerance = Math.max(ctx.config.pointSize * 2, 10);
     const toleranceSq = tolerance * tolerance;
 

@@ -43,7 +43,7 @@ export const ProjectLibraryModal = ({
           </div>
           <button
             id="closeProjectLibraryButton"
-            className="corner-md text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-1.5 transition-colors"
+            className="corner-md cursor-pointer p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-100"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -54,7 +54,7 @@ export const ProjectLibraryModal = ({
           <p className="text-text-subtle text-sm">Saved Projects</p>
           <button
             id="newProjectButton"
-            className="corner-md bg-gray-800 text-gray-100 hover:bg-gray-700 inline-flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm transition-colors"
+            className="corner-md inline-flex cursor-pointer items-center gap-2 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 transition-colors hover:bg-gray-700"
             onClick={onCreateNewProject}
           >
             <Plus className="h-4 w-4" />
@@ -71,9 +71,9 @@ export const ProjectLibraryModal = ({
             <ul className="flex flex-col gap-2">
               {projects.map((project) => (
                 <li key={project.id}>
-                  <div className="corner-lg border-border bg-gray-800/40 hover:bg-gray-700/70 flex items-center gap-1 border p-1 transition-colors">
+                  <div className="corner-lg border-border flex items-center gap-1 border bg-gray-800/40 p-1 transition-colors hover:bg-gray-700/70">
                     <button
-                      className="focus-visible:ring-border flex min-w-0 flex-1 cursor-pointer items-center rounded-md px-3 py-2 text-left transition-colors focus-visible:ring-1 focus:outline-none"
+                      className="focus-visible:ring-border flex min-w-0 flex-1 cursor-pointer items-center rounded-md px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-1"
                       onClick={() => onLoadProject(project.id)}
                     >
                       <div className="min-w-0">
@@ -86,7 +86,7 @@ export const ProjectLibraryModal = ({
                       </div>
                     </button>
                     <button
-                      className="text-gray-400 hover:text-danger focus-visible:ring-border inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:ring-1 focus:outline-none"
+                      className="hover:text-danger focus-visible:ring-border inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-400 transition-colors focus:outline-none focus-visible:ring-1"
                       onClick={() => onDeleteProject(project.id, project.name)}
                       aria-label={`${project.name} を削除`}
                       title="Delete Project"

@@ -160,9 +160,9 @@ export const Playback = ({
         <div className="flex items-center gap-1">
           <button
             id="playbackResetButton"
-            className={`corner-md bg-gray-800 text-gray-300 flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
+            className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
               hasPaths
-                ? 'hover:bg-gray-700 hover:text-gray-100 cursor-pointer'
+                ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
                 : 'cursor-not-allowed opacity-40'
             }`}
             title={hasPaths ? 'First Frame' : 'No objects to reset'}
@@ -176,9 +176,9 @@ export const Playback = ({
           </button>
           <button
             id="playbackPlayButton"
-            className={`corner-md bg-gray-800 text-gray-300 flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
+            className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
               hasPaths
-                ? 'hover:bg-gray-700 hover:text-gray-100 cursor-pointer'
+                ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
                 : 'cursor-not-allowed opacity-40'
             }`}
             title={
@@ -195,9 +195,9 @@ export const Playback = ({
           </button>
           <button
             id="playbackEndButton"
-            className={`corner-md bg-gray-800 text-gray-300 flex h-7 w-7 shrink-0 items-center justify-center transition-colors ${
+            className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
               hasPaths
-                ? 'hover:bg-gray-700 hover:text-gray-100 cursor-pointer'
+                ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
                 : 'cursor-not-allowed opacity-40'
             }`}
             title={hasPaths ? 'Last Frame' : 'No objects to seek'}
@@ -243,7 +243,7 @@ export const Playback = ({
         </span>
         <button
           id="playbackSettingsButton"
-          className="corner-md bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-gray-100 flex h-7 w-7 shrink-0 items-center justify-center transition-colors"
+          className="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-100"
           onClick={() => setIsSettingsOpen(true)}
         >
           <SettingsIcon className="h-3.5 w-3.5" />

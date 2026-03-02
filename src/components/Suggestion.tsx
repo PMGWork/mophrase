@@ -175,8 +175,7 @@ export const SketchSuggestion = ({
       const elapsed = Date.now() - active.startAt;
       if (
         !active.adjusting &&
-        (moved >= TOUCH_DRAG_THRESHOLD_PX ||
-          elapsed >= TOUCH_LONG_PRESS_MS)
+        (moved >= TOUCH_DRAG_THRESHOLD_PX || elapsed >= TOUCH_LONG_PRESS_MS)
       ) {
         active.adjusting = true;
       }
@@ -244,7 +243,7 @@ export const SketchSuggestion = ({
           {useCompactPromptEntry && (
             <button
               type="button"
-              className="text-gray-400 cursor-pointer border-border flex items-center justify-center border-r px-3 py-3"
+              className="border-border flex cursor-pointer items-center justify-center border-r px-3 py-3 text-gray-400"
               onClick={closePromptComposer}
               aria-label="Back"
             >
@@ -258,17 +257,14 @@ export const SketchSuggestion = ({
             autoComplete="off"
             className="text-text placeholder:text-text-subtle min-w-0 flex-1 p-3 text-sm focus:outline-none"
           />
-          <button
-            type="submit"
-            className="text-gray-400 cursor-pointer p-3"
-          >
+          <button type="submit" className="cursor-pointer p-3 text-gray-400">
             <Send className="h-4 w-4" />
           </button>
         </form>
       )}
       {!showPromptInput && showLoading && !hasSuggestions && (
         <div
-          className="text-text-subtle cursor-default select-none p-3 text-sm"
+          className="text-text-subtle cursor-default p-3 text-sm select-none"
           role="status"
           aria-live="polite"
         >
@@ -291,7 +287,7 @@ export const SketchSuggestion = ({
             <button
               type="button"
               data-role="open-prompt-composer"
-              className="text-gray-400 hover:bg-gray-700 hover:text-gray-100 cursor-pointer p-3 text-left text-sm transition-colors"
+              className="cursor-pointer p-3 text-left text-sm text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-100"
               onClick={openPromptComposer}
             >
               Refine...

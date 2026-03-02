@@ -445,8 +445,8 @@ const generateWithGoogle = async (
     const errorMessage =
       result.data &&
       typeof result.data === 'object' &&
-      typeof (result.data as { error?: { message?: unknown } }).error?.message ===
-        'string'
+      typeof (result.data as { error?: { message?: unknown } }).error
+        ?.message === 'string'
         ? (result.data as { error: { message: string } }).error.message
         : '';
     const isSchemaDepthError =
@@ -473,7 +473,9 @@ const generateWithGoogle = async (
           }
         ).candidates
       : undefined;
-  const parts = Array.isArray(candidates) ? candidates[0]?.content?.parts : undefined;
+  const parts = Array.isArray(candidates)
+    ? candidates[0]?.content?.parts
+    : undefined;
   const outputText = Array.isArray(parts)
     ? parts
         .map((part: unknown) =>

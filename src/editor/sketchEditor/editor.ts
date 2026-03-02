@@ -396,12 +396,7 @@ export class SketchEditor {
     if (this.currentTool === 'pen') {
       this.penTool.mouseDragged(p, p.mouseX, p.mouseY);
     } else {
-      this.selectTool.mouseDragged(
-        p.mouseX,
-        p.mouseY,
-        p.keyIsDown(p.ALT),
-        ctx,
-      );
+      this.selectTool.mouseDragged(p.mouseX, p.mouseY, p.keyIsDown(p.ALT), ctx);
     }
   }
 
@@ -536,7 +531,6 @@ export class SketchEditor {
         this.handleLostPointerCapture,
       );
     }
-
   }
 
   private capturePointer(pointerId: number): void {
