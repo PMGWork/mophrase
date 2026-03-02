@@ -24,6 +24,16 @@ type FetchSuggestionsOptions = {
   graphImageDataUrl?: string;
 };
 
+const throwIfNoSuggestions = (
+  fulfilled: SuggestionResponse[],
+  reason: unknown,
+  message: string,
+): void => {
+  if (fulfilled.length === 0) {
+    throw reason ?? new Error(message);
+  }
+};
+
 // 提案を取得
 export async function fetchSuggestions(
   serializedPaths: SerializedPath[],
@@ -140,9 +150,11 @@ const fetchSingleSuggestionsWithSlots = async (
       firstRejectedReason = result.reason;
     }
   });
-  if (fulfilled.length === 0) {
-    throw firstRejectedReason ?? new Error('提案の並列生成に失敗しました。');
-  }
+  throwIfNoSuggestions(
+    fulfilled,
+    firstRejectedReason,
+    '提案の並列生成に失敗しました。',
+  );
   return fulfilled;
 };
 
@@ -167,9 +179,11 @@ const fetchSingleSuggestionsSequentiallyWithSlots = async (
     }
   }
 
-  if (fulfilled.length === 0) {
-    throw firstRejectedReason ?? new Error('提案の直列生成に失敗しました。');
-  }
+  throwIfNoSuggestions(
+    fulfilled,
+    firstRejectedReason,
+    '提案の直列生成に失敗しました。',
+  );
   return fulfilled;
 };
 
