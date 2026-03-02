@@ -126,7 +126,14 @@ export const SketchSuggestion = ({
     };
 
   // マウス離脱ハンドラ
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const related = event.relatedTarget;
+    if (
+      related instanceof Element &&
+      related.closest('.suggestion-item')
+    ) {
+      return;
+    }
     updateHover(null, 1);
   };
 

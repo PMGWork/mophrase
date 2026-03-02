@@ -7,7 +7,7 @@ type SuggestionItemProps = {
   strength: number;
   onMouseEnter: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onMouseMove: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  onMouseLeave: () => void;
+  onMouseLeave: (event: React.MouseEvent<HTMLButtonElement>) => void;
   onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onPointerUp: (event: React.PointerEvent<HTMLButtonElement>) => void;
