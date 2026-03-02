@@ -1,5 +1,9 @@
 import type { Config } from '../config';
-import { DEFAULT_CONFIG } from '../config';
+import {
+  DEFAULT_CONFIG,
+  FIT_TOLERANCE_MAX,
+  FIT_TOLERANCE_MIN,
+} from '../config';
 
 // localStorageのキー
 const STORAGE_KEY = 'mophrase:config';
@@ -28,6 +32,15 @@ const migrateConfig = (
       ? { parallelGeneration: normalizedParallelGeneration }
       : {}),
   };
+
+  if (Number.isFinite(next.fitTolerance)) {
+    next.fitTolerance = Math.min(
+      FIT_TOLERANCE_MAX,
+      Math.max(FIT_TOLERANCE_MIN, next.fitTolerance ?? FIT_TOLERANCE_MIN),
+    );
+  } else {
+    next.fitTolerance = undefined;
+  }
 
   if (
     next.llmProvider === 'OpenRouter' &&

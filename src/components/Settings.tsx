@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
 import { ChevronDown, Settings as SettingsIcon, X } from 'lucide-react';
-import type { Config } from '../config';
+import {
+  FIT_TOLERANCE_DEFAULT,
+  FIT_TOLERANCE_MAX,
+  FIT_TOLERANCE_MIN,
+  type Config,
+} from '../config';
 import type { LLMProvider, LLMReasoningEffort } from '../types';
 import { getModels } from '../services/llm';
 
@@ -112,7 +117,7 @@ export const Settings = ({
   const shouldShowReasoningEffortSelect =
     reasoningOptions.length > 0 && !isReasoningToggleVisible;
   const parallelGeneration = config?.parallelGeneration ?? false;
-  const tolerance = config?.fitTolerance ?? 20;
+  const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
 
   const currentValue = JSON.stringify({
@@ -312,7 +317,7 @@ export const Settings = ({
           <div className="flex flex-col gap-3 p-5">
             <div className="flex items-center gap-2">
               <span className="text-text-subtle text-xs font-medium tracking-wider uppercase">
-                Generation
+                Advanced
               </span>
             </div>
             <div className="border-border flex items-center justify-between rounded-lg border bg-gray-800/40 px-3 py-2">
@@ -423,8 +428,8 @@ export const Settings = ({
               <input
                 id="settingsSketchTolerance"
                 type="range"
-                min="5"
-                max="50"
+                min={FIT_TOLERANCE_MIN}
+                max={FIT_TOLERANCE_MAX}
                 step="1"
                 value={tolerance}
                 onChange={(event) => {

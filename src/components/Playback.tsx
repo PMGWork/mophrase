@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import { Play, SkipBack, SkipForward, Square } from 'lucide-react';
 import {
-  Play,
-  SkipBack,
-  SkipForward,
-  Square,
-  Settings as SettingsIcon,
-} from 'lucide-react';
-import type { ProjectSettings as ProjectSettingsType } from '../types';
-import { ProjectSettings } from './ProjectSettings';
+  PLAYBACK_FRAME_RATE_OPTIONS,
+  normalizePlaybackFrameRate,
+  type ProjectSettings as ProjectSettingsType,
+} from '../types';
 
 // 再生状態型定義
 type PlaybackState = {
@@ -62,7 +59,6 @@ export const Playback = ({
   const [state, setState] = useState<PlaybackState>(initialPlaybackState);
   const latestStateRef = useRef<PlaybackState>(initialPlaybackState);
   const seekingPointerId = useRef<number | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // 再生状態のリアルタイム更新
   useEffect(() => {
@@ -152,109 +148,113 @@ export const Playback = ({
   };
 
   return (
-    <>
-      <section
-        id="playbackBar"
-        className="corner-lg border-border bg-background/80 flex items-center gap-3 border p-2.5"
-      >
-        <div className="flex items-center gap-1">
-          <button
-            id="playbackResetButton"
-            className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
-              hasPaths
-                ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
-                : 'cursor-not-allowed opacity-40'
-            }`}
-            title={hasPaths ? 'First Frame' : 'No objects to reset'}
-            disabled={!hasPaths}
-            onClick={() => {
-              if (!controller || !hasPaths) return;
-              controller.resetPlayback();
-            }}
-          >
-            <SkipBack className="h-3.5 w-3.5" />
-          </button>
-          <button
-            id="playbackPlayButton"
-            className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
-              hasPaths
-                ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
-                : 'cursor-not-allowed opacity-40'
-            }`}
-            title={
-              hasPaths ? (isPlaying ? 'Stop' : 'Play') : 'No objects to play'
-            }
-            disabled={!hasPaths}
-            onClick={() => {
-              if (!controller || !hasPaths) return;
-              controller.togglePlayback();
-            }}
-          >
-            <Square className={`h-3.5 w-3.5 ${isPlaying ? '' : 'hidden'}`} />
-            <Play className={`h-3.5 w-3.5 ${isPlaying ? 'hidden' : ''}`} />
-          </button>
-          <button
-            id="playbackEndButton"
-            className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
-              hasPaths
-                ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
-                : 'cursor-not-allowed opacity-40'
-            }`}
-            title={hasPaths ? 'Last Frame' : 'No objects to seek'}
-            disabled={!hasPaths}
-            onClick={() => {
-              if (!controller || !hasPaths) return;
-              controller.goToLastFrame();
-            }}
-          >
-            <SkipForward className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <div
-          id="playbackTrack"
-          className={`relative flex-1 ${
-            hasPaths ? 'cursor-pointer' : 'cursor-not-allowed'
-          }`}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-        >
-          <div className="relative h-1">
-            <div className="bg-panel-elevated absolute inset-0 rounded-full" />
-            <div
-              id="playbackPlayhead"
-              className="bg-text-muted absolute top-1/2 left-0 h-2.5 w-0.5 -translate-y-1/2 rounded-full"
-              style={playheadStyle}
-            />
-          </div>
-        </div>
-        <span
-          id="playbackTime"
-          className="text-text-subtle flex shrink-0 items-center gap-0.5 font-mono text-xs"
-        >
-          <span id="playbackTimeCurrent">
-            {formatPlaybackTime(state.elapsedMs)}
-          </span>
-          <span className="text-text-subtle">/</span>
-          <span id="playbackTimeTotal">
-            {formatPlaybackTime(state.totalMs)}
-          </span>
-        </span>
+    <section
+      id="playbackBar"
+      className="corner-lg border-border bg-background/80 flex items-center gap-3 border p-2.5"
+    >
+      <div className="flex items-center gap-1">
         <button
-          id="playbackSettingsButton"
-          className="corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-100"
-          onClick={() => setIsSettingsOpen(true)}
+          id="playbackResetButton"
+          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+            hasPaths
+              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
+              : 'cursor-not-allowed opacity-40'
+          }`}
+          title={hasPaths ? 'First Frame' : 'No objects to reset'}
+          disabled={!hasPaths}
+          onClick={() => {
+            if (!controller || !hasPaths) return;
+            controller.resetPlayback();
+          }}
         >
-          <SettingsIcon className="h-3.5 w-3.5" />
+          <SkipBack className="h-3.5 w-3.5" />
         </button>
-      </section>
-      <ProjectSettings
-        isOpen={isSettingsOpen}
-        projectSettings={projectSettings}
-        onProjectSettingsChange={onProjectSettingsChange}
-        onClose={() => setIsSettingsOpen(false)}
-      />
-    </>
+        <button
+          id="playbackPlayButton"
+          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+            hasPaths
+              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
+              : 'cursor-not-allowed opacity-40'
+          }`}
+          title={hasPaths ? (isPlaying ? 'Stop' : 'Play') : 'No objects to play'}
+          disabled={!hasPaths}
+          onClick={() => {
+            if (!controller || !hasPaths) return;
+            controller.togglePlayback();
+          }}
+        >
+          <Square className={`h-3.5 w-3.5 ${isPlaying ? '' : 'hidden'}`} />
+          <Play className={`h-3.5 w-3.5 ${isPlaying ? 'hidden' : ''}`} />
+        </button>
+        <button
+          id="playbackEndButton"
+          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+            hasPaths
+              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
+              : 'cursor-not-allowed opacity-40'
+          }`}
+          title={hasPaths ? 'Last Frame' : 'No objects to seek'}
+          disabled={!hasPaths}
+          onClick={() => {
+            if (!controller || !hasPaths) return;
+            controller.goToLastFrame();
+          }}
+        >
+          <SkipForward className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <div
+        id="playbackTrack"
+        className={`relative flex-1 ${
+          hasPaths ? 'cursor-pointer' : 'cursor-not-allowed'
+        }`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <div className="relative h-1">
+          <div className="bg-panel-elevated absolute inset-0 rounded-full" />
+          <div
+            id="playbackPlayhead"
+            className="bg-text-muted absolute top-1/2 left-0 h-2.5 w-0.5 -translate-y-1/2 rounded-full"
+            style={playheadStyle}
+          />
+        </div>
+      </div>
+      <span
+        id="playbackTime"
+        className="text-text-subtle flex shrink-0 items-center gap-0.5 font-mono text-xs"
+      >
+        <span id="playbackTimeCurrent">{formatPlaybackTime(state.elapsedMs)}</span>
+        <span className="text-text-subtle">/</span>
+        <span id="playbackTimeTotal">{formatPlaybackTime(state.totalMs)}</span>
+      </span>
+      <div className="flex shrink-0 items-center">
+        <select
+          id="playbackInlineFps"
+          aria-label="Frame Rate"
+          value={projectSettings.playbackFrameRate}
+          onChange={(event) => {
+            const frameRate = Number(event.target.value);
+            const normalized = normalizePlaybackFrameRate(frameRate);
+            if (normalized !== frameRate) {
+              return;
+            }
+            onProjectSettingsChange({
+              ...projectSettings,
+              playbackFrameRate: normalized,
+            });
+          }}
+          className="corner-md h-7 min-w-16 cursor-pointer bg-gray-800 px-2 text-xs text-gray-100 transition-colors hover:bg-gray-700 focus:ring-1 focus:outline-none"
+        >
+          {PLAYBACK_FRAME_RATE_OPTIONS.map((frameRate) => (
+            <option key={frameRate} value={frameRate}>
+              {`${frameRate}fps`}
+            </option>
+          ))}
+        </select>
+      </div>
+    </section>
   );
 };

@@ -38,6 +38,21 @@ export async function fetchSuggestions(
   const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
   const parallelRequestCount = 3;
   const benchmarkRuns = 5;
+  const requestSingleWithSlot = (slotIndex: number): Promise<SuggestionResponse> => {
+    const slottedPrompt = buildPrompt(
+      serializedPaths,
+      basePrompt,
+      promptHistory,
+      { index: slotIndex, total: parallelRequestCount },
+    );
+    return generateStructured<SuggestionResponse>(
+      slottedPrompt,
+      suggestionResponseSchema,
+      config.llmProvider,
+      config.llmModel,
+      config.llmReasoningEffort,
+    );
+  };
   const requestSingleOnce = (): Promise<SuggestionResponse> =>
     generateStructured<SuggestionResponse>(
       prompt,
@@ -73,8 +88,8 @@ export async function fetchSuggestions(
   }
 
   const suggestions = parallelGeneration
-    ? await fetchSingleSuggestionsInParallel(
-        requestSingleOnce,
+    ? await fetchSingleSuggestionsWithSlots(
+        requestSingleWithSlot,
         parallelRequestCount,
         options.onSuggestion,
       )
@@ -86,15 +101,35 @@ export async function fetchSuggestions(
   return suggestions.map(toSuggestionItem);
 }
 
-// 1件レスポンスを並列取得
-const fetchSingleSuggestionsInParallel = async (
-  requestOnce: () => Promise<SuggestionResponse>,
+// 1件レスポンスをスロット番号付きで並列取得
+const fetchSingleSuggestionsWithSlots = async (
+  requestWithSlot: (slotIndex: number) => Promise<SuggestionResponse>,
   count: number,
   onSuggestion?: (suggestion: SuggestionItem) => void,
 ): Promise<SuggestionResponse[]> => {
-  return fetchInParallel(requestOnce, count, (result) => {
-    onSuggestion?.(toSuggestionItem(result));
+  const settled = await Promise.allSettled(
+    Array.from({ length: count }, (_, i) =>
+      requestWithSlot(i + 1).then((result) => {
+        onSuggestion?.(toSuggestionItem(result));
+        return result;
+      }),
+    ),
+  );
+  const fulfilled: SuggestionResponse[] = [];
+  let firstRejectedReason: unknown;
+  settled.forEach((result) => {
+    if (result.status === 'fulfilled') {
+      fulfilled.push(result.value);
+      return;
+    }
+    if (firstRejectedReason === undefined) {
+      firstRejectedReason = result.reason;
+    }
   });
+  if (fulfilled.length === 0) {
+    throw firstRejectedReason ?? new Error('提案の並列生成に失敗しました。');
+  }
+  return fulfilled;
 };
 
 // 3件レスポンスを単発取得
@@ -107,41 +142,6 @@ const fetchBatchedSuggestions = async (
     onSuggestion?.(toSuggestionItem(suggestion));
   });
   return batch.suggestions;
-};
-
-// count 件を並列実行して成功分を返す
-const fetchInParallel = async <T>(
-  requestOnce: () => Promise<T>,
-  count: number,
-  onFulfilled?: (result: T) => void,
-): Promise<T[]> => {
-  // 失敗が混在しても、成功分があればUIへ返せるように全件待つ。
-  const settled = await Promise.allSettled(
-    Array.from({ length: count }, () =>
-      requestOnce().then((result) => {
-        onFulfilled?.(result);
-        return result;
-      }),
-    ),
-  );
-  const fulfilled: T[] = [];
-  let firstRejectedReason: unknown;
-  settled.forEach((result) => {
-    if (result.status === 'fulfilled') {
-      fulfilled.push(result.value);
-      return;
-    }
-    if (firstRejectedReason === undefined) {
-      firstRejectedReason = result.reason;
-    }
-  });
-
-  if (fulfilled.length === 0) {
-    // 全件失敗時のみエラーにする。
-    throw firstRejectedReason ?? new Error('提案の並列生成に失敗しました。');
-  }
-
-  return fulfilled;
 };
 
 // SuggestionResponse を SuggestionItem に変換
@@ -157,8 +157,16 @@ function buildPrompt(
   serializedPaths: SerializedPath[],
   basePrompt: string,
   promptHistory: string[],
+  slot?: { index: number; total: number },
 ): string {
   const promptParts = [basePrompt];
+
+  if (slot) {
+    promptParts.push(
+      '',
+      `[SLOT ${slot.index} of ${slot.total}]`,
+    );
+  }
 
   if (promptHistory.length > 0) {
     promptParts.push('', '## Instruction History');

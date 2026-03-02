@@ -28,6 +28,7 @@ const App = () => {
     // ツール関連
     selectedTool,
     setTool: setSketchTool,
+    deleteActivePath,
 
     // 提案関連
     suggestionUI,
@@ -153,7 +154,9 @@ const App = () => {
         projectName={projectName}
         hasUnsavedChanges={hasUnsavedChanges}
         selectedTool={selectedTool}
+        canDeleteActivePath={activePath !== null}
         onSelectTool={handleToolSelect}
+        onDeleteActivePath={deleteActivePath}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSave={saveProject}
         onLoad={loadProject}

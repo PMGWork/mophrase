@@ -17,7 +17,7 @@ import type {
   SketchKeyframeDelta,
   SketchModifier,
 } from '../../types';
-import { DEFAULT_PROJECT_SETTINGS } from '../../types';
+import { DEFAULT_PROJECT_SETTINGS, normalizeProjectSettings } from '../../types';
 import { createId } from '../id';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
 import { clamp } from '../number';
@@ -34,6 +34,7 @@ export function serializeProject(
   paths: Path[],
   settings: ProjectSettings,
 ): ProjectData {
+  const normalizedSettings = normalizeProjectSettings(settings);
   const serializedPaths = serializePaths(paths).map((serializedPath, index) => {
     const path = paths[index];
     const duration =
@@ -54,7 +55,7 @@ export function serializeProject(
   });
 
   return {
-    settings,
+    settings: normalizedSettings,
     paths: serializedPaths,
   };
 }
@@ -70,14 +71,14 @@ export function deserializeProject(data: unknown): {
     throw new Error('Invalid project format: paths must be an array.');
 
   const rawSettings = isRecord(data.settings) ? data.settings : undefined;
-  const settings: ProjectSettings = {
+  const settings: ProjectSettings = normalizeProjectSettings({
     playbackDuration: isFiniteNumber(rawSettings?.playbackDuration)
       ? rawSettings.playbackDuration
       : DEFAULT_PROJECT_SETTINGS.playbackDuration,
     playbackFrameRate: isFiniteNumber(rawSettings?.playbackFrameRate)
       ? rawSettings.playbackFrameRate
       : DEFAULT_PROJECT_SETTINGS.playbackFrameRate,
-  };
+  });
 
   const paths = data.paths.map((path) => toSerializedProjectPath(path));
 

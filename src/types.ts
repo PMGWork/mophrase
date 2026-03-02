@@ -157,8 +157,8 @@ export type SuggestionStatus = 'idle' | 'generating' | 'error' | 'input';
 
 // プロジェクト設定
 export interface ProjectSettings {
-  playbackDuration: number; // 再生時間（秒）、0=自動
-  playbackFrameRate: number; // フレームレート（fps）、0=自動
+  playbackDuration: number; // 再生時間（秒）
+  playbackFrameRate: number; // フレームレート（fps）
 }
 
 // プロジェクトデータ
@@ -167,10 +167,31 @@ export interface ProjectData {
   paths: SerializedProjectPath[];
 }
 
+export const FIXED_PLAYBACK_DURATION_SECONDS = 30;
+export const PLAYBACK_FRAME_RATE_OPTIONS = [60, 30, 24] as const;
+export type PlaybackFrameRate = (typeof PLAYBACK_FRAME_RATE_OPTIONS)[number];
+
+// フレームレートを正規化する関数（許容される値以外はデフォルトの30fpsにフォールバック）
+export const normalizePlaybackFrameRate = (
+  frameRate: number | undefined,
+): PlaybackFrameRate => {
+  return PLAYBACK_FRAME_RATE_OPTIONS.includes(frameRate as PlaybackFrameRate)
+    ? (frameRate as PlaybackFrameRate)
+    : 30;
+};
+
+// プロジェクト設定を正規化する関数（不足しているプロパティはデフォルト値で補完）
+export const normalizeProjectSettings = (
+  settings: Partial<ProjectSettings> = {},
+): ProjectSettings => ({
+  playbackDuration: FIXED_PLAYBACK_DURATION_SECONDS,
+  playbackFrameRate: normalizePlaybackFrameRate(settings.playbackFrameRate),
+});
+
 // デフォルトのプロジェクト設定
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
-  playbackDuration: 5,
-  playbackFrameRate: 60,
+  playbackDuration: FIXED_PLAYBACK_DURATION_SECONDS,
+  playbackFrameRate: 30,
 };
 
 // #region 6. フィッティング関連

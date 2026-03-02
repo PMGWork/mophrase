@@ -16,7 +16,7 @@ import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
 import type { Path, ProjectSettings, ToolKind } from '../types';
-import { DEFAULT_PROJECT_SETTINGS } from '../types';
+import { DEFAULT_PROJECT_SETTINGS, normalizeProjectSettings } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
 import { loadConfig, saveConfig } from '../services/configStorage';
 import {
@@ -75,6 +75,7 @@ type UseSketchEditorResult = {
   // ツール
   selectedTool: ToolKind;
   setTool: (tool: ToolKind) => void;
+  deleteActivePath: () => void;
   updateActivePath: (updater: (path: Path) => void) => void;
 
   // 提案機能
@@ -147,8 +148,8 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
-  const [projectSettings, setProjectSettings] = useState<ProjectSettings>(
-    () => ({ ...DEFAULT_PROJECT_SETTINGS }),
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings>(() =>
+    normalizeProjectSettings(DEFAULT_PROJECT_SETTINGS),
   );
   const [isProjectLibraryOpen, setIsProjectLibraryOpen] = useState(false);
   const [projectLibrary, setProjectLibrary] = useState<ProjectSummary[]>([]);
@@ -297,6 +298,11 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     editor.setTool(tool);
   }, []);
 
+  // 選択中パスを削除
+  const deleteActivePath = useCallback(() => {
+    editorRef.current?.deleteActivePath();
+  }, []);
+
   // 現在のパスを更新
   const updateActivePath = useCallback((updater: (path: Path) => void) => {
     editorRef.current?.updateActivePath(updater);
@@ -317,7 +323,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   // 提案の影響度を設定
   const setSuggestionHover = useCallback(
     (id: string | null, strength: number) => {
-      editorRef.current?.getSuggestionManager().setHover(id, strength);
+      editorRef.current?.setSuggestionHover(id, strength);
     },
     [],
   );
@@ -348,8 +354,9 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   // プロジェクト設定を更新
   const updateProjectSettings = useCallback(
     (next: ProjectSettings) => {
-      setProjectSettings(next);
-      editorRef.current?.setProjectSettings(next);
+      const normalized = normalizeProjectSettings(next);
+      setProjectSettings(normalized);
+      editorRef.current?.setProjectSettings(normalized);
       refreshProjectDirtyState();
     },
     [refreshProjectDirtyState],
@@ -456,10 +463,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const importProjectFromJson = useCallback((): void => {
     const editor = editorRef.current;
     if (!editor) return;
-    if (
-      hasUnsavedChanges &&
-      !window.confirm(IMPORT_PROJECT_CONFIRM_MESSAGE)
-    ) {
+    if (hasUnsavedChanges && !window.confirm(IMPORT_PROJECT_CONFIRM_MESSAGE)) {
       return;
     }
 
@@ -474,17 +478,19 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         try {
           const text = await file.text();
           const parsed = JSON.parse(text) as unknown;
-          const { settings, paths: serializedPaths } = deserializeProject(
-            parsed,
-          );
+          const { settings, paths: serializedPaths } =
+            deserializeProject(parsed);
           editor.applySerializedProject(serializedPaths, settings);
           setProjectId(null);
           setProjectName(toImportedProjectName(file.name));
-          setProjectSettings(settings);
+          setProjectSettings(normalizeProjectSettings(settings));
           setIsProjectLibraryOpen(false);
           markCurrentProjectAsClean(editor);
         } catch (error) {
-          console.error('[importProject] Failed to import project JSON.', error);
+          console.error(
+            '[importProject] Failed to import project JSON.',
+            error,
+          );
           window.alert(PROJECT_IMPORT_ERROR_MESSAGE);
         }
       })();
@@ -517,7 +523,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         editor.applySerializedProject(serializedPaths, settings);
         setProjectId(stored.id);
         setProjectName(stored.name);
-        setProjectSettings(settings);
+        setProjectSettings(normalizeProjectSettings(settings));
         setIsProjectLibraryOpen(false);
         markCurrentProjectAsClean(editor);
       } catch (error) {
@@ -613,7 +619,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     editor.applyProject([], { ...DEFAULT_PROJECT_SETTINGS });
     setProjectId(null);
     setProjectName(null);
-    setProjectSettings({ ...DEFAULT_PROJECT_SETTINGS });
+    setProjectSettings(normalizeProjectSettings(DEFAULT_PROJECT_SETTINGS));
     markCurrentProjectAsClean(editor);
     setIsProjectLibraryOpen(false);
   }, [hasUnsavedChanges, markCurrentProjectAsClean]);
@@ -657,6 +663,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     // ツール
     selectedTool,
     setTool,
+    deleteActivePath,
     updateActivePath,
 
     // 提案機能

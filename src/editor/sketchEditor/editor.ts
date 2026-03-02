@@ -19,7 +19,10 @@ import type {
   SerializedProjectPath,
   ToolKind,
 } from '../../types';
-import { DEFAULT_PROJECT_SETTINGS } from '../../types';
+import {
+  DEFAULT_PROJECT_SETTINGS,
+  normalizeProjectSettings,
+} from '../../types';
 import { drawSketchPath } from '../../utils/rendering';
 import {
   isLeftMouseButton,
@@ -38,6 +41,10 @@ export class SketchEditor {
   private paths: Path[] = [];
   private activePath: Path | null = null;
   private isPreviewing: boolean = false;
+  private isSuggestionLoopPlayback: boolean = false;
+  private suggestionLoopPath: Path | null = null;
+  private hoveredSuggestionId: string | null = null;
+  private hasHoverableSuggestions: boolean = false;
 
   // プロジェクト設定
   private projectSettings: ProjectSettings = { ...DEFAULT_PROJECT_SETTINGS };
@@ -51,6 +58,7 @@ export class SketchEditor {
   private dom: SketchDomRefs;
   private handleManager: HandleManager;
   private motionManager: MotionManager | null = null;
+  private suggestionMotionManager: MotionManager | null = null;
   private suggestionManager: SuggestionManager;
 
   // 設定
@@ -63,6 +71,7 @@ export class SketchEditor {
   private onPathSelected: (path: Path | null) => void; // パスが選択されたときに呼び出される
   private onPathUpdated?: (path: Path) => void; // パスが更新されたときに呼び出される
   private onToolChanged?: (tool: ToolKind) => void; // ツールが変更されたときに呼び出される
+  private onSuggestionUIChange?: (state: SuggestionUIState) => void;
 
   // コンストラクタ
   constructor(
@@ -84,6 +93,7 @@ export class SketchEditor {
     this.onPathSelected = onPathSelected;
     this.onPathUpdated = onPathUpdated;
     this.onToolChanged = onToolChanged;
+    this.onSuggestionUIChange = onSuggestionUIChange;
 
     // ツール初期化
     this.penTool = new PenTool();
@@ -110,7 +120,7 @@ export class SketchEditor {
         this.onPathSelected(updated);
         this.onPathCreated(updated);
       },
-      onUIStateChange: onSuggestionUIChange,
+      onUIStateChange: (state) => this.handleSuggestionUIStateChange(state),
     });
 
     // p5.jsの初期化
@@ -152,11 +162,16 @@ export class SketchEditor {
 
     // ペンツールに切り替わったら提案ウィンドウを閉じる
     if (tool === 'pen') {
+      this.stopSuggestionLoopPlayback();
+      this.suggestionLoopPath = null;
+      this.hoveredSuggestionId = null;
+      this.hasHoverableSuggestions = false;
       this.suggestionManager.close();
     }
 
     // 選択ツールに切り替わったら、アクティブなパスがあれば提案を表示
     if (tool === 'select' && this.activePath) {
+      this.suggestionLoopPath = this.activePath;
       this.suggestionManager.open(this.activePath);
     }
   }
@@ -177,6 +192,7 @@ export class SketchEditor {
     this.p = null;
     this.canvasElement = null;
     this.activePointerId = null;
+    this.suggestionMotionManager = null;
   }
 
   // #region DOM操作
@@ -243,6 +259,7 @@ export class SketchEditor {
     p.textFont('Geist');
 
     this.motionManager = new MotionManager(p, OBJECT_SIZE);
+    this.suggestionMotionManager = new MotionManager(p, OBJECT_SIZE);
 
     // 初期化後、プロジェクト設定を適用してフレームレートと再生時間を反映
     this.setProjectSettings(this.projectSettings);
@@ -275,18 +292,25 @@ export class SketchEditor {
   }
 
   // 選択中のパスを削除
-  private deleteActivePath(): void {
-    if (!this.activePath) return;
+  public deleteActivePath(): boolean {
+    if (!this.activePath) return false;
 
     const index = this.paths.indexOf(this.activePath);
     if (index >= 0) {
       this.paths.splice(index, 1);
     }
 
+    if (this.suggestionLoopPath === this.activePath) {
+      this.stopSuggestionLoopPlayback();
+      this.suggestionLoopPath = null;
+      this.hoveredSuggestionId = null;
+    }
+
     this.activePath = null;
     this.suggestionManager.close();
     this.handleManager.clearSelection();
     this.onPathSelected(null);
+    return true;
   }
 
   // p5.js 描画
@@ -295,6 +319,12 @@ export class SketchEditor {
 
     const ctx = this.getToolContext();
     const isPlaying = this.motionManager?.getIsPlaying() ?? false;
+    const suggestionLoopPath = this.getSuggestionLoopPath();
+    const isSuggestionLoopPlaying =
+      !isPlaying &&
+      this.isSuggestionLoopPlayback &&
+      !!suggestionLoopPath &&
+      (this.suggestionMotionManager?.getIsPlaying() ?? false);
     const shouldPreview =
       !isPlaying && this.isPreviewing && !!this.motionManager;
 
@@ -319,6 +349,7 @@ export class SketchEditor {
       // 非再生時: 個別にオブジェクトを描画
       for (let i = 0; i < this.paths.length; i++) {
         const path = this.paths[i];
+        if (isSuggestionLoopPlaying && suggestionLoopPath === path) continue;
         const isLatest = i === this.paths.length - 1;
         const color = this.objectColors[i % this.objectColors.length];
 
@@ -338,6 +369,10 @@ export class SketchEditor {
             p.pop();
           }
         }
+      }
+
+      if (isSuggestionLoopPlaying) {
+        this.suggestionMotionManager?.draw();
       }
     }
 
@@ -585,6 +620,7 @@ export class SketchEditor {
   // モーションの再生/停止をトグル
   public toggleMotion(): boolean {
     if (!this.motionManager) return false;
+    this.stopSuggestionLoopPlayback();
 
     // 再生中なら停止
     if (this.motionManager.getIsPlaying()) {
@@ -603,6 +639,7 @@ export class SketchEditor {
 
   public resetPlayback(): void {
     if (!this.motionManager) return;
+    this.stopSuggestionLoopPlayback();
 
     if (this.motionManager.getIsPlaying()) {
       this.motionManager.stop();
@@ -615,6 +652,7 @@ export class SketchEditor {
 
   public goToLastFrame(): void {
     if (!this.motionManager) return;
+    this.stopSuggestionLoopPlayback();
 
     if (this.motionManager.getIsPlaying()) {
       this.motionManager.stop();
@@ -650,6 +688,7 @@ export class SketchEditor {
   public updateActivePath(updater: (path: Path) => void): void {
     if (!this.activePath) return;
     updater(this.activePath);
+    this.restartSuggestionLoopPlaybackIfNeeded();
     this.refreshPlaybackTimeline();
     this.onPathUpdated?.(this.activePath);
   }
@@ -667,6 +706,7 @@ export class SketchEditor {
 
   public seekPlayback(progress: number): void {
     if (!this.motionManager) return;
+    this.stopSuggestionLoopPlayback();
     if (!this.prepareAllPaths()) return;
 
     const totalDuration = this.motionManager.getTotalDuration();
@@ -712,6 +752,7 @@ export class SketchEditor {
     if (!targetPath) return;
 
     const selectionRange = this.handleManager.getSelectionRange();
+    this.suggestionLoopPath = targetPath;
     this.suggestionManager.open(targetPath);
     void this.suggestionManager.submit(
       targetPath,
@@ -727,6 +768,96 @@ export class SketchEditor {
     );
   }
 
+  public setSuggestionHover(id: string | null, strength: number): void {
+    this.suggestionManager.setHover(id, strength);
+    this.hoveredSuggestionId = id;
+    const shouldLoopPlayback = this.hasHoverableSuggestions && id !== null;
+    if (shouldLoopPlayback && this.isSuggestionLoopPlayback) {
+      this.restartSuggestionLoopPlaybackIfNeeded();
+      return;
+    }
+    this.syncSuggestionLoopPlayback(shouldLoopPlayback);
+  }
+
+  private handleSuggestionUIStateChange(state: SuggestionUIState): void {
+    this.hasHoverableSuggestions = state.suggestions.length > 0;
+    if (!state.isVisible || !this.hasHoverableSuggestions) {
+      this.hoveredSuggestionId = null;
+    }
+    const shouldLoopPlayback =
+      this.hasHoverableSuggestions && this.hoveredSuggestionId !== null;
+    this.syncSuggestionLoopPlayback(shouldLoopPlayback);
+    this.onSuggestionUIChange?.(state);
+  }
+
+  private syncSuggestionLoopPlayback(shouldPlay: boolean): void {
+    if (shouldPlay) {
+      if (this.isSuggestionLoopPlayback) return;
+      this.startSuggestionLoopPlayback();
+      return;
+    }
+
+    this.stopSuggestionLoopPlayback();
+  }
+
+  private getSuggestionLoopPath(): Path | null {
+    if (!this.suggestionLoopPath) return null;
+    const index = this.paths.indexOf(this.suggestionLoopPath);
+    return index >= 0 ? this.paths[index] : null;
+  }
+
+  private startSuggestionLoopPlayback(startAtMs: number = 0): void {
+    if (!this.suggestionMotionManager) return;
+    if (this.motionManager?.getIsPlaying()) return;
+
+    if (!this.p) return;
+    const path = this.suggestionManager.getHoveredPreviewPath(this.p);
+    if (!path) return;
+
+    const duration = Number.isFinite(path.duration)
+      ? Math.max(path.duration, 0.01)
+      : 0.01;
+    const loopPath: Path = {
+      ...path,
+      startTime: 0,
+      duration,
+    };
+
+    const originalPath = this.getSuggestionLoopPath();
+    const colorSource = originalPath ?? path;
+    this.suggestionMotionManager.startAll(
+      [loopPath],
+      [this.getPathColor(colorSource)],
+      startAtMs,
+    );
+    if (!this.suggestionMotionManager.getIsPlaying()) return;
+    this.isSuggestionLoopPlayback = true;
+  }
+
+  private stopSuggestionLoopPlayback(): void {
+    if (
+      !this.isSuggestionLoopPlayback &&
+      !this.suggestionMotionManager?.getIsPlaying()
+    ) {
+      return;
+    }
+    this.suggestionMotionManager?.stop();
+    this.isSuggestionLoopPlayback = false;
+  }
+
+  private restartSuggestionLoopPlaybackIfNeeded(): void {
+    if (!this.isSuggestionLoopPlayback) return;
+    const elapsedMs = this.suggestionMotionManager?.getElapsedTime() ?? 0;
+    this.stopSuggestionLoopPlayback();
+    this.startSuggestionLoopPlayback(elapsedMs);
+  }
+
+  private getPathColor(path: Path): string {
+    const index = this.paths.indexOf(path);
+    const colorIndex = index >= 0 ? index : 0;
+    return this.objectColors[colorIndex % this.objectColors.length];
+  }
+
   // #region プロジェクト設定
 
   // プロジェクト設定を取得
@@ -736,18 +867,19 @@ export class SketchEditor {
 
   // プロジェクト設定を更新（フレームレート/再生時間）
   public setProjectSettings(settings: ProjectSettings): void {
-    this.projectSettings = { ...settings };
+    const normalizedSettings = normalizeProjectSettings(settings);
+    this.projectSettings = normalizedSettings;
 
     // フレームレートを即時反映
     if (this.p) {
-      const fps =
-        settings.playbackFrameRate > 0 ? settings.playbackFrameRate : 60;
-      this.p.frameRate(fps);
+      this.p.frameRate(normalizedSettings.playbackFrameRate);
     }
 
     // 総再生時間の上書きを設定（秒→ミリ秒）
     if (this.motionManager) {
-      this.motionManager.setDurationOverride(settings.playbackDuration * 1000);
+      this.motionManager.setDurationOverride(
+        normalizedSettings.playbackDuration * 1000,
+      );
     }
 
     // タイムラインを更新
@@ -765,6 +897,10 @@ export class SketchEditor {
     this.paths = paths;
     this.activePath = null;
     this.isPreviewing = false;
+    this.stopSuggestionLoopPlayback();
+    this.suggestionLoopPath = null;
+    this.hoveredSuggestionId = null;
+    this.hasHoverableSuggestions = false;
 
     // プロジェクト設定を適用
     this.setProjectSettings(settings);

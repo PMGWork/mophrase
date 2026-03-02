@@ -5,6 +5,7 @@ import {
   PenTool,
   Save,
   Settings,
+  Trash2,
   Upload,
 } from 'lucide-react';
 import type { ToolKind } from '../types';
@@ -15,7 +16,9 @@ type HeaderProps = {
   projectName: string | null;
   hasUnsavedChanges: boolean;
   selectedTool: ToolKind; // 選択されているツール
+  canDeleteActivePath: boolean; // 削除可能か
   onSelectTool: (tool: ToolKind) => void; // ツールを選択する関数
+  onDeleteActivePath: () => void; // 選択中パスを削除
   onOpenSettings: () => void; // 設定モーダルを開く
   onSave: () => void; // プロジェクトを保存
   onLoad: () => void; // プロジェクトを読み込み
@@ -28,7 +31,9 @@ export const Header = ({
   projectName,
   hasUnsavedChanges,
   selectedTool,
+  canDeleteActivePath,
   onSelectTool,
+  onDeleteActivePath,
   onOpenSettings,
   onSave,
   onLoad,
@@ -62,6 +67,12 @@ export const Header = ({
           icon={PenTool}
           isSelected={selectedTool === 'pen'}
           onClick={() => onSelectTool('pen')}
+        />
+        <ToolButton
+          title="Delete Active Path"
+          icon={Trash2}
+          onClick={onDeleteActivePath}
+          disabled={!canDeleteActivePath}
         />
 
         <div className="bg-border mx-2 h-6 w-px" />

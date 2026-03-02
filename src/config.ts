@@ -18,6 +18,7 @@ export interface Config {
   suggestionPromptParallel: string; // 並列生成用キーフレーム補正プロンプト
 }
 
+// プロジェクト設定の型定義
 const composePrompt = (common: string, modeSpecific: string): string => {
   const parts = [common.trim(), modeSpecific.trim()].filter(
     (part) => part.length > 0,
@@ -25,6 +26,7 @@ const composePrompt = (common: string, modeSpecific: string): string => {
   return parts.join('\n\n');
 };
 
+// プロジェクト設定の型定義
 export interface Colors {
   handle: string; // 制御点の色
   curve: string; // ベジェ曲線の色
@@ -35,9 +37,14 @@ export interface Colors {
   selection: string; // 選択のハイライト色
 }
 
+// フィット許容誤差の最小値、最大値、デフォルト値
+export const FIT_TOLERANCE_MIN = 20;
+export const FIT_TOLERANCE_MAX = 80;
+export const FIT_TOLERANCE_DEFAULT = 40;
+
 // デフォルト設定
 export const DEFAULT_CONFIG: Config = {
-  fitTolerance: 20,
+  fitTolerance: FIT_TOLERANCE_DEFAULT,
   coarseErrorWeight: 2.0,
   lineWeight: 1,
   pointSize: 6,
@@ -53,6 +60,7 @@ export const DEFAULT_CONFIG: Config = {
   ),
 };
 
+// デフォルトの色設定
 export const DEFAULT_COLORS: Colors = {
   handle: '#ffffff', // White
   curve: '#f9fafb', // Gray-50

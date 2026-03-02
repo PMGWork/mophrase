@@ -157,6 +157,64 @@ export class SuggestionManager {
     });
   }
 
+  // ホバー中提案を強度込みで適用した一時パスを取得（ループ再生用）
+  public getHoveredPreviewPath(p: p5): Path | null {
+    if (!this.hoveredId || !this.targetPath) return null;
+
+    const suggestion = this.suggestions.find((s) => s.id === this.hoveredId);
+    if (!suggestion) return null;
+    const modifierTarget = this.resolveModifierTarget(suggestion);
+
+    const originalCurves = buildSketchCurves(this.targetPath.keyframes);
+    const allProgress = computeKeyframeProgress(
+      this.targetPath.keyframes,
+      originalCurves,
+    );
+    const { keyframes: referenceKeyframes, progress: referenceProgress } =
+      getSelectionReference(this.targetPath, this.selectionRange, allProgress);
+
+    const llmKeyframes = deserializePathKeyframes(
+      suggestion.path,
+      referenceKeyframes,
+      referenceProgress,
+      p,
+    );
+    if (llmKeyframes.length === 0) return null;
+
+    const sketchModifiers = [...(this.targetPath.sketchModifiers ?? [])];
+    const graphModifiers = [...(this.targetPath.graphModifiers ?? [])];
+
+    if (modifierTarget !== 'graph') {
+      const previewSketchModifier = createSketchModifier(
+        this.targetPath.keyframes,
+        llmKeyframes,
+        'preview',
+        this.selectionRange,
+      );
+      previewSketchModifier.strength = this.hoveredStrength;
+      sketchModifiers.push(previewSketchModifier);
+    }
+
+    if (modifierTarget !== 'sketch' && llmKeyframes.length > 1) {
+      const previewGraphModifier = createGraphModifier(
+        this.targetPath.keyframes,
+        allProgress,
+        llmKeyframes,
+        referenceProgress,
+        'preview',
+        this.selectionRange,
+      );
+      previewGraphModifier.strength = this.hoveredStrength;
+      graphModifiers.push(previewGraphModifier);
+    }
+
+    return {
+      ...this.targetPath,
+      sketchModifiers: sketchModifiers.length > 0 ? sketchModifiers : undefined,
+      graphModifiers: graphModifiers.length > 0 ? graphModifiers : undefined,
+    };
+  }
+
   // #region プライベートメソッド
 
   // 提案を設定
