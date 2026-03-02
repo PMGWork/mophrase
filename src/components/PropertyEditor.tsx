@@ -41,12 +41,11 @@ export const PropertyEditor = ({
   const graphModifiers = activePath?.graphModifiers ?? [];
 
   // 時間変更ハンドラ
-  const handleTimeChange = (field: 'startTime' | 'duration', value: string) => {
-    const next = Number(value);
-    if (!Number.isFinite(next)) return;
-    if (field === 'startTime' && next < 0) return;
-    if (field === 'duration' && next <= 0) return;
-    handlers?.onTimeChange?.(field, next);
+  const handleTimeChange = (field: 'startTime' | 'duration', value: number) => {
+    if (!Number.isFinite(value)) return;
+    if (field === 'startTime' && value < 0) return;
+    if (field === 'duration' && value <= 0) return;
+    handlers?.onTimeChange?.(field, value);
   };
 
   // モディファイア変更ハンドラ
@@ -86,9 +85,7 @@ export const PropertyEditor = ({
         <TimeSection
           startTime={startTime}
           duration={duration}
-          onChange={(field, value) => {
-            handleTimeChange(field, value.toString());
-          }}
+          onChange={handleTimeChange}
           activePathId={activePath?.id}
         />
 

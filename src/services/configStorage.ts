@@ -14,6 +14,18 @@ type PersistentConfigFields = Omit<
   'suggestionPrompt' | 'suggestionPromptParallel'
 >;
 
+// モデルマイグレーションテーブル: [fromProvider, fromModel, toProvider, toModel]
+const MODEL_MIGRATIONS: [string, string, string, string][] = [
+  ['OpenRouter', 'anthropic/claude-sonnet-4.6', 'OpenRouter', 'anthropic/claude-opus-4.6'],
+  ['Google', 'gemini-2.5-flash', 'Google', 'gemini-3-flash-preview'],
+];
+
+// プロバイダリネームテーブル: [fromProvider, toProvider]
+const PROVIDER_RENAMES: [string, string][] = [
+  ['GoogleAIStudio', 'Google'],
+];
+
+// 旧バージョンの設定を現行スキーマに移行
 const migrateConfig = (
   parsed: Partial<PersistentConfigFields>,
 ): Partial<PersistentConfigFields> => {
@@ -42,42 +54,34 @@ const migrateConfig = (
     next.fitTolerance = undefined;
   }
 
-  if (
-    next.llmProvider === 'OpenRouter' &&
-    next.llmModel === 'anthropic/claude-sonnet-4.6'
-  ) {
-    next.llmModel = 'anthropic/claude-opus-4.6';
+  // テーブル駆動のモデルマイグレーション
+  for (const [fromProv, fromModel, toProv, toModel] of MODEL_MIGRATIONS) {
+    if (next.llmProvider === fromProv && next.llmModel === fromModel) {
+      next.llmProvider = toProv as typeof next.llmProvider;
+      next.llmModel = toModel;
+    }
   }
 
-  if (next.llmProvider === 'Google' && next.llmModel === 'gemini-2.5-flash') {
-    next.llmModel = 'gemini-3-flash-preview';
+  // テーブル駆動のプロバイダリネーム
+  for (const [fromProv, toProv] of PROVIDER_RENAMES) {
+    if ((next as { llmProvider?: string }).llmProvider === fromProv) {
+      next.llmProvider = toProv as typeof next.llmProvider;
+    }
   }
 
+  // Cerebras は推論強度を固定
   if (next.llmProvider === 'Cerebras') {
-    return {
-      ...next,
-      llmReasoningEffort: 'medium',
-    };
+    next.llmReasoningEffort = 'medium';
   }
 
+  // OpenRouter 上の Google モデルを Google プロバイダに移行
   if (
     next.llmProvider === 'OpenRouter' &&
     typeof next.llmModel === 'string' &&
     next.llmModel.startsWith('google/gemini-')
   ) {
-    return {
-      ...next,
-      llmProvider: 'Google',
-      llmModel: next.llmModel.replace('google/', ''),
-    };
-  }
-
-  const legacyProvider = (next as { llmProvider?: string }).llmProvider;
-  if (legacyProvider === 'GoogleAIStudio') {
-    return {
-      ...next,
-      llmProvider: 'Google',
-    };
+    next.llmProvider = 'Google';
+    next.llmModel = next.llmModel.replace('google/', '');
   }
 
   return next;

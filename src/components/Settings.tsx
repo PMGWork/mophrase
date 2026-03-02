@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { ChevronDown, Settings as SettingsIcon, X } from 'lucide-react';
 import {
@@ -69,19 +70,75 @@ const resolveReasoningEffort = (
   return options.includes(effort) ? effort : options[0];
 };
 
+export type SettingsChangePayload = {
+  llmProvider: LLMProvider;
+  llmModel: string;
+  llmReasoningEffort: LLMReasoningEffort;
+  parallelGeneration: boolean;
+  fitTolerance: number;
+  testMode: boolean;
+};
+
 type SettingsProps = {
   isOpen: boolean;
   config: Config | null;
   onClose: () => void;
-  onChange: (next: {
-    llmProvider: LLMProvider;
-    llmModel: string;
-    llmReasoningEffort: LLMReasoningEffort;
-    parallelGeneration: boolean;
-    fitTolerance: number;
-    testMode: boolean;
-  }) => void;
+  onChange: (next: SettingsChangePayload) => void;
 };
+
+// トグル行コンポーネント
+const ToggleRow = ({
+  label,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  description: ReactNode;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+}) => (
+  <div
+    className={`border-border flex items-center justify-between rounded-lg border bg-gray-800/40 px-3 py-2 ${
+      disabled ? 'opacity-80' : ''
+    }`}
+  >
+    <div>
+      <div className="text-text text-sm">{label}</div>
+      <div className="text-text-subtle text-xs">{description}</div>
+    </div>
+    <label
+      className={`group inline-flex ${
+        disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+      }`}
+    >
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        className="sr-only"
+        disabled={disabled}
+        onChange={onChange}
+      />
+      <div
+        aria-hidden="true"
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
+          checked
+            ? 'bg-success/80'
+            : 'bg-gray-600 group-hover:bg-gray-500'
+        }`}
+      >
+        <span
+          className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            checked ? 'translate-x-5.5' : 'translate-x-0.5'
+          }`}
+        />
+      </div>
+    </label>
+  </div>
+);
 
 export const Settings = ({
   isOpen,
@@ -119,6 +176,18 @@ export const Settings = ({
   const parallelGeneration = config?.parallelGeneration ?? false;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
+
+  // onChange ヘルパー: 変更対象のフィールドだけ渡せば残りはデフォルト値で補完
+  const emit = (patch: Partial<SettingsChangePayload>) =>
+    onChange({
+      llmProvider: selectedProvider,
+      llmModel: selectedModel,
+      llmReasoningEffort: resolvedReasoningEffort,
+      parallelGeneration,
+      fitTolerance: tolerance,
+      testMode,
+      ...patch,
+    });
 
   const currentValue = JSON.stringify({
     provider: selectedProvider,
@@ -177,18 +246,14 @@ export const Settings = ({
                         provider: LLMProvider;
                         modelId: string;
                       };
-                      const nextReasoningEffort = resolveReasoningEffort(
-                        parsed.provider,
-                        parsed.modelId,
-                        'none',
-                      );
-                      onChange({
+                      emit({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
-                        llmReasoningEffort: nextReasoningEffort,
-                        parallelGeneration,
-                        fitTolerance: tolerance,
-                        testMode,
+                        llmReasoningEffort: resolveReasoningEffort(
+                          parsed.provider,
+                          parsed.modelId,
+                          'none',
+                        ),
                       });
                     } catch {
                       // ignore invalid value
@@ -211,67 +276,21 @@ export const Settings = ({
               </div>
             </div>
             {isReasoningToggleVisible && (
-              <div
-                className={`border-border flex items-center justify-between rounded-lg border bg-gray-800/40 px-3 py-2 ${
-                  isReasoningLockedOn ? 'opacity-80' : ''
-                }`}
-              >
-                <div>
-                  <div className="text-text text-sm">Reasoning</div>
-                  <div className="text-text-subtle text-xs">
-                    {reasoningDescription}
-                  </div>
-                </div>
-                <label
-                  className={`group inline-flex ${
-                    isReasoningLockedOn
-                      ? 'cursor-not-allowed'
-                      : 'cursor-pointer'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    checked={isReasoningEnabled}
-                    className="sr-only"
-                    disabled={isReasoningLockedOn}
-                    onChange={() => {
-                      if (isReasoningLockedOn) {
-                        return;
-                      }
-                      const nextEffort = isReasoningEnabled
-                        ? 'none'
-                        : resolvedReasoningEffort === 'none'
-                          ? 'medium'
-                          : resolvedReasoningEffort;
-                      onChange({
-                        llmProvider: selectedProvider,
-                        llmModel: selectedModel,
-                        llmReasoningEffort: nextEffort,
-                        parallelGeneration,
-                        fitTolerance: tolerance,
-                        testMode,
-                      });
-                    }}
-                  />
-                  <div
-                    aria-hidden="true"
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
-                      isReasoningEnabled
-                        ? 'bg-success/80'
-                        : 'bg-gray-600 group-hover:bg-gray-500'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                        isReasoningEnabled
-                          ? 'translate-x-5.5'
-                          : 'translate-x-0.5'
-                      }`}
-                    />
-                  </div>
-                </label>
-              </div>
+              <ToggleRow
+                label="Reasoning"
+                description={reasoningDescription}
+                checked={isReasoningEnabled}
+                disabled={isReasoningLockedOn}
+                onChange={() => {
+                  if (isReasoningLockedOn) return;
+                  const nextEffort = isReasoningEnabled
+                    ? 'none'
+                    : resolvedReasoningEffort === 'none'
+                      ? 'medium'
+                      : resolvedReasoningEffort;
+                  emit({ llmReasoningEffort: nextEffort });
+                }}
+              />
             )}
             {shouldShowReasoningEffortSelect && (
               <div className="flex flex-col gap-2">
@@ -289,17 +308,8 @@ export const Settings = ({
                     onChange={(event) => {
                       const nextEffort = event.target
                         .value as LLMReasoningEffort;
-                      if (!reasoningOptions.includes(nextEffort)) {
-                        return;
-                      }
-                      onChange({
-                        llmProvider: selectedProvider,
-                        llmModel: selectedModel,
-                        llmReasoningEffort: nextEffort,
-                        parallelGeneration,
-                        fitTolerance: tolerance,
-                        testMode,
-                      });
+                      if (!reasoningOptions.includes(nextEffort)) return;
+                      emit({ llmReasoningEffort: nextEffort });
                     }}
                   >
                     {reasoningOptions.map((option) => (
@@ -320,88 +330,18 @@ export const Settings = ({
                 Advanced
               </span>
             </div>
-            <div className="border-border flex items-center justify-between rounded-lg border bg-gray-800/40 px-3 py-2">
-              <div>
-                <div className="text-text text-sm">Parallel Generation</div>
-                <div className="text-text-subtle text-xs">
-                  Run all requests concurrently
-                </div>
-              </div>
-              <label className="group inline-flex cursor-pointer">
-                <input
-                  type="checkbox"
-                  role="switch"
-                  checked={parallelGeneration}
-                  className="sr-only"
-                  onChange={() =>
-                    onChange({
-                      llmProvider: selectedProvider,
-                      llmModel: selectedModel,
-                      llmReasoningEffort: resolvedReasoningEffort,
-                      parallelGeneration: !parallelGeneration,
-                      fitTolerance: tolerance,
-                      testMode,
-                    })
-                  }
-                />
-                <div
-                  aria-hidden="true"
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
-                    parallelGeneration
-                      ? 'bg-success/80'
-                      : 'bg-gray-600 group-hover:bg-gray-500'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                      parallelGeneration
-                        ? 'translate-x-5.5'
-                        : 'translate-x-0.5'
-                    }`}
-                  />
-                </div>
-              </label>
-            </div>
-            <div className="border-border flex items-center justify-between rounded-lg border bg-gray-800/40 px-3 py-2">
-              <div>
-                <div className="text-text text-sm">Test Mode</div>
-                <div className="text-text-subtle text-xs">
-                  Generate 5 times for benchmarking
-                </div>
-              </div>
-              <label className="group inline-flex cursor-pointer">
-                <input
-                  type="checkbox"
-                  role="switch"
-                  checked={testMode}
-                  className="sr-only"
-                  onChange={() =>
-                    onChange({
-                      llmProvider: selectedProvider,
-                      llmModel: selectedModel,
-                      llmReasoningEffort: resolvedReasoningEffort,
-                      parallelGeneration,
-                      fitTolerance: tolerance,
-                      testMode: !testMode,
-                    })
-                  }
-                />
-                <div
-                  aria-hidden="true"
-                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
-                    testMode
-                      ? 'bg-success/80'
-                      : 'bg-gray-600 group-hover:bg-gray-500'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                      testMode ? 'translate-x-5.5' : 'translate-x-0.5'
-                    }`}
-                  />
-                </div>
-              </label>
-            </div>
+            <ToggleRow
+              label="Parallel Generation"
+              description="Run all requests concurrently"
+              checked={parallelGeneration}
+              onChange={() => emit({ parallelGeneration: !parallelGeneration })}
+            />
+            <ToggleRow
+              label="Test Mode"
+              description="Generate 5 times for benchmarking"
+              checked={testMode}
+              onChange={() => emit({ testMode: !testMode })}
+            />
           </div>
 
           <div className="flex flex-col gap-3 p-5">
@@ -435,14 +375,7 @@ export const Settings = ({
                 onChange={(event) => {
                   const next = Number(event.target.value);
                   if (!Number.isFinite(next)) return;
-                  onChange({
-                    llmProvider: selectedProvider,
-                    llmModel: selectedModel,
-                    llmReasoningEffort: resolvedReasoningEffort,
-                    parallelGeneration,
-                    fitTolerance: next,
-                    testMode,
-                  });
+                  emit({ fitTolerance: next });
                 }}
                 className="corner-md [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-full cursor-pointer appearance-none bg-gray-800 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
               />

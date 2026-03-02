@@ -48,6 +48,11 @@ export class MotionManager {
     this.objectSize = objectSize;
   }
 
+  // 総再生時間を解決（上書きがあればそれを優先）
+  private resolvedDuration(computed: number): number {
+    return this.durationOverrideMs > 0 ? this.durationOverrideMs : computed;
+  }
+
   // #region メイン関数
 
   // 再生中かどうかを取得
@@ -78,8 +83,7 @@ export class MotionManager {
   ): void {
     const { states, totalDuration } = this.buildAnimationStates(paths, colors);
     this.animationStates = states;
-    this.totalDuration =
-      this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
+    this.totalDuration = this.resolvedDuration(totalDuration);
 
     const clamped = clamp(startAtMs, 0, this.totalDuration);
     this.elapsedTime = clamped;
@@ -90,8 +94,7 @@ export class MotionManager {
   public prepareAll(paths: Path[], colors: string[]): void {
     if (paths.length === 0) {
       this.animationStates = [];
-      this.totalDuration =
-        this.durationOverrideMs > 0 ? this.durationOverrideMs : 0;
+      this.totalDuration = this.resolvedDuration(0);
       if (this.elapsedTime > this.totalDuration) {
         this.elapsedTime = this.totalDuration;
       }
@@ -100,8 +103,7 @@ export class MotionManager {
 
     const { states, totalDuration } = this.buildAnimationStates(paths, colors);
     this.animationStates = states;
-    this.totalDuration =
-      this.durationOverrideMs > 0 ? this.durationOverrideMs : totalDuration;
+    this.totalDuration = this.resolvedDuration(totalDuration);
 
     if (this.elapsedTime > this.totalDuration) {
       this.elapsedTime = this.totalDuration;

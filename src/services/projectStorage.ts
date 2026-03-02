@@ -24,15 +24,18 @@ export type ProjectSummary = {
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
+// プロジェクト名を正規化（トリム＆小文字化）
 const normalizeProjectName = (name: string): string =>
   name.trim().toLowerCase();
 
+// IDBRequest を Promise にラップ
 const requestToPromise = <T>(request: IDBRequest<T>): Promise<T> =>
   new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 
+// IDBTransaction の完了を待つ
 const transactionDone = (transaction: IDBTransaction): Promise<void> =>
   new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
@@ -40,6 +43,7 @@ const transactionDone = (transaction: IDBTransaction): Promise<void> =>
     transaction.onabort = () => reject(transaction.error);
   });
 
+// IndexedDB を開く（初回はスキーマ作成、以降はキャッシュ済み Promise を返す）
 const openDatabase = (): Promise<IDBDatabase> => {
   if (dbPromise) return dbPromise;
 
@@ -83,6 +87,7 @@ const openDatabase = (): Promise<IDBDatabase> => {
   return openingPromise;
 };
 
+// StoredProjectRecord からサマリー情報のみ抽出
 const toProjectSummary = (record: StoredProjectRecord): ProjectSummary => ({
   id: record.id,
   name: record.name,
@@ -90,7 +95,8 @@ const toProjectSummary = (record: StoredProjectRecord): ProjectSummary => ({
   updatedAt: record.updatedAt,
 });
 
-export const createNewProjectId = (): string => {
+// 新規プロジェクト用のユニーク ID を生成
+const createNewProjectId = (): string => {
   if (
     typeof crypto !== 'undefined' &&
     typeof crypto.randomUUID === 'function'
@@ -100,6 +106,7 @@ export const createNewProjectId = (): string => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+// 全プロジェクトのサマリー一覧を取得（更新日時降順）
 export const listProjects = async (): Promise<ProjectSummary[]> => {
   const db = await openDatabase();
   const transaction = db.transaction(PROJECT_STORE, 'readonly');
@@ -113,6 +120,7 @@ export const listProjects = async (): Promise<ProjectSummary[]> => {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 };
 
+// ID でプロジェクトを取得（存在しなければ null）
 export const getProject = async (
   id: string,
 ): Promise<StoredProjectRecord | null> => {
@@ -126,6 +134,7 @@ export const getProject = async (
   return record ?? null;
 };
 
+// プロジェクト名で検索（正規化済み名前のユニークインデックスを使用）
 export const findProjectByName = async (
   name: string,
 ): Promise<StoredProjectRecord | null> => {
@@ -140,6 +149,7 @@ export const findProjectByName = async (
   return record ?? null;
 };
 
+// プロジェクトを保存（新規作成 or 上書き更新）
 export const saveProject = async (input: {
   id?: string;
   name: string;
@@ -178,6 +188,7 @@ export const saveProject = async (input: {
   };
 };
 
+// プロジェクトを削除（存在しなければ false）
 export const deleteProject = async (id: string): Promise<boolean> => {
   const db = await openDatabase();
   const transaction = db.transaction(PROJECT_STORE, 'readwrite');
@@ -195,6 +206,7 @@ export const deleteProject = async (id: string): Promise<boolean> => {
   return true;
 };
 
+// プロジェクト名を変更（名前の重複チェック付き）
 export const renameProject = async (input: {
   id: string;
   name: string;

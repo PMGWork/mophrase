@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { useCallback, useState } from 'react';
-import type { Path, ToolKind } from './types';
+import type { Path } from './types';
 import { removeModifier, updateModifierStrength } from './utils/modifier';
 import { clamp } from './utils/number';
 import { Canvas } from './components/Canvas';
@@ -76,14 +76,6 @@ const App = () => {
     updateSuggestionUI();
   };
 
-  // ツール選択ハンドラ
-  const handleToolSelect = useCallback(
-    (tool: ToolKind) => {
-      setSketchTool(tool);
-    },
-    [setSketchTool],
-  );
-
   // 時間変更ハンドラ
   const handleTimeChange = useCallback(
     (field: 'startTime' | 'duration', value: number) => {
@@ -118,32 +110,16 @@ const App = () => {
     (modifierId: string, type: 'sketch' | 'graph') => {
       applyPathUpdate((path) => {
         if (type === 'sketch') {
-          const target = path.sketchModifiers?.find(
-            (modifier) => modifier.id === modifierId,
-          );
-          if (target) target.strength = 0;
           path.sketchModifiers = removeModifier(
             path.sketchModifiers,
             modifierId,
           );
         } else {
-          const target = path.graphModifiers?.find(
-            (modifier) => modifier.id === modifierId,
-          );
-          if (target) target.strength = 0;
           path.graphModifiers = removeModifier(path.graphModifiers, modifierId);
         }
       });
     },
     [applyPathUpdate],
-  );
-
-  // 設定変更ハンドラ
-  const handleConfigChange = useCallback(
-    (next: Parameters<typeof updateConfig>[0]) => {
-      updateConfig(next);
-    },
-    [updateConfig],
   );
 
   const hasGraphPath = (activePath?.keyframes?.length ?? 0) >= 2;
@@ -155,7 +131,7 @@ const App = () => {
         hasUnsavedChanges={hasUnsavedChanges}
         selectedTool={selectedTool}
         canDeleteActivePath={activePath !== null}
-        onSelectTool={handleToolSelect}
+        onSelectTool={setSketchTool}
         onDeleteActivePath={deleteActivePath}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSave={saveProject}
@@ -205,7 +181,7 @@ const App = () => {
         isOpen={isSettingsOpen}
         config={config}
         onClose={() => setIsSettingsOpen(false)}
-        onChange={handleConfigChange}
+        onChange={updateConfig}
       />
       <ProjectLibraryModal
         isOpen={isProjectLibraryOpen}

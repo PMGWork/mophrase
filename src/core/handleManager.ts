@@ -19,22 +19,36 @@ import { applySketchModifiers } from '../utils/modifier';
 // ハンドル位置情報（曲線インデックスと制御点インデックス）
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
 
+// 座標変換関数の型（p5.Vector の x/y のみ使用）
+type PointXY = { x: number; y: number };
+type CoordTransform = (x: number, y: number) => PointXY;
+
 // ハンドルの制御クラス
 export class HandleManager {
   private draggedHandle: HandleSelection | null = null; // ドラッグ中のハンドル
   private selectedHandles: HandleSelection[] = []; // 選択中のハンドル
 
   private getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[]; // パスの取得関数
-  private pixelToNorm: (x: number, y: number) => p5.Vector; // ピクセル座標を正規化座標に変換
-  private normToPixel: (x: number, y: number) => p5.Vector; // 正規化座標をピクセル座標に変換
+  private pixelToNorm: CoordTransform; // ピクセル座標を正規化座標に変換
+  private normToPixel: CoordTransform; // 正規化座標をピクセル座標に変換
+
+  // HandleSelection の一致判定
+  private static matchesHandle(
+    a: HandleSelection,
+    b: HandleSelection,
+  ): boolean {
+    return (
+      a.pathIndex === b.pathIndex &&
+      a.keyframeIndex === b.keyframeIndex &&
+      a.handleType === b.handleType
+    );
+  }
 
   // コンストラクタ
   constructor(
     getPaths: () => Pick<Path, 'keyframes' | 'sketchModifiers'>[],
-    pixelToNorm: (x: number, y: number) => p5.Vector = (x, y) =>
-      ({ x, y }) as p5.Vector,
-    normToPixel: (x: number, y: number) => p5.Vector = (x, y) =>
-      ({ x, y }) as p5.Vector,
+    pixelToNorm: CoordTransform = (x, y) => ({ x, y }),
+    normToPixel: CoordTransform = (x, y) => ({ x, y }),
   ) {
     this.getPaths = getPaths;
     this.pixelToNorm = pixelToNorm;
@@ -58,10 +72,7 @@ export class HandleManager {
       if (this.isSelected(handle)) {
         // 既に選択されている場合は選択解除
         this.selectedHandles = this.selectedHandles.filter(
-          (h) =>
-            h.pathIndex !== handle.pathIndex ||
-            h.keyframeIndex !== handle.keyframeIndex ||
-            h.handleType !== handle.handleType,
+          (h) => !HandleManager.matchesHandle(h, handle),
         );
       } else {
         // 選択されていない場合は追加
@@ -100,11 +111,8 @@ export class HandleManager {
 
   // ハンドルが選択されているか
   isSelected(target: HandleSelection): boolean {
-    return this.selectedHandles.some(
-      (h) =>
-        h.pathIndex === target.pathIndex &&
-        h.keyframeIndex === target.keyframeIndex &&
-        h.handleType === target.handleType,
+    return this.selectedHandles.some((h) =>
+      HandleManager.matchesHandle(h, target),
     );
   }
 
