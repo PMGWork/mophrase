@@ -33,13 +33,6 @@ export interface FitCurveResult {
 
 const TANGENT_EPS = 1e-6;
 
-// ベジェ曲線の始点と終点の接ベクトルを計算する
-export function computeEndTangents(
-  points: p5.Vector[],
-): [p5.Vector, p5.Vector] {
-  return computeRangeEndTangents(points, { start: 0, end: points.length - 1 });
-}
-
 // 指定範囲の始点と終点の接ベクトルを計算する
 export function computeRangeEndTangents(
   points: p5.Vector[],

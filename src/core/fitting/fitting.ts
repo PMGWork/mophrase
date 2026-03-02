@@ -107,6 +107,12 @@ function fitSketchRecursive(
   fitError: { current: FitErrorResult },
   ranges?: FitRange[],
 ): void {
+  // フィッティング結果を確定する関数
+  const finalizeCurve = (controls: p5.Vector[]): void => {
+    curves.push(controls);
+    ranges?.push({ start: range.start, end: range.end });
+  };
+
   // パラメータを計算
   const params = parametrizeRange(points, range);
 
@@ -126,8 +132,7 @@ function fitSketchRecursive(
 
   // 許容誤差内にある場合のみ確定
   if (maxError <= errorTol) {
-    curves.push(controls);
-    ranges?.push({ start: range.start, end: range.end });
+    finalizeCurve(controls);
     return;
   }
 
@@ -148,8 +153,7 @@ function fitSketchRecursive(
 
     // 許容誤差内に収まったら確定
     if (maxError <= errorTol) {
-      curves.push(controls);
-      ranges?.push({ start: range.start, end: range.end });
+      finalizeCurve(controls);
       return;
     }
   }
@@ -157,16 +161,14 @@ function fitSketchRecursive(
   // 分割点で分割する
   const splitIndex = fitError.current.index;
   if (splitIndex <= range.start || splitIndex >= range.end) {
-    curves.push(controls);
-    ranges?.push({ start: range.start, end: range.end });
+    finalizeCurve(controls);
     return;
   }
 
   // 分割点の接ベクトルを計算
   const tangent = splitTangent(points, splitIndex, range);
   if (tangent === null) {
-    curves.push(controls);
-    ranges?.push({ start: range.start, end: range.end });
+    finalizeCurve(controls);
     return;
   }
 

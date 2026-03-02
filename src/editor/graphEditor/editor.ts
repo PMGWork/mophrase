@@ -600,21 +600,14 @@ export class GraphEditor {
   ): void {
     const current = type === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;
     if (!current) return;
+    if (current.magSq() <= 0) return;
 
     if (type === 'GRAPH_OUT') {
-      if (keyframe.graphIn) {
-        const mag = keyframe.graphIn.mag();
-        if (current.magSq() > 0) {
-          keyframe.graphIn = current.copy().normalize().mult(-mag);
-        }
-      }
+      const mag = keyframe.graphIn?.mag() ?? current.mag();
+      keyframe.graphIn = current.copy().normalize().mult(-mag);
     } else {
-      if (keyframe.graphOut) {
-        const mag = keyframe.graphOut.mag();
-        if (current.magSq() > 0) {
-          keyframe.graphOut = current.copy().normalize().mult(-mag);
-        }
-      }
+      const mag = keyframe.graphOut?.mag() ?? current.mag();
+      keyframe.graphOut = current.copy().normalize().mult(-mag);
     }
   }
 }
