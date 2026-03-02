@@ -5,6 +5,7 @@
 
 import type p5 from 'p5';
 import { BEZIER_T_STEP } from '../../constants';
+import { resolveFitToleranceFromCanvasHeight } from '../../config';
 import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
 import { bezierCurve, refineParameter } from '../../utils/bezier';
@@ -94,11 +95,17 @@ export class PenTool {
   private finalizePath(ctx: ToolContext): void {
     if (!this.draftPath) return;
 
+    const canvasHeight = ctx.dom.getCanvasSize().height;
+    const fitTolerance = resolveFitToleranceFromCanvasHeight(
+      canvasHeight,
+      ctx.config.fitTolerance,
+    );
+
     const keyframes = generateKeyframes(
       this.draftPath.points,
       this.draftPath.timestamps,
-      ctx.config.fitTolerance,
-      ctx.config.fitTolerance * ctx.config.coarseErrorWeight,
+      fitTolerance,
+      fitTolerance * ctx.config.coarseErrorWeight,
       this.draftPath.fitError,
     );
 

@@ -1,6 +1,7 @@
 import type { Config } from '../config';
 import {
   DEFAULT_CONFIG,
+  FIT_TOLERANCE_BASE_CANVAS_HEIGHT,
   FIT_TOLERANCE_MAX,
   FIT_TOLERANCE_MIN,
 } from '../config';
@@ -46,9 +47,14 @@ const migrateConfig = (
   };
 
   if (Number.isFinite(next.fitTolerance)) {
+    const tolerance =
+      (next.fitTolerance ?? FIT_TOLERANCE_MIN) > 1
+        ? (next.fitTolerance ?? FIT_TOLERANCE_MIN) /
+          FIT_TOLERANCE_BASE_CANVAS_HEIGHT
+        : (next.fitTolerance ?? FIT_TOLERANCE_MIN);
     next.fitTolerance = Math.min(
       FIT_TOLERANCE_MAX,
-      Math.max(FIT_TOLERANCE_MIN, next.fitTolerance ?? FIT_TOLERANCE_MIN),
+      Math.max(FIT_TOLERANCE_MIN, tolerance),
     );
   } else {
     next.fitTolerance = undefined;

@@ -47,6 +47,7 @@ export const Header = ({
   onImportJson,
 }: HeaderProps) => {
   const displayProjectName = projectName ?? 'Untitled';
+  const smoothPercent = (fitTolerance * 100).toFixed(1);
 
   return (
     <header className="flex w-full flex-col gap-4 px-5 py-3 md:flex-row md:items-center md:justify-between">
@@ -77,14 +78,14 @@ export const Header = ({
         <div className="bg-border mx-1 h-6 w-px" />
         <label
           className="corner-md group flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-2.5 transition-colors select-none hover:bg-gray-700"
-          title={`Sketch Smooth: ${fitTolerance}px`}
+          title={`Sketch Smooth: ${smoothPercent}% of canvas height`}
         >
           <Spline className="h-4 w-4 text-gray-300 transition-colors group-hover:text-gray-100" />
           <input
             type="range"
             min={FIT_TOLERANCE_MIN}
             max={FIT_TOLERANCE_MAX}
-            step="1"
+            step="0.001"
             value={fitTolerance}
             onChange={(event) => {
               const next = Number(event.target.value);
@@ -94,8 +95,8 @@ export const Header = ({
             className="h-1 w-14 cursor-pointer appearance-none rounded-full bg-gray-600 transition-colors group-hover:bg-gray-500 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:active:scale-110 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:active:scale-110"
             aria-label="Sketch smooth"
           />
-          <span className="text-text-muted w-5 text-right font-mono text-[11px] tabular-nums transition-colors group-hover:text-gray-200">
-            {fitTolerance}
+          <span className="text-text-muted w-11 text-right font-mono text-[11px] tabular-nums transition-colors group-hover:text-gray-200">
+            {smoothPercent}%
           </span>
         </label>
         <ToolButton
