@@ -25,12 +25,6 @@ export type ReasoningCapability =
     }
   | { mode: 'hidden'; resolve: (current: LLMReasoningEffort) => LLMReasoningEffort };
 
-const OPENAI_REASONING_OPTIONS: LLMReasoningEffort[] = [
-  'none',
-  'low',
-  'medium',
-];
-
 // LLMの推論能力に関する情報を提供する関数
 export function getReasoningCapability(
   provider: LLMProvider,
@@ -45,19 +39,9 @@ export function getReasoningCapability(
     };
   }
 
-  // OpenAI GPT-5.2: effort 3段階選択
-  if (provider === 'OpenAI' && modelId.startsWith('gpt-5.2')) {
-    return {
-      mode: 'select',
-      description: 'Select reasoning effort level',
-      options: OPENAI_REASONING_OPTIONS,
-      resolve: (cur) =>
-        OPENAI_REASONING_OPTIONS.includes(cur) ? cur : OPENAI_REASONING_OPTIONS[0],
-    };
-  }
-
-  // Google Gemini Flash / OpenRouter Claude: ON(medium)/OFF(none) トグル
+  // GPT-5.2 / Gemini Flash / OpenRouter Claude: ON(medium)/OFF(none) トグル
   const isToggleModel =
+    (provider === 'OpenAI' && modelId.startsWith('gpt-5.2')) ||
     (provider === 'Google' && modelId.includes('flash')) ||
     (provider === 'OpenRouter' && modelId.startsWith('anthropic/claude-'));
   if (isToggleModel) {

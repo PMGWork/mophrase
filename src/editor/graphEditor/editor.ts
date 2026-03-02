@@ -109,11 +109,23 @@ export class GraphEditor {
     this.p.resizeCanvas(size, size);
   }
 
-  // キャンバスを PNG data URL としてキャプチャ
+  // キャンバスを PNG data URL としてキャプチャ（LLM用にマージン付き）
   public captureCanvas(): string | null {
     if (!this.canvasElement) return null;
     try {
-      return this.canvasElement.toDataURL('image/png');
+      const src = this.canvasElement;
+      const margin = 32;
+      const w = src.width + margin * 2;
+      const h = src.height + margin * 2;
+      const offscreen = document.createElement('canvas');
+      offscreen.width = w;
+      offscreen.height = h;
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) return src.toDataURL('image/png');
+      ctx.fillStyle = this.colors.background;
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(src, margin, margin);
+      return offscreen.toDataURL('image/png');
     } catch {
       return null;
     }
