@@ -43,7 +43,7 @@ export class InputHandler {
 
   // #region ライフサイクル
 
-  /** キャンバスにアタッチしてリスナーを登録する */
+  // キャンバスにアタッチしてリスナーを登録する
   attach(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
     if (this.pointerEventsEnabled) {
@@ -52,7 +52,7 @@ export class InputHandler {
     }
   }
 
-  /** リスナーを解除してクリーンアップする */
+  // リスナーを解除してクリーンアップする
   destroy(): void {
     if (this.activePointerId !== null) {
       this.releasePointerCapture(this.activePointerId);
