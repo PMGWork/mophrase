@@ -9,6 +9,8 @@ import { clamp } from '../../utils/number';
 import { detectDiscontinuitySplitPoints } from './discontinuity';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 
+const HANDLE_EPS = 1e-6;
+
 // キーフレームを生成
 export function generateKeyframes(
   points: p5.Vector[],
@@ -124,7 +126,64 @@ export function generateKeyframes(
     }
   }
 
+  const keyframeSourcePointIndices = mapKeyframeSourcePointIndices(ranges);
+  enforceGraphContinuityOnSmoothJoints(
+    keyframes,
+    keyframeSourcePointIndices,
+    discontinuitySplitPoints,
+  );
+
   return keyframes;
+}
+
+// キーフレームが元点列のどのインデックスに対応するかを構築
+function mapKeyframeSourcePointIndices(
+  ranges: Array<{ start: number; end: number }>,
+): number[] {
+  if (ranges.length === 0) return [];
+  const indices = [ranges[0].start];
+  for (const range of ranges) indices.push(range.end);
+  return indices;
+}
+
+// スムーズな接続点のみ、graphIn/out を180度対向に補正
+function enforceGraphContinuityOnSmoothJoints(
+  keyframes: Keyframe[],
+  keyframeSourcePointIndices: number[],
+  discontinuitySplitPoints: number[],
+): void {
+  if (keyframes.length < 3) return;
+
+  const discontinuitySet = new Set(discontinuitySplitPoints);
+
+  for (let i = 1; i < keyframes.length - 1; i++) {
+    const sourcePointIndex = keyframeSourcePointIndices[i];
+    if (sourcePointIndex === undefined) continue;
+    if (discontinuitySet.has(sourcePointIndex)) continue;
+
+    const keyframe = keyframes[i];
+    const out = keyframe.graphOut;
+    const inn = keyframe.graphIn;
+    if (!out || !inn) continue;
+
+    const outLength = out.mag();
+    const inLength = inn.mag();
+    if (outLength <= HANDLE_EPS || inLength <= HANDLE_EPS) continue;
+
+    const outDir = out.copy().mult(1 / outLength);
+    const inOppDir = inn.copy().mult(-1 / inLength);
+    const blendedDir = outDir.copy().add(inOppDir);
+
+    let baseDir: p5.Vector;
+    if (blendedDir.magSq() > HANDLE_EPS * HANDLE_EPS) {
+      baseDir = blendedDir.normalize();
+    } else {
+      baseDir = outLength >= inLength ? outDir : inOppDir;
+    }
+
+    keyframe.graphOut = baseDir.copy().mult(outLength);
+    keyframe.graphIn = baseDir.copy().mult(-inLength);
+  }
 }
 
 // 累積距離を計算

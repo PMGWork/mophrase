@@ -196,6 +196,265 @@ const summarizeOpenAIOutput = (
   };
 };
 
+const stripMarkdownJsonFence = (value: string): string => {
+  const trimmed = value.trim();
+  const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fencedMatch) {
+    return fencedMatch[1].trim();
+  }
+  return trimmed;
+};
+
+const tryParseJsonText = (
+  value: string,
+): { parsed: unknown; sourceText: string } | null => {
+  const normalized = stripMarkdownJsonFence(value);
+  if (!normalized) return null;
+
+  try {
+    return { parsed: JSON.parse(normalized), sourceText: normalized };
+  } catch {
+    // JSON前後に説明文が付くケースに備えて、最外のオブジェクト/配列を再抽出する。
+    const objectStart = normalized.indexOf('{');
+    const objectEnd = normalized.lastIndexOf('}');
+    if (objectStart !== -1 && objectEnd > objectStart) {
+      const objectSlice = normalized.slice(objectStart, objectEnd + 1);
+      try {
+        return { parsed: JSON.parse(objectSlice), sourceText: objectSlice };
+      } catch {
+        // no-op
+      }
+    }
+
+    const arrayStart = normalized.indexOf('[');
+    const arrayEnd = normalized.lastIndexOf(']');
+    if (arrayStart !== -1 && arrayEnd > arrayStart) {
+      const arraySlice = normalized.slice(arrayStart, arrayEnd + 1);
+      try {
+        return { parsed: JSON.parse(arraySlice), sourceText: arraySlice };
+      } catch {
+        // no-op
+      }
+    }
+
+    return null;
+  }
+};
+
+const extractOpenRouterOutputCandidates = (data: unknown): string[] => {
+  if (!data || typeof data !== 'object') return [];
+
+  const root = data as {
+    output_text?: unknown;
+    choices?: unknown;
+  };
+
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  const pushCandidate = (value: unknown): void => {
+    if (typeof value !== 'string') return;
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    candidates.push(trimmed);
+  };
+
+  pushCandidate(root.output_text);
+  if (Array.isArray(root.output_text)) {
+    root.output_text.forEach((value) => pushCandidate(value));
+    const joined = root.output_text
+      .map((value) => (typeof value === 'string' ? value : ''))
+      .join('')
+      .trim();
+    if (joined) {
+      pushCandidate(joined);
+    }
+  }
+
+  if (!Array.isArray(root.choices)) return candidates;
+
+  root.choices.forEach((choice) => {
+    if (!choice || typeof choice !== 'object') return;
+    const choiceNode = choice as {
+      text?: unknown;
+      message?: unknown;
+    };
+    pushCandidate(choiceNode.text);
+
+    if (!choiceNode.message || typeof choiceNode.message !== 'object') return;
+    const messageNode = choiceNode.message as {
+      content?: unknown;
+      parsed?: unknown;
+      tool_calls?: unknown;
+    };
+
+    const pushContent = (content: unknown): void => {
+      if (typeof content === 'string') {
+        pushCandidate(content);
+        return;
+      }
+      if (!content || typeof content !== 'object') return;
+      const contentNode = content as {
+        text?: unknown;
+        output_text?: unknown;
+        arguments?: unknown;
+        parsed?: unknown;
+        json?: unknown;
+      };
+      pushCandidate(contentNode.text);
+      pushCandidate(contentNode.output_text);
+      pushCandidate(contentNode.arguments);
+      if (contentNode.parsed && typeof contentNode.parsed === 'object') {
+        pushCandidate(JSON.stringify(contentNode.parsed));
+      }
+      if (contentNode.json && typeof contentNode.json === 'object') {
+        pushCandidate(JSON.stringify(contentNode.json));
+      }
+    };
+
+    if (Array.isArray(messageNode.content)) {
+      messageNode.content.forEach((part) => pushContent(part));
+      const joined = messageNode.content
+        .map((part) => {
+          if (typeof part === 'string') return part;
+          if (!part || typeof part !== 'object') return '';
+          const textValue = (part as { text?: unknown }).text;
+          return typeof textValue === 'string' ? textValue : '';
+        })
+        .join('')
+        .trim();
+      if (joined) {
+        pushCandidate(joined);
+      }
+    } else {
+      pushContent(messageNode.content);
+    }
+
+    if (messageNode.parsed && typeof messageNode.parsed === 'object') {
+      pushCandidate(JSON.stringify(messageNode.parsed));
+    }
+
+    if (Array.isArray(messageNode.tool_calls)) {
+      messageNode.tool_calls.forEach((toolCall) => {
+        if (!toolCall || typeof toolCall !== 'object') return;
+        const functionNode = (toolCall as { function?: unknown }).function;
+        if (!functionNode || typeof functionNode !== 'object') return;
+        pushCandidate((functionNode as { arguments?: unknown }).arguments);
+      });
+    }
+  });
+
+  return candidates;
+};
+
+const summarizeOpenRouterOutput = (
+  data: unknown,
+): {
+  choiceCount: number;
+  finishReasons: string[];
+  messageContentKinds: string[];
+  hasToolCalls: boolean;
+  hasChoiceText: boolean;
+} => {
+  if (!data || typeof data !== 'object') {
+    return {
+      choiceCount: 0,
+      finishReasons: [],
+      messageContentKinds: [],
+      hasToolCalls: false,
+      hasChoiceText: false,
+    };
+  }
+
+  const root = data as { choices?: unknown };
+  if (!Array.isArray(root.choices)) {
+    return {
+      choiceCount: 0,
+      finishReasons: [],
+      messageContentKinds: [],
+      hasToolCalls: false,
+      hasChoiceText: false,
+    };
+  }
+
+  const finishReasons = new Set<string>();
+  const messageContentKinds = new Set<string>();
+  let hasToolCalls = false;
+  let hasChoiceText = false;
+
+  root.choices.forEach((choice) => {
+    if (!choice || typeof choice !== 'object') return;
+    const choiceNode = choice as {
+      finish_reason?: unknown;
+      text?: unknown;
+      message?: unknown;
+    };
+
+    if (typeof choiceNode.finish_reason === 'string') {
+      finishReasons.add(choiceNode.finish_reason);
+    }
+    if (typeof choiceNode.text === 'string' && choiceNode.text.trim()) {
+      hasChoiceText = true;
+    }
+
+    if (!choiceNode.message || typeof choiceNode.message !== 'object') return;
+    const messageNode = choiceNode.message as {
+      content?: unknown;
+      tool_calls?: unknown;
+    };
+
+    if (
+      Array.isArray(messageNode.tool_calls) &&
+      messageNode.tool_calls.length > 0
+    ) {
+      hasToolCalls = true;
+    }
+
+    if (Array.isArray(messageNode.content)) {
+      messageContentKinds.add('array');
+      messageNode.content.forEach((part) => {
+        if (!part || typeof part !== 'object') {
+          if (typeof part === 'string' && part.trim()) {
+            messageContentKinds.add('string_part');
+          }
+          return;
+        }
+        const partType = (part as { type?: unknown }).type;
+        if (typeof partType === 'string') {
+          messageContentKinds.add(partType);
+          return;
+        }
+        if (typeof (part as { text?: unknown }).text === 'string') {
+          messageContentKinds.add('text');
+          return;
+        }
+        messageContentKinds.add('object_part');
+      });
+      return;
+    }
+
+    if (typeof messageNode.content === 'string' && messageNode.content.trim()) {
+      messageContentKinds.add('string');
+      return;
+    }
+    if (messageNode.content === null) {
+      messageContentKinds.add('null');
+      return;
+    }
+    if (messageNode.content !== undefined) {
+      messageContentKinds.add(typeof messageNode.content);
+    }
+  });
+
+  return {
+    choiceCount: root.choices.length,
+    finishReasons: Array.from(finishReasons),
+    messageContentKinds: Array.from(messageContentKinds),
+    hasToolCalls,
+    hasChoiceText,
+  };
+};
+
 // OpenAIによる生成
 const generateWithOpenAI = async (
   env: Env,
@@ -504,30 +763,39 @@ const generateWithOpenRouter = async (
     };
   }
 
-  const rawContent = data.choices?.[0]?.message?.content;
-  const outputText =
-    typeof rawContent === 'string'
-      ? rawContent
-      : Array.isArray(rawContent)
-        ? rawContent
-            .map((part) => (typeof part?.text === 'string' ? part.text : ''))
-            .join('')
-        : '';
-
-  if (!outputText) {
+  const outputCandidates = extractOpenRouterOutputCandidates(data);
+  if (outputCandidates.length === 0) {
     return {
       status: 500,
-      body: { error: 'OpenRouter response has no output text.' },
+      body: {
+        error: 'OpenRouter response has no output text.',
+        details: summarizeOpenRouterOutput(data),
+      },
     };
   }
 
   const t3 = nowMs();
-  const parsed = JSON.parse(outputText);
+  const parsedResult = outputCandidates
+    .map((candidate) => tryParseJsonText(candidate))
+    .find((value) => value !== null);
   const t4 = nowMs();
+  if (!parsedResult) {
+    return {
+      status: 500,
+      body: {
+        error: 'OpenRouter response has no valid JSON output.',
+        details: {
+          ...summarizeOpenRouterOutput(data),
+          candidateCount: outputCandidates.length,
+          firstCandidatePreview: outputCandidates[0].slice(0, 200),
+        },
+      },
+    };
+  }
 
   return {
     status: 200,
-    body: parsed,
+    body: parsedResult.parsed,
     meta: {
       provider: 'OpenRouter',
       model,
@@ -535,7 +803,7 @@ const generateWithOpenRouter = async (
       jsonDecodeMs: t2 - t1,
       outputParseMs: t4 - t3,
       totalMs: t4 - t0,
-      outputChars: outputText.length,
+      outputChars: parsedResult.sourceText.length,
     },
   };
 };
