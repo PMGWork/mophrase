@@ -251,7 +251,7 @@ export const Settings = ({
                   />
                   <div
                     aria-hidden="true"
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
                       isReasoningEnabled
                         ? 'bg-success/80'
                         : 'bg-gray-600 group-hover:bg-gray-500'
@@ -260,7 +260,7 @@ export const Settings = ({
                     <span
                       className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
                         isReasoningEnabled
-                          ? 'translate-x-[22px]'
+                          ? 'translate-x-5.5'
                           : 'translate-x-0.5'
                       }`}
                     />
@@ -341,7 +341,7 @@ export const Settings = ({
                 />
                 <div
                   aria-hidden="true"
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
                     parallelGeneration
                       ? 'bg-success/80'
                       : 'bg-gray-600 group-hover:bg-gray-500'
@@ -350,7 +350,7 @@ export const Settings = ({
                   <span
                     className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
                       parallelGeneration
-                        ? 'translate-x-[22px]'
+                        ? 'translate-x-5.5'
                         : 'translate-x-0.5'
                     }`}
                   />
@@ -383,7 +383,7 @@ export const Settings = ({
                 />
                 <div
                   aria-hidden="true"
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
                     testMode
                       ? 'bg-success/80'
                       : 'bg-gray-600 group-hover:bg-gray-500'
@@ -391,7 +391,7 @@ export const Settings = ({
                 >
                   <span
                     className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                      testMode ? 'translate-x-[22px]' : 'translate-x-0.5'
+                      testMode ? 'translate-x-5.5' : 'translate-x-0.5'
                     }`}
                   />
                 </div>
