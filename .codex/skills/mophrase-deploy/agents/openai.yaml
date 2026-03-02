@@ -1,0 +1,4 @@
+interface:
+  display_name: "MoPhrase Deploy"
+  short_description: "MoPhraseのCloudflare Workersデプロイ手順を実行するSkill"
+  default_prompt: "Use $mophrase-deploy to run pnpm install, pnpm build, and deploy with wrangler config worker/wrangler.toml."

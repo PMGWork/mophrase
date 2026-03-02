@@ -71,6 +71,16 @@ pnpm dev:worker
 pnpm build
 ```
 
+### Cloudflare Workers へのデプロイ
+
+```bash
+# フロントをビルド
+pnpm build
+
+# Worker をデプロイ（ルートの wrangler.jsonc を使用）
+pnpx wrangler deploy
+```
+
 ### リント・フォーマット
 
 ```bash
