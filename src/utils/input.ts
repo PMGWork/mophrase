@@ -40,6 +40,16 @@ export type EditorPointerInput = {
   isPrimary: boolean;
 };
 
+function isIPadDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+
+  const userAgent = navigator.userAgent;
+  if (/iPad/i.test(userAgent)) return true;
+
+  // iPadOS 13+ は desktop UA を返すことがあるため、platform とタッチ点数で補完する。
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+}
+
 export function toCanvasPoint(
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
   canvas: HTMLCanvasElement,
@@ -72,6 +82,10 @@ export function toEditorPointerInput(
 }
 
 export function isPrimaryEditingPointer(input: EditorPointerInput): boolean {
+  if (isIPadDevice() && input.pointerType !== 'pen') {
+    return false;
+  }
+
   if (input.pointerType === 'mouse') {
     return input.button === 0 || (input.buttons & 1) === 1;
   }
