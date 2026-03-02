@@ -133,6 +133,18 @@ export function generateKeyframes(
     discontinuitySplitPoints,
   );
 
+  // 不連続ポイントのキーフレームにコーナーフラグを設定
+  const discontinuitySet = new Set(discontinuitySplitPoints);
+  for (let i = 1; i < keyframes.length - 1; i++) {
+    const sourcePointIndex = keyframeSourcePointIndices[i];
+    if (
+      sourcePointIndex !== undefined &&
+      discontinuitySet.has(sourcePointIndex)
+    ) {
+      keyframes[i].corner = true;
+    }
+  }
+
   return keyframes;
 }
 

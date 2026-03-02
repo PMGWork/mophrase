@@ -96,6 +96,7 @@ function serializeKeyframes(
       time: roundNormalizedValue(keyframe.time),
       sketchIn: serializeHandle(inHandle, anchor, diag),
       sketchOut: serializeHandle(outHandle, anchor, diag),
+      ...(keyframe.corner ? { corner: true } : {}),
     };
   });
 

@@ -507,6 +507,7 @@ export class HandleManager {
     type: HandleType,
   ): void {
     if (type === 'ANCHOR') return;
+    if (keyframe.corner) return;
 
     const oppositeType: HandleType =
       type === 'SKETCH_IN' ? 'SKETCH_OUT' : 'SKETCH_IN';

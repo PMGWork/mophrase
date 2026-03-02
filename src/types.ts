@@ -49,6 +49,7 @@ export interface Keyframe {
   sketchOut?: p5.Vector;
   graphIn?: p5.Vector;
   graphOut?: p5.Vector;
+  corner?: boolean;
 }
 
 // 描画パス情報
@@ -110,6 +111,7 @@ export interface SerializedKeyframe {
   sketchOut?: SerializedHandle | null;
   graphIn?: SerializedHandle | null;
   graphOut?: SerializedHandle | null;
+  corner?: boolean;
 }
 
 // シリアライズされたパスのバウンディングボックス

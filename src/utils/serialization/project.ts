@@ -303,6 +303,7 @@ export function deserializePaths(
           bboxX + keyframe.x * width,
           bboxY + keyframe.y * height,
         ),
+        ...(keyframe.corner ? { corner: true } : {}),
       };
     });
 
