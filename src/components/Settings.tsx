@@ -19,15 +19,20 @@ const OPENAI_REASONING_OPTIONS: LLMReasoningEffort[] = [
 const isOpenAIGpt52Model = (provider: LLMProvider, modelId: string): boolean =>
   provider === 'OpenAI' && modelId.startsWith('gpt-5.2');
 
-const isGoogleGemini3FlashModel = (
+const isGoogleGemini3Model = (
   provider: LLMProvider,
   modelId: string,
-): boolean => provider === 'Google' && modelId.startsWith('gemini-3-flash');
+): boolean => provider === 'Google' && modelId.startsWith('gemini-3');
 
-const isCerebrasGptOssModel = (
+const isOpenRouterClaudeModel = (
   provider: LLMProvider,
   modelId: string,
-): boolean => provider === 'Cerebras' && modelId === 'gpt-oss-120b';
+): boolean =>
+  provider === 'OpenRouter' && modelId.startsWith('anthropic/claude-');
+
+const isCerebrasModel = (
+  provider: LLMProvider,
+): boolean => provider === 'Cerebras';
 
 const getReasoningOptions = (
   provider: LLMProvider,
@@ -44,12 +49,13 @@ const resolveReasoningEffort = (
   modelId: string,
   effort: LLMReasoningEffort,
 ): LLMReasoningEffort => {
-  if (isCerebrasGptOssModel(provider, modelId)) {
+  if (isCerebrasModel(provider)) {
     return 'medium';
   }
   if (
     isOpenAIGpt52Model(provider, modelId) ||
-    isGoogleGemini3FlashModel(provider, modelId)
+    isGoogleGemini3Model(provider, modelId) ||
+    isOpenRouterClaudeModel(provider, modelId)
   ) {
     return effort === 'none' ? 'none' : 'medium';
   }
@@ -89,17 +95,20 @@ export const Settings = ({
     selectedModel,
     reasoningEffort,
   );
-  const isReasoningLockedOn = isCerebrasGptOssModel(
-    selectedProvider,
-    selectedModel,
-  );
+  const isReasoningLockedOn = isCerebrasModel(selectedProvider);
   const isReasoningToggleVisible =
     isReasoningLockedOn ||
     isOpenAIGpt52Model(selectedProvider, selectedModel) ||
-    isGoogleGemini3FlashModel(selectedProvider, selectedModel);
+    isGoogleGemini3Model(selectedProvider, selectedModel) ||
+    isOpenRouterClaudeModel(selectedProvider, selectedModel);
   const isReasoningEnabled = isReasoningLockedOn
     ? true
     : isReasoningToggleVisible && resolvedReasoningEffort !== 'none';
+  const reasoningDescription = isReasoningLockedOn
+    ? selectedProvider === 'Cerebras'
+      ? 'Always enabled (fixed to medium for Cerebras)'
+      : 'Always enabled for this model'
+    : 'Enable advanced reasoning';
   const shouldShowReasoningEffortSelect =
     reasoningOptions.length > 0 && !isReasoningToggleVisible;
   const parallelGeneration = config?.parallelGeneration ?? false;
@@ -205,9 +214,7 @@ export const Settings = ({
                 <div>
                   <div className="text-text text-sm">Reasoning</div>
                   <div className="text-text-subtle text-xs">
-                    {isReasoningLockedOn
-                      ? 'Always enabled for this model'
-                      : 'Enable advanced reasoning'}
+                    {reasoningDescription}
                   </div>
                 </div>
                 <label

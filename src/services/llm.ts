@@ -128,7 +128,7 @@ export async function generateStructured<T>(
 ): Promise<T> {
   const config = PROVIDERS[provider];
   if (!config) {
-    throw new Error(`サポートされていないLLMプロバイダ: ${provider}`);
+    throw new Error(`Unsupported LLM provider: ${provider}`);
   }
 
   const actualModel = model ?? config.defaultModel;

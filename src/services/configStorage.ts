@@ -29,7 +29,7 @@ const migrateConfig = (
       : {}),
   };
 
-  if (next.llmProvider === 'Cerebras' && next.llmModel === 'gpt-oss-120b') {
+  if (next.llmProvider === 'Cerebras') {
     return {
       ...next,
       llmReasoningEffort: 'medium',

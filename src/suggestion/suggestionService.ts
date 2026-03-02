@@ -121,7 +121,10 @@ const fetchSuggestionsInParallel = async (
     const firstRejected = settled.find(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
     );
-    throw firstRejected?.reason ?? new Error('提案の並列生成に失敗しました。');
+    throw (
+      firstRejected?.reason ??
+      new Error('Parallel suggestion generation failed.')
+    );
   }
 
   return fulfilled;
@@ -144,17 +147,17 @@ function buildPrompt(
   const promptParts = [basePrompt];
 
   if (promptHistory.length > 0) {
-    promptParts.push('', '## ユーザー指示の履歴');
+    promptParts.push('', '## Instruction History');
 
     promptHistory.forEach((p, i) => {
       const isLatest = i === promptHistory.length - 1;
-      const label = isLatest ? '現在の指示' : `指示${i + 1}`;
+      const label = isLatest ? 'Current Instruction' : `Instruction ${i + 1}`;
       promptParts.push(`- **${label}**: ${p}`);
     });
 
     promptParts.push(
       '',
-      '上記の履歴を踏まえ、特に最新の「現在の指示」に従ってパスを修正してください。',
+      'Based on the instruction history above, update the path by prioritizing the latest "Current Instruction".',
     );
   }
 

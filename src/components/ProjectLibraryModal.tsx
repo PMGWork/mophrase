@@ -65,7 +65,7 @@ export const ProjectLibraryModal = ({
         <div className="max-h-[55vh] overflow-y-auto p-3">
           {projects.length === 0 ? (
             <div className="text-text-subtle px-2 py-8 text-center text-sm">
-              保存済みプロジェクトはありません。
+              No saved projects yet.
             </div>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -88,7 +88,7 @@ export const ProjectLibraryModal = ({
                     <button
                       className="hover:text-danger focus-visible:ring-border inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-400 transition-colors focus:outline-none focus-visible:ring-1"
                       onClick={() => onDeleteProject(project.id, project.name)}
-                      aria-label={`${project.name} を削除`}
+                      aria-label={`Delete ${project.name}`}
                       title="Delete Project"
                     >
                       <Trash2 className="h-4 w-4" />

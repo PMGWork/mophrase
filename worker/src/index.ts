@@ -13,10 +13,12 @@ type Env = {
 type Provider = 'OpenAI' | 'Cerebras' | 'OpenRouter' | 'Google';
 type OpenAIReasoningEffort = 'none' | 'low' | 'medium';
 type CerebrasReasoningEffort = 'medium';
+type OpenRouterReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 type GoogleReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 type ReasoningEffort =
   | OpenAIReasoningEffort
   | CerebrasReasoningEffort
+  | OpenRouterReasoningEffort
   | GoogleReasoningEffort;
 
 // LLM生成リクエストの型定義
@@ -64,6 +66,11 @@ const isOpenAIReasoningEffort = (
 const isGoogleReasoningEffort = (
   value: unknown,
 ): value is GoogleReasoningEffort =>
+  value === 'none' || value === 'low' || value === 'medium' || value === 'high';
+
+const isOpenRouterReasoningEffort = (
+  value: unknown,
+): value is OpenRouterReasoningEffort =>
   value === 'none' || value === 'low' || value === 'medium' || value === 'high';
 
 const isOpenRouterAnthropicModel = (model: string): boolean =>
@@ -223,42 +230,70 @@ const generateWithCerebras = async (
   }
 
   const sanitizedSchema = sanitizeSchemaForCerebras(schema);
-  const requestBody: Record<string, unknown> = {
-    model,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 1.0,
-    top_p: 0.95,
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'schema',
-        strict: true,
-        schema: sanitizedSchema,
+  const runRequest = async (
+    targetModel: string,
+  ): Promise<{
+    response: Response;
+    data: unknown;
+    t0: number;
+    t1: number;
+    t2: number;
+    model: string;
+  }> => {
+    const requestBody: Record<string, unknown> = {
+      model: targetModel,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 1.0,
+      top_p: 0.95,
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'schema',
+          strict: true,
+          schema: sanitizedSchema,
+        },
       },
-    },
-  };
-  requestBody.reasoning_effort = 'medium';
+    };
+    requestBody.reasoning_effort = 'medium';
 
-  const t0 = nowMs();
-  const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  });
-  const t1 = nowMs();
-  const data = await response.json();
-  const t2 = nowMs();
-  if (!response.ok) {
+    const t0 = nowMs();
+    const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    const t1 = nowMs();
+    const data = await response.json();
+    const t2 = nowMs();
+    return { response, data, t0, t1, t2, model: targetModel };
+  };
+
+  const result = await runRequest(model);
+
+  if (!result.response.ok) {
     return {
-      status: toContentfulStatus(response.status),
-      body: { error: data },
+      status: toContentfulStatus(result.response.status),
+      body: { error: result.data },
     };
   }
 
-  const outputText = data.choices?.[0]?.message?.content;
+  const rawOutputText =
+    result.data &&
+    typeof result.data === 'object' &&
+    Array.isArray((result.data as { choices?: unknown[] }).choices)
+      ? (
+          (
+            result.data as {
+              choices: Array<{ message?: { content?: unknown } }>;
+            }
+          ).choices[0]?.message?.content ?? ''
+        )
+      : '';
+  const outputText =
+    typeof rawOutputText === 'string' ? rawOutputText : '';
   if (!outputText) {
     return {
       status: 500,
@@ -275,11 +310,11 @@ const generateWithCerebras = async (
     body: parsed,
     meta: {
       provider: 'Cerebras',
-      model,
-      upstreamMs: t1 - t0,
-      jsonDecodeMs: t2 - t1,
+      model: result.model,
+      upstreamMs: result.t1 - result.t0,
+      jsonDecodeMs: result.t2 - result.t1,
       outputParseMs: t4 - t3,
-      totalMs: t4 - t0,
+      totalMs: t4 - result.t0,
       outputChars: outputText.length,
     },
   };
@@ -291,6 +326,7 @@ const generateWithOpenRouter = async (
   model: string,
   prompt: string,
   schema: Record<string, unknown>,
+  reasoningEffort?: OpenRouterReasoningEffort,
 ): Promise<ProviderResult> => {
   const apiKey = env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -315,6 +351,17 @@ const generateWithOpenRouter = async (
       only: ['anthropic'],
       require_parameters: true,
     };
+    if (reasoningEffort === 'none') {
+      requestBody.reasoning = {
+        enabled: false,
+        effort: 'none',
+      };
+    } else {
+      requestBody.reasoning = {
+        enabled: true,
+        effort: reasoningEffort ?? 'medium',
+      };
+    }
   } else if (isOpenRouterGoogleModel(model)) {
     requestBody.provider = {
       only: ['google'],
@@ -525,6 +572,11 @@ app.post('/api/llm/generate', async (c) => {
   const resolvedOpenAIReasoningEffort = isOpenAIReasoningEffort(reasoningEffort)
     ? reasoningEffort
     : undefined;
+  const resolvedOpenRouterReasoningEffort = isOpenRouterReasoningEffort(
+    reasoningEffort,
+  )
+    ? reasoningEffort
+    : undefined;
   const resolvedGoogleReasoningEffort = isGoogleReasoningEffort(reasoningEffort)
     ? reasoningEffort
     : undefined;
@@ -582,7 +634,13 @@ app.post('/api/llm/generate', async (c) => {
     }
 
     if (provider === 'OpenRouter') {
-      const result = await generateWithOpenRouter(c.env, model, prompt, schema);
+      const result = await generateWithOpenRouter(
+        c.env,
+        model,
+        prompt,
+        schema,
+        resolvedOpenRouterReasoningEffort,
+      );
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
         c.header('x-llm-provider', result.meta.provider);

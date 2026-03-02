@@ -43,17 +43,17 @@ type SketchConfigUpdate = {
 };
 
 const NEW_PROJECT_CONFIRM_MESSAGE =
-  '未保存の変更があります。破棄して新規プロジェクトを作成しますか？';
+  'You have unsaved changes. Discard them and create a new project?';
 const LOAD_PROJECT_CONFIRM_MESSAGE =
-  '未保存の変更があります。破棄して別プロジェクトを読み込みますか？';
+  'You have unsaved changes. Discard them and load another project?';
 const PROJECT_SAVE_ERROR_MESSAGE =
-  'プロジェクト保存に失敗しました。ブラウザの保存領域を確認してください。';
+  'Failed to save the project. Please check available browser storage.';
 const PROJECT_LOAD_ERROR_MESSAGE =
-  'プロジェクト読込に失敗しました。再度お試しください。';
+  'Failed to load the project. Please try again.';
 const PROJECT_DELETE_ERROR_MESSAGE =
-  'プロジェクト削除に失敗しました。再度お試しください。';
+  'Failed to delete the project. Please try again.';
 const PROJECT_LIST_ERROR_MESSAGE =
-  'プロジェクト一覧の取得に失敗しました。再度お試しください。';
+  'Failed to fetch the project list. Please try again.';
 const DELETED_PROJECT_MARKER = '__deleted_project__';
 
 // エディタの結果
@@ -344,7 +344,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         if (!targetId) {
           const defaultName = targetName ?? 'Untitled';
           const promptedName = window.prompt(
-            'プロジェクト名を入力してください',
+            'Enter a project name',
             defaultName,
           );
           if (!promptedName) return;
@@ -355,7 +355,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
           const existing = await findProjectByName(trimmedName);
           if (existing) {
             const shouldOverwrite = window.confirm(
-              `「${existing.name}」は既に存在します。上書きしますか？`,
+              `"${existing.name}" already exists. Overwrite it?`,
             );
             if (!shouldOverwrite) return;
             targetId = existing.id;
@@ -418,7 +418,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         const stored = await getProject(id);
         if (!stored) {
           console.error('[loadProject] Target project is not found.', { id });
-          window.alert('選択したプロジェクトが見つかりませんでした。');
+          window.alert('The selected project was not found.');
           return;
         }
 
@@ -447,7 +447,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const deleteProjectById = useCallback(
     async (id: string, name: string): Promise<void> => {
       const shouldDelete = window.confirm(
-        `「${name}」を削除します。元に戻せません。`,
+        `Delete "${name}"? This action cannot be undone.`,
       );
       if (!shouldDelete) return;
 
@@ -455,7 +455,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         const deleted = await deleteProjectFromStorage(id);
         if (!deleted) {
           console.error('[deleteProject] Target project is not found.', { id });
-          window.alert('削除対象のプロジェクトが見つかりませんでした。');
+          window.alert('The project to delete was not found.');
           return;
         }
 
