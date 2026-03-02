@@ -26,6 +26,11 @@ export function createId(): string {
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
 
-  const hex = Array.from(bytes, (byte) => HEX_TABLE[byte]);
-  return `${hex.slice(0, 4).join('')}-${hex.slice(4, 6).join('')}-${hex.slice(6, 8).join('')}-${hex.slice(8, 10).join('')}-${hex.slice(10).join('')}`;
+  return (
+    `${HEX_TABLE[bytes[0]]}${HEX_TABLE[bytes[1]]}${HEX_TABLE[bytes[2]]}${HEX_TABLE[bytes[3]]}` +
+    `-${HEX_TABLE[bytes[4]]}${HEX_TABLE[bytes[5]]}` +
+    `-${HEX_TABLE[bytes[6]]}${HEX_TABLE[bytes[7]]}` +
+    `-${HEX_TABLE[bytes[8]]}${HEX_TABLE[bytes[9]]}` +
+    `-${HEX_TABLE[bytes[10]]}${HEX_TABLE[bytes[11]]}${HEX_TABLE[bytes[12]]}${HEX_TABLE[bytes[13]]}${HEX_TABLE[bytes[14]]}${HEX_TABLE[bytes[15]]}`
+  );
 }

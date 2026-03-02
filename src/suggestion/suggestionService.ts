@@ -24,6 +24,7 @@ type FetchSuggestionsOptions = {
   graphImageDataUrl?: string;
 };
 
+// 成功レスポンスが1件もない場合は、最初の失敗理由（なければ既定メッセージ）で例外化する。
 const throwIfNoSuggestions = (
   fulfilled: SuggestionResponse[],
   reason: unknown,
