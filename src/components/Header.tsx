@@ -95,7 +95,7 @@ export const Header = ({
             className="h-1 w-14 cursor-pointer appearance-none rounded-full bg-gray-600 transition-colors group-hover:bg-gray-500 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:active:scale-110 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:active:scale-110"
             aria-label="Sketch smooth"
           />
-          <span className="text-text-muted w-11 text-right font-mono text-[11px] tabular-nums transition-colors group-hover:text-gray-200">
+          <span className="text-text-muted w-5 text-right font-mono text-[11px] tabular-nums transition-colors group-hover:text-gray-200">
             {smoothPercent}%
           </span>
         </label>
