@@ -13,7 +13,10 @@ import type {
   SuggestionItem,
   SuggestionResponse,
 } from '../types';
-import { suggestionBatchResponseSchema, suggestionResponseSchema } from '../types';
+import {
+  suggestionBatchResponseSchema,
+  suggestionResponseSchema,
+} from '../types';
 
 // 提案を取得する際のオプション
 type FetchSuggestionsOptions = {
@@ -27,12 +30,13 @@ export async function fetchSuggestions(
   promptHistory: string[],
   options: FetchSuggestionsOptions = {},
 ): Promise<SuggestionItem[]> {
+  // 設定に応じて直列/並列用のプロンプトを切り替える。
   const parallelGeneration = config.parallelGeneration ?? false;
   const basePrompt = parallelGeneration
     ? config.suggestionPromptParallel
     : config.suggestionPrompt;
   const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
-  const requestCount = 3;
+  const parallelRequestCount = 3;
   const benchmarkRuns = 5;
   const requestSingleOnce = (): Promise<SuggestionResponse> =>
     generateStructured<SuggestionResponse>(
@@ -53,13 +57,15 @@ export async function fetchSuggestions(
 
   if (config.testMode) {
     if (parallelGeneration) {
+      // 並列モードのベンチでは単発提案を同時実行する。
       await Promise.all(
         Array.from({ length: benchmarkRuns }, () => requestSingleOnce()),
       );
     } else {
-      await Promise.all(
-        Array.from({ length: benchmarkRuns }, () => requestBatchOnce()),
-      );
+      // 直列モードのベンチでは3件バッチを逐次実行する。
+      for (let i = 0; i < benchmarkRuns; i += 1) {
+        await requestBatchOnce();
+      }
     }
 
     // テストモードの場合は結果を返さない（UIに反映しない）
@@ -69,14 +75,11 @@ export async function fetchSuggestions(
   const suggestions = parallelGeneration
     ? await fetchSingleSuggestionsInParallel(
         requestSingleOnce,
-        requestCount,
+        parallelRequestCount,
         options.onSuggestion,
       )
-    : await fetchBatchedSuggestionsInParallel(
-        requestBatchOnce,
-        requestCount,
-        options.onSuggestion,
-      );
+    : // 直列モードは1回のバッチ要求のみ実行する。
+      await fetchBatchedSuggestions(requestBatchOnce, options.onSuggestion);
 
   console.log('[llm] result:', suggestions);
 
@@ -94,19 +97,16 @@ const fetchSingleSuggestionsInParallel = async (
   });
 };
 
-// 3件レスポンスを並列取得
-const fetchBatchedSuggestionsInParallel = async (
+// 3件レスポンスを単発取得
+const fetchBatchedSuggestions = async (
   requestOnce: () => Promise<SuggestionBatchResponse>,
-  count: number,
   onSuggestion?: (suggestion: SuggestionItem) => void,
 ): Promise<SuggestionResponse[]> => {
-  const batches = await fetchInParallel(requestOnce, count, (batch) => {
-    batch.suggestions.forEach((suggestion) => {
-      onSuggestion?.(toSuggestionItem(suggestion));
-    });
+  const batch = await requestOnce();
+  batch.suggestions.forEach((suggestion) => {
+    onSuggestion?.(toSuggestionItem(suggestion));
   });
-
-  return batches.flatMap((batch) => batch.suggestions);
+  return batch.suggestions;
 };
 
 // count 件を並列実行して成功分を返す
@@ -115,6 +115,7 @@ const fetchInParallel = async <T>(
   count: number,
   onFulfilled?: (result: T) => void,
 ): Promise<T[]> => {
+  // 失敗が混在しても、成功分があればUIへ返せるように全件待つ。
   const settled = await Promise.allSettled(
     Array.from({ length: count }, () =>
       requestOnce().then((result) => {
@@ -136,9 +137,8 @@ const fetchInParallel = async <T>(
   });
 
   if (fulfilled.length === 0) {
-    throw (
-      firstRejectedReason ?? new Error('提案の並列生成に失敗しました。')
-    );
+    // 全件失敗時のみエラーにする。
+    throw firstRejectedReason ?? new Error('提案の並列生成に失敗しました。');
   }
 
   return fulfilled;
