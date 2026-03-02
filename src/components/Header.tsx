@@ -5,6 +5,7 @@ import {
   PenTool,
   Save,
   Settings,
+  Spline,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -74,10 +75,11 @@ export const Header = ({
           onClick={() => onSelectTool('pen')}
         />
         <div className="bg-border mx-1 h-6 w-px" />
-        <div className="corner-md flex h-9 items-center gap-2.5 bg-gray-800 px-3 transition-colors hover:bg-gray-700">
-          <span className="text-text-subtle shrink-0 text-[11px] font-medium tracking-wider uppercase">
-            Smooth
-          </span>
+        <label
+          className="corner-md group flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-2.5 transition-colors select-none hover:bg-gray-700"
+          title={`Sketch Smooth: ${fitTolerance}px`}
+        >
+          <Spline className="h-4 w-4 text-gray-300 transition-colors group-hover:text-gray-100" />
           <input
             type="range"
             min={FIT_TOLERANCE_MIN}
@@ -89,14 +91,13 @@ export const Header = ({
               if (!Number.isFinite(next)) return;
               onChangeFitTolerance(next);
             }}
-            className="corner-md [&::-moz-range-thumb]:bg-text [&::-webkit-slider-thumb]:bg-text h-1.5 w-16 cursor-pointer appearance-none bg-gray-600/90 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full"
-            title={`Sketch Smooth: ${fitTolerance}px`}
+            className="h-1 w-14 cursor-pointer appearance-none rounded-full bg-gray-600 transition-colors group-hover:bg-gray-500 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gray-50 [&::-moz-range-thumb]:transition-transform [&::-moz-range-thumb]:active:scale-110 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gray-50 [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:active:scale-110"
             aria-label="Sketch smooth"
           />
-          <span className="text-text w-9 text-right font-mono text-xs tabular-nums">
+          <span className="text-text-muted w-5 text-right font-mono text-[11px] tabular-nums transition-colors group-hover:text-gray-200">
             {fitTolerance}
           </span>
-        </div>
+        </label>
         <ToolButton
           title="Delete Active Path"
           icon={Trash2}

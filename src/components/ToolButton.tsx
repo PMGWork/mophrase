@@ -23,7 +23,6 @@ export const ToolButton = ({
     'bg-gray-800 text-gray-300';
   const interactiveClass =
     'cursor-pointer hover:bg-gray-700 hover:text-gray-100';
-  const selectedInteractiveClass = 'hover:bg-gray-200';
   const disabledClass = 'cursor-not-allowed opacity-40';
 
   return (
@@ -33,7 +32,9 @@ export const ToolButton = ({
       className={`${baseClass} ${isSelected ? selectedClass : idleClass} ${
         disabled
           ? disabledClass
-          : `${interactiveClass} ${isSelected ? selectedInteractiveClass : ''}`
+          : isSelected
+            ? 'cursor-pointer'
+            : interactiveClass
       }`}
       onClick={onClick}
       disabled={disabled}
