@@ -83,10 +83,6 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
     defaultModel: 'gpt-oss-120b',
     models: [{ id: 'gpt-oss-120b', name: 'GPT OSS 120B' }],
   },
-  OpenRouter: {
-    defaultModel: 'anthropic/claude-opus-4.6',
-    models: [{ id: 'anthropic/claude-opus-4.6', name: 'Claude Opus 4.6' }],
-  },
   Google: {
     defaultModel: 'gemini-3-flash-preview',
     models: [{ id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' }],

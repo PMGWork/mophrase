@@ -192,6 +192,7 @@ export const Settings = ({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
                         llmReasoningEffort: effort,
+                        parallelGeneration: false,
                         graphImageEnabled: isGraphImageSupported(
                           parsed.provider,
                           parsed.modelId,
@@ -262,6 +263,7 @@ export const Settings = ({
               label="Parallel Generation"
               description="Run all requests concurrently"
               checked={parallelGeneration}
+              disabled={false}
               onChange={() => emit({ parallelGeneration: !parallelGeneration })}
             />
             <ToggleRow

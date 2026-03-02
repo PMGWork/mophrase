@@ -33,11 +33,10 @@ export function getReasoningCapability(
     };
   }
 
-  // GPT-5.2 / Gemini Flash / OpenRouter Claude: ON(medium)/OFF(none) トグル
+  // GPT-5.2 / Gemini Flash: ON(medium)/OFF(none) トグル
   const isToggleModel =
     (provider === 'OpenAI' && modelId.startsWith('gpt-5.2')) ||
-    (provider === 'Google' && modelId.includes('flash')) ||
-    (provider === 'OpenRouter' && modelId.startsWith('anthropic/claude-'));
+    (provider === 'Google' && modelId.includes('flash'));
   if (isToggleModel) {
     return {
       mode: 'toggle',

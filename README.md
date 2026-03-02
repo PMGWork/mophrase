@@ -36,18 +36,16 @@ pnpm install
 # Worker secrets
 OPENAI_API_KEY=your_openai_api_key_here
 CEREBRAS_API_KEY=your_cerebras_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Provider: "openai" or "cerebras" or "openrouter" or "google" (default: "cerebras")
+# Provider: "openai" or "cerebras" or "google" (default: "cerebras")
 VITE_PROVIDER=cerebras
 
 # Model name (optional)
-# OpenAI: gpt-4o, gpt-4o-mini など
-# Cerebras: llama3.1-8b, llama3.1-70b など
-# OpenRouter: anthropic/claude-opus-4.6 など
+# OpenAI: gpt-5.2 など
+# Cerebras: gpt-oss-120b など
 # Google AI Studio: gemini-3-flash-preview など
-VITE_MODEL=llama3.1-8b
+VITE_MODEL=gpt-oss-120b
 ```
 
 ## 開発
@@ -121,7 +119,7 @@ docs/               # ドキュメント
 - **フロントエンド**: React, TypeScript, Vite, Tailwind CSS
 - **グラフィックス**: p5.js
 - **状態管理**: React Hooks
-- **LLM**: OpenAI / Cerebras / OpenRouter / Google AI Studio API
+- **LLM**: OpenAI / Cerebras / Google AI Studio API
 - **バックエンド**: Cloudflare Workers
 
 ## ライセンス

@@ -40,6 +40,9 @@ export async function fetchSuggestions(
   const imageDataUrl = options.graphImageDataUrl;
   const parallelRequestCount = 3;
   const benchmarkRuns = 5;
+  const requiresSingleResponseSchema = config.llmProvider === 'Google';
+  const useSingleResponseSchema =
+    parallelGeneration || requiresSingleResponseSchema;
   const requestSingleWithSlot = (slotIndex: number): Promise<SuggestionResponse> => {
     const slottedPrompt = buildPrompt(
       serializedPaths,
@@ -56,15 +59,6 @@ export async function fetchSuggestions(
       imageDataUrl,
     );
   };
-  const requestSingleOnce = (): Promise<SuggestionResponse> =>
-    generateStructured<SuggestionResponse>(
-      prompt,
-      suggestionResponseSchema,
-      config.llmProvider,
-      config.llmModel,
-      config.llmReasoningEffort,
-      imageDataUrl,
-    );
   const requestBatchOnce = (): Promise<SuggestionBatchResponse> =>
     generateStructured<SuggestionBatchResponse>(
       prompt,
@@ -76,11 +70,20 @@ export async function fetchSuggestions(
     );
 
   if (config.testMode) {
-    if (parallelGeneration) {
-      // 並列モードのベンチでは単発提案を同時実行する。
-      await Promise.all(
-        Array.from({ length: benchmarkRuns }, () => requestSingleOnce()),
-      );
+    if (useSingleResponseSchema) {
+      if (parallelGeneration) {
+        // 単発スキーマ経路の並列ベンチでは単発提案を同時実行する。
+        await Promise.all(
+          Array.from({ length: benchmarkRuns }, (_, i) =>
+            requestSingleWithSlot((i % parallelRequestCount) + 1),
+          ),
+        );
+      } else {
+        // 単発スキーマ経路の直列ベンチでは単発提案を順次実行する。
+        for (let i = 0; i < benchmarkRuns; i += 1) {
+          await requestSingleWithSlot((i % parallelRequestCount) + 1);
+        }
+      }
     } else {
       // 直列モードのベンチでは3件バッチを逐次実行する。
       for (let i = 0; i < benchmarkRuns; i += 1) {
@@ -98,6 +101,12 @@ export async function fetchSuggestions(
         parallelRequestCount,
         options.onSuggestion,
       )
+    : requiresSingleResponseSchema
+      ? await fetchSingleSuggestionsSequentiallyWithSlots(
+          requestSingleWithSlot,
+          parallelRequestCount,
+          options.onSuggestion,
+        )
     : // 直列モードは1回のバッチ要求のみ実行する。
       await fetchBatchedSuggestions(requestBatchOnce, options.onSuggestion);
 
@@ -133,6 +142,33 @@ const fetchSingleSuggestionsWithSlots = async (
   });
   if (fulfilled.length === 0) {
     throw firstRejectedReason ?? new Error('提案の並列生成に失敗しました。');
+  }
+  return fulfilled;
+};
+
+// 1件レスポンスをスロット番号付きで直列取得
+const fetchSingleSuggestionsSequentiallyWithSlots = async (
+  requestWithSlot: (slotIndex: number) => Promise<SuggestionResponse>,
+  count: number,
+  onSuggestion?: (suggestion: SuggestionItem) => void,
+): Promise<SuggestionResponse[]> => {
+  const fulfilled: SuggestionResponse[] = [];
+  let firstRejectedReason: unknown;
+
+  for (let i = 0; i < count; i += 1) {
+    try {
+      const result = await requestWithSlot(i + 1);
+      onSuggestion?.(toSuggestionItem(result));
+      fulfilled.push(result);
+    } catch (error) {
+      if (firstRejectedReason === undefined) {
+        firstRejectedReason = error;
+      }
+    }
+  }
+
+  if (fulfilled.length === 0) {
+    throw firstRejectedReason ?? new Error('提案の直列生成に失敗しました。');
   }
   return fulfilled;
 };

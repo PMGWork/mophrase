@@ -17,7 +17,6 @@ type PersistentConfigFields = Omit<
 
 // モデルマイグレーションテーブル: [fromProvider, fromModel, toProvider, toModel]
 const MODEL_MIGRATIONS: [string, string, string, string][] = [
-  ['OpenRouter', 'anthropic/claude-sonnet-4.6', 'OpenRouter', 'anthropic/claude-opus-4.6'],
   ['Google', 'gemini-2.5-flash', 'Google', 'gemini-3-flash-preview'],
 ];
 
@@ -73,16 +72,6 @@ const migrateConfig = (
   // Cerebras は推論強度を固定
   if (next.llmProvider === 'Cerebras') {
     next.llmReasoningEffort = 'medium';
-  }
-
-  // OpenRouter 上の Google モデルを Google プロバイダに移行
-  if (
-    next.llmProvider === 'OpenRouter' &&
-    typeof next.llmModel === 'string' &&
-    next.llmModel.startsWith('google/gemini-')
-  ) {
-    next.llmProvider = 'Google';
-    next.llmModel = next.llmModel.replace('google/', '');
   }
 
   const provider = next.llmProvider ?? DEFAULT_CONFIG.llmProvider;
