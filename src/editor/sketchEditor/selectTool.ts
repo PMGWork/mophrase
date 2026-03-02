@@ -14,6 +14,11 @@ import type { ToolContext } from './types';
 // 選択ツール
 export class SelectTool {
   private marqueeRect: MarqueeRect | null = null;
+  private objectSize: number = OBJECT_SIZE;
+
+  public setObjectSize(size: number): void {
+    this.objectSize = size;
+  }
 
   // #region メイン関数
 
@@ -135,7 +140,7 @@ export class SelectTool {
     const toleranceSq = tolerance * tolerance;
 
     // オブジェクト半径（クリック判定に余裕を持たせる）
-    const objectRadius = OBJECT_SIZE / 2;
+    const objectRadius = this.objectSize / 2;
     const objectRadiusSq = objectRadius * objectRadius;
 
     for (let i = ctx.paths.length - 1; i >= 0; i--) {

@@ -75,6 +75,11 @@ export class MotionManager {
     this.durationOverrideMs = durationMs;
   }
 
+  // オブジェクトサイズを更新
+  public setObjectSize(objectSize: number): void {
+    this.objectSize = objectSize;
+  }
+
   // 全パスのタイムライン再生を開始
   public startAll(
     paths: Path[],

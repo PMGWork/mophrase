@@ -5,7 +5,7 @@
 
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
-import { OBJECT_SIZE } from '../../constants';
+import { OBJECT_SIZE, resolveObjectSizeFromCanvasHeight } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import {
@@ -132,6 +132,7 @@ export class SketchEditor {
   private canvasElement: HTMLCanvasElement | null = null;
   private pointerEventsEnabled: boolean = false;
   private activePointerId: number | null = null;
+  private objectSize: number = OBJECT_SIZE;
 
   private readonly handlePointerDown = (event: PointerEvent): void => {
     this.pointerDown(event);
@@ -181,6 +182,7 @@ export class SketchEditor {
     if (!this.p) return;
     const { width, height } = this.dom.getCanvasSize();
     this.p.resizeCanvas(width, height);
+    this.updateObjectSize(height);
   }
 
   public destroy(): void {
@@ -258,8 +260,9 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.motionManager = new MotionManager(p, OBJECT_SIZE);
-    this.suggestionMotionManager = new MotionManager(p, OBJECT_SIZE);
+    this.updateObjectSize(height);
+    this.motionManager = new MotionManager(p, this.objectSize);
+    this.suggestionMotionManager = new MotionManager(p, this.objectSize);
 
     // 初期化後、プロジェクト設定を適用してフレームレートと再生時間を反映
     this.setProjectSettings(this.projectSettings);
@@ -365,7 +368,7 @@ export class SketchEditor {
             p.push();
             p.fill(color);
             p.noStroke();
-            p.circle(pos.x, pos.y, OBJECT_SIZE);
+            p.circle(pos.x, pos.y, this.objectSize);
             p.pop();
           }
         }
@@ -615,6 +618,13 @@ export class SketchEditor {
       !!target?.closest('#sketchSuggestionContainer') ||
       !!target?.closest('#sidebarContainer')
     );
+  }
+
+  private updateObjectSize(canvasHeight: number): void {
+    this.objectSize = resolveObjectSizeFromCanvasHeight(canvasHeight);
+    this.selectTool.setObjectSize(this.objectSize);
+    this.motionManager?.setObjectSize(this.objectSize);
+    this.suggestionMotionManager?.setObjectSize(this.objectSize);
   }
 
   // モーションの再生/停止をトグル
