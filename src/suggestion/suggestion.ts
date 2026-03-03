@@ -15,7 +15,6 @@ import type {
   Suggestion,
   SuggestionStatus,
 } from '../types';
-import { createId } from '../utils/id';
 import { slicePath } from '../utils/path';
 import {
   serializePaths,
@@ -291,7 +290,7 @@ export class SuggestionManager {
         // 既に別世代へ切り替わっていたら更新を破棄する。
         if (!this.isGenerationActive(currentGenerationId)) return;
         const suggestion: Suggestion = {
-          id: createId(),
+          id: globalThis.crypto.randomUUID(),
           title: item.title,
           modifierTarget: item.modifierTarget,
           confidence: item.confidence,
@@ -317,7 +316,7 @@ export class SuggestionManager {
 
       if (streamedSuggestions.length === 0) {
         const suggestions: Suggestion[] = items.map((item) => ({
-          id: createId(),
+          id: globalThis.crypto.randomUUID(),
           title: item.title,
           modifierTarget: item.modifierTarget,
           confidence: item.confidence,

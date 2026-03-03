@@ -77,8 +77,8 @@ pnpm build
 # フロントをビルド
 pnpm build
 
-# Worker をデプロイ（ルートの wrangler.jsonc を使用）
-pnpx wrangler deploy
+# Worker をデプロイ
+pnpx wrangler deploy --config worker/wrangler.toml
 ```
 
 ### リント・フォーマット

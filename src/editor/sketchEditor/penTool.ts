@@ -14,8 +14,7 @@ import {
   splitGraphModifierDeltas,
   splitSketchModifierDeltas,
 } from '../../utils/modifier';
-import { createId } from '../../utils/id';
-import { clamp } from '../../utils/number';
+import { clamp } from '../../utils/math';
 import { resolveSketchCurves } from '../../utils/path';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
@@ -116,7 +115,7 @@ export class PenTool {
     const duration = Math.max(0.01, Math.round(durationMs) / 1000);
 
     const path: Path = {
-      id: createId(),
+      id: globalThis.crypto.randomUUID(),
       keyframes,
       startTime: 0,
       duration,

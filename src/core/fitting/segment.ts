@@ -12,7 +12,7 @@ import {
   TANGENT_SAMPLE_WINDOW,
   MIN_TANGENT_DIST_SQ,
 } from '../../utils/bezier';
-import { clamp } from '../../utils/number';
+import { clamp } from '../../utils/math';
 
 // フィッティング用の範囲情報
 export interface FitRange {

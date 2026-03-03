@@ -12,15 +12,13 @@
 
   /* Border */
   --color-border: #1f2937; /* gray-800 */
-  --color-border-muted: #374151; /* gray-700 */
 
   /* Text */
   --color-text: #ffffff; /* white */
   --color-text-muted: #9ca3af; /* gray-400 */
   --color-text-subtle: #6b7280; /* gray-500 */
 
-  /* Accent & States */
-  --color-accent: #eab308; /* yellow-500 */
+  /* States */
   --color-success: #10b981; /* emerald-500 */
   --color-danger: #f87171; /* red-400 */
 

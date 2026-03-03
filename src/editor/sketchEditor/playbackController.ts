@@ -5,7 +5,7 @@
 
 import type { MotionManager } from '../../core/motionManager';
 import type { Path } from '../../types';
-import { clamp } from '../../utils/number';
+import { clamp } from '../../utils/math';
 
 // 再生コントローラー
 export class PlaybackController {

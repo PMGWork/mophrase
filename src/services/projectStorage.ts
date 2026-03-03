@@ -6,7 +6,8 @@ const PROJECT_STORE = 'projects';
 const INDEX_BY_NAME = 'by_name_normalized';
 const INDEX_BY_UPDATED_AT = 'by_updated_at';
 
-export type StoredProjectRecord = {
+// プロジェクトストレージサービス
+type StoredProjectRecord = {
   id: string;
   name: string;
   nameNormalized: string;
@@ -15,6 +16,7 @@ export type StoredProjectRecord = {
   updatedAt: number;
 };
 
+// プロジェクトのサマリー情報（ID、名前、更新日時のみ）
 export type ProjectSummary = {
   id: string;
   name: string;
@@ -22,6 +24,7 @@ export type ProjectSummary = {
   updatedAt: number;
 };
 
+// IndexedDB 接続のキャッシュ
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 // プロジェクト名を正規化（トリム＆小文字化）
@@ -96,15 +99,7 @@ const toProjectSummary = (record: StoredProjectRecord): ProjectSummary => ({
 });
 
 // 新規プロジェクト用のユニーク ID を生成
-const createNewProjectId = (): string => {
-  if (
-    typeof crypto !== 'undefined' &&
-    typeof crypto.randomUUID === 'function'
-  ) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
+const createNewProjectId = (): string => globalThis.crypto.randomUUID();
 
 // 全プロジェクトのサマリー一覧を取得（更新日時降順）
 export const listProjects = async (): Promise<ProjectSummary[]> => {

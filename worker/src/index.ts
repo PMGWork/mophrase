@@ -4,20 +4,15 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 // 環境変数の型定義
 type Env = {
   OPENAI_API_KEY?: string;
-  CEREBRAS_API_KEY?: string;
   GEMINI_API_KEY?: string;
   ASSETS?: Fetcher;
 };
 
 // サポートするLLMプロバイダの型定義
-type Provider = 'OpenAI' | 'Cerebras' | 'Google';
+type Provider = 'OpenAI' | 'Google';
 type OpenAIReasoningEffort = 'none' | 'low' | 'medium';
-type CerebrasReasoningEffort = 'medium';
 type GoogleReasoningEffort = 'none' | 'low' | 'medium' | 'high';
-type ReasoningEffort =
-  | OpenAIReasoningEffort
-  | CerebrasReasoningEffort
-  | GoogleReasoningEffort;
+type ReasoningEffort = OpenAIReasoningEffort | GoogleReasoningEffort;
 
 // LLM生成リクエストの型定義
 type LlmGenerateRequest = {
@@ -286,132 +281,6 @@ const generateWithOpenAI = async (
       jsonDecodeMs: t2 - t1,
       outputParseMs: t4 - t3,
       totalMs: t4 - t0,
-      outputChars: outputText.length,
-    },
-  };
-};
-
-// Cerebras用にスキーマから非対応フィールドを削除
-const sanitizeSchemaForCerebras = (
-  schema: Record<string, unknown>,
-): Record<string, unknown> => {
-  const sanitize = (obj: unknown): unknown => {
-    if (Array.isArray(obj)) {
-      return obj.map(sanitize);
-    }
-    if (obj && typeof obj === 'object') {
-      const result: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(obj)) {
-        // minItems, maxItems を除外
-        if (key === 'minItems' || key === 'maxItems') continue;
-        result[key] = sanitize(value);
-      }
-      return result;
-    }
-    return obj;
-  };
-  return sanitize(schema) as Record<string, unknown>;
-};
-
-// Cerebrasによる生成
-const generateWithCerebras = async (
-  env: Env,
-  model: string,
-  prompt: string,
-  schema: Record<string, unknown>,
-  _imageDataUrl?: string,
-): Promise<ProviderResult> => {
-  const apiKey = env.CEREBRAS_API_KEY;
-  if (!apiKey) {
-    return { status: 500, body: { error: 'CEREBRAS_API_KEY is not set.' } };
-  }
-
-  const sanitizedSchema = sanitizeSchemaForCerebras(schema);
-  const runRequest = async (
-    targetModel: string,
-  ): Promise<{
-    response: Response;
-    data: unknown;
-    t0: number;
-    t1: number;
-    t2: number;
-    model: string;
-  }> => {
-    const requestBody: Record<string, unknown> = {
-      model: targetModel,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 1.0,
-      top_p: 0.95,
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'schema',
-          strict: true,
-          schema: sanitizedSchema,
-        },
-      },
-    };
-    requestBody.reasoning_effort = 'medium';
-
-    const t0 = nowMs();
-    const response = await fetch(
-      'https://api.cerebras.ai/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      },
-    );
-    const t1 = nowMs();
-    const data = await response.json();
-    const t2 = nowMs();
-    return { response, data, t0, t1, t2, model: targetModel };
-  };
-
-  const result = await runRequest(model);
-
-  if (!result.response.ok) {
-    return {
-      status: toContentfulStatus(result.response.status),
-      body: { error: result.data },
-    };
-  }
-
-  const rawOutputText =
-    result.data &&
-    typeof result.data === 'object' &&
-    Array.isArray((result.data as { choices?: unknown[] }).choices)
-      ? ((
-          result.data as {
-            choices: Array<{ message?: { content?: unknown } }>;
-          }
-        ).choices[0]?.message?.content ?? '')
-      : '';
-  const outputText = typeof rawOutputText === 'string' ? rawOutputText : '';
-  if (!outputText) {
-    return {
-      status: 500,
-      body: { error: 'Cerebras response has no output text.' },
-    };
-  }
-
-  const t3 = nowMs();
-  const parsed = JSON.parse(outputText);
-  const t4 = nowMs();
-
-  return {
-    status: 200,
-    body: parsed,
-    meta: {
-      provider: 'Cerebras',
-      model: result.model,
-      upstreamMs: result.t1 - result.t0,
-      jsonDecodeMs: result.t2 - result.t1,
-      outputParseMs: t4 - t3,
-      totalMs: t4 - result.t0,
       outputChars: outputText.length,
     },
   };
@@ -722,25 +591,6 @@ app.post('/api/llm/generate', async (c) => {
         resolvedOpenAIReasoningEffort,
         imageDataUrl,
       );
-      const totalMs = nowMs() - requestStart;
-      if (result.meta) {
-        c.header('x-llm-provider', result.meta.provider);
-        c.header('x-llm-model', result.meta.model);
-        c.header('x-llm-upstream-ms', result.meta.upstreamMs.toFixed(2));
-        c.header('x-llm-json-decode-ms', result.meta.jsonDecodeMs.toFixed(2));
-        c.header('x-llm-output-parse-ms', result.meta.outputParseMs.toFixed(2));
-        c.header('x-llm-total-ms', totalMs.toFixed(2));
-        c.header('x-llm-schema-bytes', String(schemaBytes));
-        c.header('x-llm-prompt-chars', String(promptChars));
-        if (result.meta.outputChars !== undefined) {
-          c.header('x-llm-output-chars', String(result.meta.outputChars));
-        }
-      }
-      return c.json(result.body, result.status);
-    }
-
-    if (provider === 'Cerebras') {
-      const result = await generateWithCerebras(c.env, model, prompt, schema, imageDataUrl);
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
         c.header('x-llm-provider', result.meta.provider);

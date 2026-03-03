@@ -17,6 +17,7 @@ export const resolveObjectSizeFromCanvasHeight = (
   return Math.max(OBJECT_SIZE_MIN, Math.min(OBJECT_SIZE_MAX, scaled));
 };
 
+// オブジェクトの色（CSS変数）
 export const OBJECT_COLORS = [
   'var(--color-object-1)',
   'var(--color-object-2)',

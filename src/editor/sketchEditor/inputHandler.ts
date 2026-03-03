@@ -10,6 +10,14 @@ import {
   toEditorPointerInput,
 } from '../../utils/input';
 
+// ポインタイベントのオプション
+const POINTER_LISTENER_OPTIONS: AddEventListenerOptions = { passive: false };
+const IGNORE_CLICK_CONTAINERS = [
+  'form',
+  '#sketchSuggestionContainer',
+  '#sidebarContainer',
+] as const;
+
 // ツールへの入力ディスパッチインターフェース
 export interface InputDispatcher {
   getP5(): p5 | null;
@@ -21,9 +29,9 @@ export interface InputDispatcher {
 // 入力ハンドラー
 export class InputHandler {
   private canvas: HTMLCanvasElement | null = null;
-  private pointerEventsEnabled: boolean = false;
+  private readonly pointerEventsEnabled: boolean;
   private activePointerId: number | null = null;
-  private dispatcher: InputDispatcher;
+  private readonly dispatcher: InputDispatcher;
 
   constructor(dispatcher: InputDispatcher) {
     this.dispatcher = dispatcher;
@@ -31,19 +39,12 @@ export class InputHandler {
       typeof window !== 'undefined' && 'PointerEvent' in window;
   }
 
-  // #region 状態アクセス
-
+  // ポインタイベントが利用可能か
   isPointerEnabled(): boolean {
     return this.pointerEventsEnabled;
   }
 
-  getActivePointerId(): number | null {
-    return this.activePointerId;
-  }
-
-  // #region ライフサイクル
-
-  // キャンバスにアタッチしてリスナーを登録する
+  // キャンバスにリスナーをアタッチする
   attach(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
     if (this.pointerEventsEnabled) {
@@ -52,7 +53,7 @@ export class InputHandler {
     }
   }
 
-  // リスナーを解除してクリーンアップする
+  // キャンバスからリスナーをデタッチする
   destroy(): void {
     if (this.activePointerId !== null) {
       this.releasePointerCapture(this.activePointerId);
@@ -65,15 +66,12 @@ export class InputHandler {
   // #region p5.js マウスフォールバック
 
   mousePressed(p: p5): void {
-    const target = this.getClickTargetFromLocal(p.mouseX, p.mouseY);
-    if (shouldIgnoreClick(target)) return;
+    if (this.shouldIgnoreClickByLocalPoint(p.mouseX, p.mouseY)) return;
     if (!isLeftMouseButton(p.mouseButton, p.LEFT)) return;
     this.dispatcher.dispatchPress(p, p.mouseX, p.mouseY, p.keyIsDown(p.SHIFT));
   }
 
   mouseDragged(p: p5): void {
-    const p5Inst = this.dispatcher.getP5();
-    if (!p5Inst) return;
     this.dispatcher.dispatchDrag(p, p.mouseX, p.mouseY, p.keyIsDown(p.ALT));
   }
 
@@ -83,114 +81,105 @@ export class InputHandler {
 
   // #region ポインタイベント
 
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.pointerDown(event);
-  };
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    this.pointerMove(event);
-  };
-
-  private readonly handlePointerUp = (event: PointerEvent): void => {
-    this.pointerEnd(event);
-  };
-
-  private readonly handlePointerCancel = (event: PointerEvent): void => {
-    this.pointerEnd(event);
-  };
-
-  private readonly handleLostPointerCapture = (event: PointerEvent): void => {
-    this.pointerLostCapture(event);
-  };
-
-  private pointerDown(event: PointerEvent): void {
+  private readonly pointerDown = (event: PointerEvent): void => {
     if (this.activePointerId !== null) return;
-    const p = this.dispatcher.getP5();
-    if (!p) return;
-    const canvas = this.canvas;
-    if (!canvas) return;
+    const resolved = this.resolvePointerInput(event);
+    if (!resolved) return;
+    const { p, input } = resolved;
 
-    const input = toEditorPointerInput(event, canvas);
     if (!isPrimaryEditingPointer(input)) return;
 
-    const target = getClickTargetFromClient(input.clientX, input.clientY);
-    if (shouldIgnoreClick(target)) return;
+    if (
+      shouldIgnoreClick(document.elementFromPoint(input.clientX, input.clientY))
+    )
+      return;
 
     this.activePointerId = input.pointerId;
     this.capturePointer(input.pointerId);
-    if (event.cancelable) event.preventDefault();
+    this.preventDefaultIfCancelable(event);
 
     this.dispatcher.dispatchPress(p, input.x, input.y, input.shiftKey);
-  }
+  };
 
-  private pointerMove(event: PointerEvent): void {
-    if (this.activePointerId !== event.pointerId) return;
-    const p = this.dispatcher.getP5();
-    if (!p) return;
-    const canvas = this.canvas;
-    if (!canvas) return;
+  private readonly pointerMove = (event: PointerEvent): void => {
+    if (!this.isActivePointer(event.pointerId)) return;
+    const resolved = this.resolvePointerInput(event);
+    if (!resolved) return;
+    const { p, input } = resolved;
 
-    const input = toEditorPointerInput(event, canvas);
-    if (event.cancelable) event.preventDefault();
+    this.preventDefaultIfCancelable(event);
 
     this.dispatcher.dispatchDrag(p, input.x, input.y, input.altKey);
-  }
+  };
 
-  private pointerEnd(event: PointerEvent): void {
-    if (this.activePointerId !== event.pointerId) return;
-    if (event.cancelable) event.preventDefault();
+  private readonly pointerEnd = (event: PointerEvent): void => {
+    if (!this.isActivePointer(event.pointerId)) return;
+    this.preventDefaultIfCancelable(event);
+    this.finishPointerInteraction(true);
+  };
+
+  // 何らかの理由でポインタキャプチャが失われた場合の処理
+  private readonly pointerLostCapture = (event: PointerEvent): void => {
+    if (!this.isActivePointer(event.pointerId)) return;
+    this.finishPointerInteraction(false);
+  };
+
+  // ポインタ操作の終了処理。
+  private finishPointerInteraction(releaseCapture: boolean): void {
     const pointerId = this.activePointerId;
-    this.finishPointerInteraction();
-    if (pointerId !== null) {
+    if (pointerId === null) return;
+    this.dispatcher.dispatchRelease();
+    this.activePointerId = null;
+    if (releaseCapture) {
       this.releasePointerCapture(pointerId);
     }
   }
 
-  private pointerLostCapture(event: PointerEvent): void {
-    if (this.activePointerId !== event.pointerId) return;
-    this.finishPointerInteraction();
-  }
-
-  private finishPointerInteraction(): void {
-    if (this.activePointerId === null) return;
-    this.dispatcher.dispatchRelease();
-    this.activePointerId = null;
-  }
-
   // #region リスナー管理
 
+  // キャンバスに対してポインタイベントリスナーを追加する
   private addPointerListeners(): void {
     if (!this.pointerEventsEnabled || !this.canvas) return;
     this.removePointerListeners();
-    const options: AddEventListenerOptions = { passive: false };
-    this.canvas.addEventListener('pointerdown', this.handlePointerDown, options);
-    this.canvas.addEventListener('pointermove', this.handlePointerMove, options);
-    this.canvas.addEventListener('pointerup', this.handlePointerUp, options);
+    this.canvas.addEventListener(
+      'pointerdown',
+      this.pointerDown,
+      POINTER_LISTENER_OPTIONS,
+    );
+    this.canvas.addEventListener(
+      'pointermove',
+      this.pointerMove,
+      POINTER_LISTENER_OPTIONS,
+    );
+    this.canvas.addEventListener(
+      'pointerup',
+      this.pointerEnd,
+      POINTER_LISTENER_OPTIONS,
+    );
     this.canvas.addEventListener(
       'pointercancel',
-      this.handlePointerCancel,
-      options,
+      this.pointerEnd,
+      POINTER_LISTENER_OPTIONS,
     );
-    this.canvas.addEventListener(
-      'lostpointercapture',
-      this.handleLostPointerCapture,
-    );
+    this.canvas.addEventListener('lostpointercapture', this.pointerLostCapture);
   }
 
+  // キャンバスからすべてのポインタイベントリスナーを削除する
   private removePointerListeners(): void {
     if (!this.canvas) return;
-    this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-    this.canvas.removeEventListener('pointermove', this.handlePointerMove);
-    this.canvas.removeEventListener('pointerup', this.handlePointerUp);
-    this.canvas.removeEventListener('pointercancel', this.handlePointerCancel);
+    this.canvas.removeEventListener('pointerdown', this.pointerDown);
+    this.canvas.removeEventListener('pointermove', this.pointerMove);
+    this.canvas.removeEventListener('pointerup', this.pointerEnd);
+    this.canvas.removeEventListener('pointercancel', this.pointerEnd);
     this.canvas.removeEventListener(
       'lostpointercapture',
-      this.handleLostPointerCapture,
+      this.pointerLostCapture,
     );
   }
 
   // #region ポインタキャプチャ
 
+  // ポインタキャプチャを取得。例外は無視して安全に呼び出せるようにする
   private capturePointer(pointerId: number): void {
     if (!this.canvas) return;
     try {
@@ -200,6 +189,7 @@ export class InputHandler {
     }
   }
 
+  // ポインタキャプチャの解除。保持しているかをチェックしてから呼ぶ
   private releasePointerCapture(pointerId: number): void {
     if (!this.canvas) return;
     try {
@@ -213,20 +203,36 @@ export class InputHandler {
 
   // #region クリック判定
 
-  private getClickTargetFromLocal(x: number, y: number): Element | null {
-    const rect = this.canvas?.getBoundingClientRect();
-    const clientX = (rect?.left ?? 0) + x;
-    const clientY = (rect?.top ?? 0) + y;
-    return getClickTargetFromClient(clientX, clientY);
+  // 指定したローカル座標が UI 要素の上にあるか判定し、クリックを無視すべきか返す
+  private shouldIgnoreClickByLocalPoint(x: number, y: number): boolean {
+    const canvas = this.canvas;
+    if (!canvas) return false;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = rect.left + x;
+    const clientY = rect.top + y;
+    return shouldIgnoreClick(document.elementFromPoint(clientX, clientY));
   }
-}
 
-// クリック対象の要素を取得
-function getClickTargetFromClient(
-  clientX: number,
-  clientY: number,
-): Element | null {
-  return document.elementFromPoint(clientX, clientY);
+  // PointerEvent をエディタ専用入力形式に変換し、p5 インスタンスを取得して返す。
+  private resolvePointerInput(
+    event: PointerEvent,
+  ): { p: p5; input: ReturnType<typeof toEditorPointerInput> } | null {
+    const p = this.dispatcher.getP5();
+    if (!p) return null;
+    const canvas = this.canvas;
+    if (!canvas) return null;
+    return { p, input: toEditorPointerInput(event, canvas) };
+  }
+
+  // 与えられたポインタ ID が現在操作中のポインタと一致するかチェック
+  private isActivePointer(pointerId: number): boolean {
+    return this.activePointerId === pointerId;
+  }
+
+  // イベントがキャンセル可能であれば preventDefault を呼び出すユーティリティ
+  private preventDefaultIfCancelable(event: PointerEvent): void {
+    if (event.cancelable) event.preventDefault();
+  }
 }
 
 // UI要素クリック判定
@@ -235,8 +241,6 @@ function shouldIgnoreClick(target: Element | null): boolean {
     target instanceof HTMLInputElement ||
     target instanceof HTMLButtonElement ||
     target instanceof HTMLSelectElement ||
-    !!target?.closest('form') ||
-    !!target?.closest('#sketchSuggestionContainer') ||
-    !!target?.closest('#sidebarContainer')
+    IGNORE_CLICK_CONTAINERS.some((selector) => !!target?.closest(selector))
   );
 }

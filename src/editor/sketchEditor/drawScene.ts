@@ -20,7 +20,7 @@ import type { SelectTool } from './selectTool';
 import type { ToolContext } from './types';
 
 // drawScene に渡すシーン状態
-export interface DrawSceneState {
+interface DrawSceneState {
   paths: Path[];
   activePath: Path | null;
   colors: Colors;
@@ -168,6 +168,7 @@ export function drawScene(p: p5, state: DrawSceneState): void {
   }
 }
 
+// 選択範囲内か
 function isPointInSelectionRange(
   curveIndex: number,
   range: SelectionRange | null,
@@ -178,6 +179,7 @@ function isPointInSelectionRange(
   );
 }
 
+// カーブのポイントに対応するハンドル選択を取得
 function getAttachedAnchorSelection(
   pathIndex: number,
   curveIndex: number,

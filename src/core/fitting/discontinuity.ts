@@ -4,6 +4,7 @@
  */
 
 import type p5 from 'p5';
+import { toFinite } from '../../utils/math';
 
 const EPS = 1e-6;
 const MIN_TIME_DELTA_MS = 8;
@@ -21,7 +22,7 @@ export function detectDiscontinuitySplitPoints(
 ): number[] {
   if (points.length < 3) return [];
 
-  const minStepPx = Math.max(2, finiteOr(errorTol, 0) * 0.12);
+  const minStepPx = Math.max(2, toFinite(errorTol, 0) * 0.12);
 
   const candidates: Array<{ index: number; turnAngleDeg: number }> = [];
   for (let i = 1; i < points.length - 1; i++) {
@@ -111,11 +112,6 @@ function clampedTimeDeltaMs(
 ): number {
   const start = timestamps[startIndex];
   const end = timestamps[endIndex];
-  const delta = finiteOr(end, 0) - finiteOr(start, 0);
+  const delta = toFinite(end, 0) - toFinite(start, 0);
   return Math.max(MIN_TIME_DELTA_MS, delta);
-}
-
-// 有限値ならそのまま、そうでなければ fallback を返す
-function finiteOr(value: number, fallback: number): number {
-  return Number.isFinite(value) ? value : fallback;
 }

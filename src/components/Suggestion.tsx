@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Send } from 'lucide-react';
 import type { Suggestion, SuggestionStatus } from '../types';
-import { clamp } from '../utils/number';
+import { clamp } from '../utils/math';
 import { SuggestionItem } from './SuggestionItem';
 
 const TOUCH_LONG_PRESS_MS = 260;

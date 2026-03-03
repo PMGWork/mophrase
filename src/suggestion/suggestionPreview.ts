@@ -31,7 +31,7 @@ import { getSelectionReference } from '../utils/path';
 import { deserializePathKeyframes } from '../utils/serialization/curves';
 
 // 提案パイプラインの共通結果
-export type SuggestionPipelineResult = {
+type SuggestionPipelineResult = {
   llmKeyframes: Keyframe[];
   allProgress: number[];
   referenceProgress: number[];

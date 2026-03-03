@@ -101,12 +101,12 @@ export class HandleManager {
     this.applyDrag(this.draggedHandle, localPos.x, localPos.y, dragMode);
   }
 
-  // #region 選択管理
-
   // ドラッグ中かどうか
   isDragging(): boolean {
     return !!this.draggedHandle;
   }
+
+  // #region 選択管理
 
   // ハンドルが選択されているか
   isSelected(target: HandleSelection): boolean {
@@ -393,7 +393,43 @@ export class HandleManager {
     }
   }
 
-  // #region プライベート - 曲線・ハンドル補助
+  // ハンドル移動を元曲線に反映
+  private applyHandleTarget(
+    path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
+    selection: HandleSelection,
+    targetX: number,
+    targetY: number,
+    originalCurves: p5.Vector[][],
+    effectiveCurves: p5.Vector[][],
+  ): void {
+    const info = this.getHandlePointInfo(path, selection);
+    if (!info) return;
+    const originalPoint = originalCurves[info.curveIndex]?.[info.pointIndex];
+    const effectivePoint = effectiveCurves[info.curveIndex]?.[info.pointIndex];
+    if (!originalPoint || !effectivePoint) return;
+
+    const correctedX = targetX - (effectivePoint.x - originalPoint.x);
+    const correctedY = targetY - (effectivePoint.y - originalPoint.y);
+
+    const keyframe = path.keyframes[selection.keyframeIndex];
+    if (!keyframe) return;
+
+    if (selection.handleType === 'ANCHOR') {
+      keyframe.position.set(correctedX, correctedY);
+      return;
+    }
+
+    const updated = keyframe.position
+      .copy()
+      .set(correctedX - keyframe.position.x, correctedY - keyframe.position.y);
+    if (selection.handleType === 'SKETCH_IN') {
+      keyframe.sketchIn = updated;
+    } else {
+      keyframe.sketchOut = updated;
+    }
+  }
+
+  // #region プライベート - 曲線参照
 
   // 元の曲線とModifier適用後の曲線を取得
   private getCurves(path: Pick<Path, 'keyframes' | 'sketchModifiers'>): {
@@ -442,42 +478,6 @@ export class HandleManager {
     const info = this.getHandlePointInfo(path, selection);
     if (!info) return null;
     return curves[info.curveIndex]?.[info.pointIndex] ?? null;
-  }
-
-  // ハンドル移動を元曲線に反映
-  private applyHandleTarget(
-    path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
-    selection: HandleSelection,
-    targetX: number,
-    targetY: number,
-    originalCurves: p5.Vector[][],
-    effectiveCurves: p5.Vector[][],
-  ): void {
-    const info = this.getHandlePointInfo(path, selection);
-    if (!info) return;
-    const originalPoint = originalCurves[info.curveIndex]?.[info.pointIndex];
-    const effectivePoint = effectiveCurves[info.curveIndex]?.[info.pointIndex];
-    if (!originalPoint || !effectivePoint) return;
-
-    const correctedX = targetX - (effectivePoint.x - originalPoint.x);
-    const correctedY = targetY - (effectivePoint.y - originalPoint.y);
-
-    const keyframe = path.keyframes[selection.keyframeIndex];
-    if (!keyframe) return;
-
-    if (selection.handleType === 'ANCHOR') {
-      keyframe.position.set(correctedX, correctedY);
-      return;
-    }
-
-    const updated = keyframe.position
-      .copy()
-      .set(correctedX - keyframe.position.x, correctedY - keyframe.position.y);
-    if (selection.handleType === 'SKETCH_IN') {
-      keyframe.sketchIn = updated;
-    } else {
-      keyframe.sketchOut = updated;
-    }
   }
 
   // #region プライベート - ハンドル操作

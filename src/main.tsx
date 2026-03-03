@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { useCallback, useEffect, useState } from 'react';
 import type { Path } from './types';
 import { removeModifier, updateModifierStrength } from './utils/modifier';
-import { clamp } from './utils/number';
+import { clamp } from './utils/math';
 import { Canvas } from './components/Canvas';
 import { Header } from './components/Header';
 import { Playback } from './components/Playback';

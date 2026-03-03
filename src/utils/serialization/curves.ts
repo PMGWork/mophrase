@@ -13,7 +13,7 @@ import type {
   SerializedPath,
 } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
-import { roundNormalizedValue } from '../bezier';
+import { round } from '../math';
 
 // p5.Vector -> キーフレーム座標（正規化）
 function serializePosition(
@@ -23,8 +23,8 @@ function serializePosition(
   const width = bbox.width;
   const height = bbox.height;
   return {
-    x: roundNormalizedValue((vec.x - bbox.x) / width),
-    y: roundNormalizedValue((vec.y - bbox.y) / height),
+    x: round((vec.x - bbox.x) / width, 3),
+    y: round((vec.y - bbox.y) / height, 3),
   };
 }
 
@@ -40,8 +40,8 @@ function serializeHandle(
   const angle = Math.atan2(dy, dx) * (180 / Math.PI);
   const dist = Math.hypot(dx, dy) / diag;
   return {
-    angle: roundNormalizedValue(angle),
-    dist: roundNormalizedValue(dist),
+    angle: round(angle, 3),
+    dist: round(dist, 3),
   };
 }
 
@@ -70,8 +70,8 @@ function serializeGraphHandle(
   const dist = Math.hypot(vec.x, vec.y) / segmentDiag;
 
   return {
-    angle: roundNormalizedValue(angle),
-    dist: roundNormalizedValue(dist),
+    angle: round(angle, 3),
+    dist: round(dist, 3),
   };
 }
 
@@ -93,7 +93,7 @@ function serializeKeyframes(
 
     return {
       ...serializePosition(anchor, bbox),
-      time: roundNormalizedValue(keyframe.time),
+      time: round(keyframe.time, 3),
       sketchIn: serializeHandle(inHandle, anchor, diag),
       sketchOut: serializeHandle(outHandle, anchor, diag),
       ...(keyframe.corner ? { corner: true } : {}),

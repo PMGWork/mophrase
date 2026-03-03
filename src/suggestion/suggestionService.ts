@@ -6,7 +6,7 @@
 import { encode } from '@toon-format/toon';
 
 import type { Config } from '../config';
-import { generateStructured } from '../services/llm';
+import { generateStructured } from '../services/llmService';
 import type {
   SerializedPath,
   SuggestionBatchResponse,
@@ -109,8 +109,6 @@ export async function fetchSuggestions(
         )
     : // 直列モードは1回のバッチ要求のみ実行する。
       await fetchBatchedSuggestions(requestBatchOnce, options.onSuggestion);
-
-  console.log('[llm] result:', suggestions);
 
   return suggestions.map(toSuggestionItem);
 }

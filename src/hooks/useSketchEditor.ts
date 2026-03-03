@@ -50,6 +50,7 @@ type SketchConfigUpdate = {
   testMode: Config['testMode'];
 };
 
+// プロジェクト関連の定数
 const NEW_PROJECT_CONFIRM_MESSAGE =
   'You have unsaved changes. Discard them and create a new project?';
 const LOAD_PROJECT_CONFIRM_MESSAGE =

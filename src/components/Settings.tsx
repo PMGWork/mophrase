@@ -7,27 +7,63 @@ import {
 } from '../config';
 import type { LLMProvider, LLMReasoningEffort } from '../types';
 import { getModels } from '../services/llm';
-import {
-  getReasoningCapability,
-  isGraphImageSupported,
-} from '../utils/llmCapabilities';
 import { ModalBackdrop } from './ModalBackdrop';
 
-export type SettingsChangePayload = {
+
+// 設定パネルから親へ通知する更新値
+export type SettingsUpdate = {
+  // 利用する LLM プロバイダ
   llmProvider: LLMProvider;
+  // 利用するモデル ID
   llmModel: string;
+  // 推論強度（モデルによっては hidden/toggle 制御）
   llmReasoningEffort: LLMReasoningEffort;
+  // 提案生成を並列化するか
   parallelGeneration: boolean;
+  // カーブ画像を LLM 入力として送るか
   graphImageEnabled: boolean;
+  // フィット許容誤差（キャンバス縦幅比）
   fitTolerance: number;
+  // ベンチマーク用テストモード
   testMode: boolean;
 };
 
+// 設定パネルのプロパティ
 type SettingsProps = {
   isOpen: boolean;
   config: Config | null;
   onClose: () => void;
-  onChange: (next: SettingsChangePayload) => void;
+  onChange: (next: SettingsUpdate) => void;
+};
+
+// LLM の推論能力の表現方法
+type ReasoningCapability =
+  | {
+      mode: 'toggle';
+      description: string;
+      resolve: (current: LLMReasoningEffort) => LLMReasoningEffort;
+    }
+  | { mode: 'hidden'; resolve: (current: LLMReasoningEffort) => LLMReasoningEffort };
+
+const getReasoningCapability = (
+  provider: LLMProvider,
+  modelId: string,
+): ReasoningCapability => {
+  const isToggleModel =
+    (provider === 'OpenAI' && modelId.startsWith('gpt-5.2')) ||
+    (provider === 'Google' && modelId.includes('flash'));
+  if (isToggleModel) {
+    return {
+      mode: 'toggle',
+      description: 'Enable advanced reasoning',
+      resolve: (cur) => (cur === 'none' ? 'none' : 'medium'),
+    };
+  }
+
+  return {
+    mode: 'hidden',
+    resolve: (cur) => cur,
+  };
 };
 
 // トグル行コンポーネント
@@ -96,21 +132,15 @@ export const Settings = ({
   const selectedModel = config?.llmModel ?? '';
   const reasoningEffort = config?.llmReasoningEffort ?? 'none';
   const reasoning = getReasoningCapability(selectedProvider, selectedModel);
-  const resolvedEffort =
-    reasoning.mode === 'locked'
-      ? reasoning.resolve()
-      : reasoning.resolve(reasoningEffort);
+  const resolvedEffort = reasoning.resolve(reasoningEffort);
   const parallelGeneration = config?.parallelGeneration ?? false;
-  const graphImageSupported = isGraphImageSupported(selectedProvider, selectedModel);
-  const resolvedGraphImageEnabled = graphImageSupported
-    ? (config?.graphImageEnabled ?? true)
-    : false;
+  const resolvedGraphImageEnabled = config?.graphImageEnabled ?? true;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
 
   // onChange ヘルパー: 変更対象のフィールドだけ渡せば残りはデフォルト値で補完
-  const emit = (patch: Partial<SettingsChangePayload>) => {
-    const next: SettingsChangePayload = {
+  const emit = (patch: Partial<SettingsUpdate>) => {
+    const next: SettingsUpdate = {
       llmProvider: selectedProvider,
       llmModel: selectedModel,
       llmReasoningEffort: resolvedEffort,
@@ -120,10 +150,6 @@ export const Settings = ({
       testMode,
       ...patch,
     };
-
-    if (!isGraphImageSupported(next.llmProvider, next.llmModel)) {
-      next.graphImageEnabled = false;
-    }
 
     onChange(next);
   };
@@ -179,18 +205,13 @@ export const Settings = ({
                         modelId: string;
                       };
                       const cap = getReasoningCapability(parsed.provider, parsed.modelId);
-                      const effort = cap.mode === 'locked'
-                        ? cap.resolve()
-                        : cap.resolve('none');
+                      const effort = cap.resolve('none');
                       emit({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
                         llmReasoningEffort: effort,
                         parallelGeneration: false,
-                        graphImageEnabled: isGraphImageSupported(
-                          parsed.provider,
-                          parsed.modelId,
-                        ),
+                        graphImageEnabled: true,
                       });
                     } catch {
                       // ignore invalid value
@@ -212,15 +233,6 @@ export const Settings = ({
                 <ChevronDown className="text-text-muted pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
               </div>
             </div>
-            {reasoning.mode === 'locked' && (
-              <ToggleRow
-                label="Reasoning"
-                description={reasoning.description}
-                checked
-                disabled
-                onChange={() => {}}
-              />
-            )}
             {reasoning.mode === 'toggle' && (
               <ToggleRow
                 label="Reasoning"
@@ -234,13 +246,9 @@ export const Settings = ({
             )}
             <ToggleRow
               label="Curve Image"
-              description={
-                graphImageSupported
-                  ? 'Send sketch canvas screenshot to LLM'
-                  : 'Unavailable for GPT OSS models'
-              }
+              description="Send sketch canvas screenshot to LLM"
               checked={resolvedGraphImageEnabled}
-              disabled={!graphImageSupported}
+              disabled={false}
               onChange={() =>
                 emit({ graphImageEnabled: !resolvedGraphImageEnabled })
               }

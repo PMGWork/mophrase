@@ -5,7 +5,6 @@
  */
 
 import p5 from 'p5';
-import '../../utils/p5Setup';
 import { type Colors, type Config } from '../../config';
 import { OBJECT_SIZE, resolveObjectSizeFromCanvasHeight } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
@@ -152,16 +151,13 @@ export class SketchEditor {
 
   // #region 公開API
 
-  /** ツールを設定 */
+  // ツールの切り替え
   public setTool(tool: ToolKind): void {
     this.currentTool = tool;
     this.onToolChanged?.(tool);
 
     if (tool === 'pen') {
-      this.stopSuggestionLoopPlayback();
-      this.suggestionLoopPath = null;
-      this.hoveredSuggestionId = null;
-      this.hasHoverableSuggestions = false;
+      this.resetSuggestionLoopPlaybackContext();
       this.suggestionManager.close();
     }
 
@@ -171,11 +167,12 @@ export class SketchEditor {
     }
   }
 
+  // 現在のツールを取得
   public getCurrentTool(): ToolKind {
     return this.currentTool;
   }
 
-  /** リサイズ */
+  // キャンバスのリサイズ
   public resize(): void {
     if (!this.p) return;
     const { width, height } = this.dom.getCanvasSize();
@@ -183,6 +180,7 @@ export class SketchEditor {
     this.updateObjectSize(height);
   }
 
+  // エディタの破棄
   public destroy(): void {
     this.inputHandler.destroy();
     this.p?.remove();
@@ -452,9 +450,7 @@ export class SketchEditor {
     }
 
     if (this.suggestionLoopPath === this.activePath) {
-      this.stopSuggestionLoopPlayback();
-      this.suggestionLoopPath = null;
-      this.hoveredSuggestionId = null;
+      this.resetSuggestionLoopPlaybackContext();
     }
 
     this.activePath = null;
@@ -467,10 +463,11 @@ export class SketchEditor {
   /** アクティブなパスを安全に更新 */
   public updateActivePath(updater: (path: Path) => void): void {
     if (!this.activePath) return;
-    updater(this.activePath);
-    this.restartSuggestionLoopPlaybackIfNeeded();
+    const updatedPath = this.activePath;
+    updater(updatedPath);
+    this.restartSuggestionLoopPlaybackForPath(updatedPath);
     this.playback.refreshPlaybackTimeline();
-    this.onPathUpdated?.(this.activePath);
+    this.onPathUpdated?.(updatedPath);
   }
 
   public getActivePath(): Path | null {
@@ -544,12 +541,7 @@ export class SketchEditor {
   public setSuggestionHover(id: string | null, strength: number): void {
     this.suggestionManager.setHover(id, strength);
     this.hoveredSuggestionId = id;
-    const shouldLoopPlayback = this.hasHoverableSuggestions && id !== null;
-    if (shouldLoopPlayback && this.isSuggestionLoopPlayback) {
-      this.restartSuggestionLoopPlaybackIfNeeded();
-      return;
-    }
-    this.syncSuggestionLoopPlayback(shouldLoopPlayback);
+    this.syncSuggestionLoopPlaybackByState({ restartIfPlaying: true });
   }
 
   // #region プロジェクト設定
@@ -582,10 +574,7 @@ export class SketchEditor {
     this.paths = paths;
     this.activePath = null;
     this.playback.isPreviewing = false;
-    this.stopSuggestionLoopPlayback();
-    this.suggestionLoopPath = null;
-    this.hoveredSuggestionId = null;
-    this.hasHoverableSuggestions = false;
+    this.resetSuggestionLoopPlaybackContext();
 
     this.setProjectSettings(settings);
     this.suggestionManager.close();
@@ -768,19 +757,30 @@ export class SketchEditor {
     if (!state.isVisible || !this.hasHoverableSuggestions) {
       this.hoveredSuggestionId = null;
     }
-    const shouldLoopPlayback =
-      this.hasHoverableSuggestions && this.hoveredSuggestionId !== null;
-    this.syncSuggestionLoopPlayback(shouldLoopPlayback);
+    this.syncSuggestionLoopPlaybackByState();
     this.onSuggestionUIChange?.(state);
   }
 
-  private syncSuggestionLoopPlayback(shouldPlay: boolean): void {
-    if (shouldPlay) {
-      if (this.isSuggestionLoopPlayback) return;
-      this.startSuggestionLoopPlayback();
+  private shouldPlaySuggestionLoopPlayback(): boolean {
+    return this.hasHoverableSuggestions && this.hoveredSuggestionId !== null;
+  }
+
+  private syncSuggestionLoopPlaybackByState(
+    options: { restartIfPlaying?: boolean } = {},
+  ): void {
+    if (!this.shouldPlaySuggestionLoopPlayback()) {
+      this.stopSuggestionLoopPlayback();
       return;
     }
-    this.stopSuggestionLoopPlayback();
+
+    if (options.restartIfPlaying && this.isSuggestionLoopPlayback) {
+      this.restartSuggestionLoopPlayback();
+      return;
+    }
+
+    if (!this.isSuggestionLoopPlayback) {
+      this.startSuggestionLoopPlayback();
+    }
   }
 
   private getSuggestionLoopPath(): Path | null {
@@ -824,11 +824,24 @@ export class SketchEditor {
     this.isSuggestionLoopPlayback = false;
   }
 
-  private restartSuggestionLoopPlaybackIfNeeded(): void {
+  private restartSuggestionLoopPlayback(): void {
     if (!this.isSuggestionLoopPlayback) return;
     const elapsedMs = this.suggestionMotionManager?.getElapsedTime() ?? 0;
     this.stopSuggestionLoopPlayback();
     this.startSuggestionLoopPlayback(elapsedMs);
+  }
+
+  private restartSuggestionLoopPlaybackForPath(path: Path): void {
+    const loopPath = this.getSuggestionLoopPath();
+    if (!loopPath || loopPath !== path) return;
+    this.restartSuggestionLoopPlayback();
+  }
+
+  private resetSuggestionLoopPlaybackContext(): void {
+    this.stopSuggestionLoopPlayback();
+    this.suggestionLoopPath = null;
+    this.hoveredSuggestionId = null;
+    this.hasHoverableSuggestions = false;
   }
 
   // #region プライベートヘルパー

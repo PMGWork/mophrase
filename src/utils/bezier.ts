@@ -17,7 +17,7 @@ export function bernstein(i: number, n: number, t: number): number {
 }
 
 // 二項係数
-export function binomial(n: number, k: number): number {
+function binomial(n: number, k: number): number {
   if (k === 0 || k === n) return 1;
 
   let res = 1;
@@ -48,11 +48,6 @@ export function bezierCurve(
 // #endregion
 
 // #region Fitting(グラフ)
-// 正規化値を丸める
-export function roundNormalizedValue(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
-
 // 曲線の長さ
 export function curveLength(c: p5.Vector[]): number {
   const chord = c[0].dist(c[3]);
@@ -63,14 +58,14 @@ export function curveLength(c: p5.Vector[]): number {
 
 // #region Fitting
 // 単位接ベクトル
-export function unitTangent(d0: p5.Vector, d1: p5.Vector): p5.Vector {
+function unitTangent(d0: p5.Vector, d1: p5.Vector): p5.Vector {
   const tangent = d1.copy().sub(d0);
   tangent.normalize();
   return tangent;
 }
 
 // 3次ベジェ曲線の1階微分
-export function bezierDerivative(
+function bezierDerivative(
   v0: p5.Vector,
   v1: p5.Vector,
   v2: p5.Vector,
@@ -100,7 +95,7 @@ export function bezierDerivative(
 }
 
 // 3次ベジェ曲線の2階微分
-export function bezierSecondDerivative(
+function bezierSecondDerivative(
   v0: p5.Vector,
   v1: p5.Vector,
   v2: p5.Vector,
@@ -225,7 +220,7 @@ function lerpVector(a: p5.Vector, b: p5.Vector, t: number): p5.Vector {
 }
 
 // de Casteljauでn次ベジェをt位置で2つに分割する
-export function splitBezier(
+function splitBezier(
   points: readonly p5.Vector[],
   t: number,
 ): { left: p5.Vector[]; right: p5.Vector[]; point: p5.Vector } {

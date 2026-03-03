@@ -12,9 +12,8 @@ import type {
   SketchKeyframeDelta,
   SketchModifier,
 } from '../types';
-import { createId } from './id';
 import { splitKeyframeSegment } from './keyframes';
-import { clamp } from './number';
+import { clamp } from './math';
 
 // #region 適用
 
@@ -145,7 +144,7 @@ export function createSketchModifier(
       if (outDelta) delta.outDelta = outDelta;
     }
 
-    return { id: createId(), name, strength: 1.0, deltas };
+    return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
   }
 
   const startIndex = selectionRange?.startCurveIndex ?? 0;
@@ -187,7 +186,7 @@ export function createSketchModifier(
     }
   }
 
-  return { id: createId(), name, strength: 1.0, deltas };
+  return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
 }
 
 // LLMの出力からグラフモディファイアを作成
@@ -221,7 +220,7 @@ export function createGraphModifier(
       if (inDelta) delta.inDelta = inDelta;
     }
 
-    return { id: createId(), name, strength: 1.0, deltas };
+    return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
   }
 
   const startIndex = selectionRange?.startCurveIndex ?? 0;
@@ -270,7 +269,7 @@ export function createGraphModifier(
     }
   }
 
-  return { id: createId(), name, strength: 1.0, deltas };
+  return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
 }
 
 // #region 分割

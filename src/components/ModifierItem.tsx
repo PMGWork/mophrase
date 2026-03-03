@@ -1,6 +1,6 @@
 import { Minus } from 'lucide-react';
 import type { AnyModifier, ModifierKind } from '../types';
-import { clamp } from '../utils/number';
+import { clamp } from '../utils/math';
 
 // プロパティ
 type ModifierItemProps = {

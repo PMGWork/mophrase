@@ -4,11 +4,10 @@
  */
 
 import p5 from 'p5';
-import '../../utils/p5Setup';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
-import { clamp } from '../../utils/number';
+import { clamp } from '../../utils/math';
 import { drawBezierCurve, drawControls } from '../../utils/rendering';
 import { resolveGraphCurves } from '../../utils/path';
 import {

@@ -5,7 +5,7 @@
 
 import type p5 from 'p5';
 import type { FitErrorResult, Keyframe } from '../../types';
-import { clamp } from '../../utils/number';
+import { clamp } from '../../utils/math';
 import { detectDiscontinuitySplitPoints } from './discontinuity';
 import { fitSketchCurves, fitGraphCurves } from './fitting';
 

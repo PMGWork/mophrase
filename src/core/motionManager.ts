@@ -6,7 +6,7 @@
 import type p5 from 'p5';
 import type { Path } from '../types';
 import { bezierCurve } from '../utils/bezier';
-import { clamp } from '../utils/number';
+import { clamp } from '../utils/math';
 import {
   buildGraphCurves,
   computeKeyframeProgress,

@@ -5,7 +5,6 @@ import {
   FIT_TOLERANCE_MAX,
   FIT_TOLERANCE_MIN,
 } from '../config';
-import { isGraphImageSupported } from '../utils/llmCapabilities';
 
 // localStorageのキー
 const STORAGE_KEY = 'mophrase:config';
@@ -18,11 +17,15 @@ type PersistentConfigFields = Omit<
 
 // モデルマイグレーションテーブル: [fromProvider, fromModel, toProvider, toModel]
 const MODEL_MIGRATIONS: [string, string, string, string][] = [
+  ['Cerebras', 'gpt-oss-120b', 'OpenAI', 'gpt-5.2'],
   ['Google', 'gemini-2.5-flash', 'Google', 'gemini-3-flash-preview'],
 ];
 
 // プロバイダリネームテーブル: [fromProvider, toProvider]
-const PROVIDER_RENAMES: [string, string][] = [['GoogleAIStudio', 'Google']];
+const PROVIDER_RENAMES: [string, string][] = [
+  ['GoogleAIStudio', 'Google'],
+  ['Cerebras', 'OpenAI'],
+];
 
 // 旧バージョンの設定を現行スキーマに移行
 const migrateConfig = (
@@ -73,16 +76,12 @@ const migrateConfig = (
       next.llmProvider = toProv as typeof next.llmProvider;
     }
   }
-
-  // Cerebras は推論強度を固定
-  if (next.llmProvider === 'Cerebras') {
-    next.llmReasoningEffort = 'medium';
-  }
-
-  const provider = next.llmProvider ?? DEFAULT_CONFIG.llmProvider;
-  const model = next.llmModel ?? DEFAULT_CONFIG.llmModel;
-  if (!isGraphImageSupported(provider, model)) {
-    next.graphImageEnabled = false;
+  if (
+    next.llmProvider === 'OpenAI' &&
+    typeof next.llmModel === 'string' &&
+    next.llmModel.startsWith('gpt-oss')
+  ) {
+    next.llmModel = 'gpt-5.2';
   }
 
   return next;

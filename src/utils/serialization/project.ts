@@ -18,9 +18,8 @@ import type {
   SketchModifier,
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS, normalizeProjectSettings } from '../../types';
-import { createId } from '../id';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
-import { clamp } from '../number';
+import { clamp, isFiniteNumber } from '../math';
 import {
   deserializeGraphHandle,
   deserializeHandle,
@@ -162,7 +161,7 @@ function parseModifierMeta(value: Record<string, unknown>): ModifierMeta {
     id:
       typeof value.id === 'string' && value.id.trim() !== ''
         ? value.id
-        : createId(),
+        : globalThis.crypto.randomUUID(),
     name: typeof value.name === 'string' ? value.name : 'modifier',
     strength: isFiniteNumber(value.strength) ? value.strength : 1,
   };
@@ -376,7 +375,7 @@ export function deserializePaths(
     }
 
     return {
-      id: serializedPath.id || createId(),
+      id: serializedPath.id || globalThis.crypto.randomUUID(),
       keyframes,
       startTime: serializedPath.startTime,
       duration: serializedPath.duration,
@@ -397,11 +396,6 @@ export function deserializePaths(
 // 値がRecordかどうかをチェック
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-// 有限な数値かどうかをチェック
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
 }
 
 // オプショナルなハンドルかどうかをチェック
