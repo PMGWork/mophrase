@@ -629,6 +629,9 @@ export class GraphEditor {
     keyframe: Keyframe,
     type: 'GRAPH_OUT' | 'GRAPH_IN',
   ): void {
+    // 不連続点（corner）はハンドルを独立で扱う
+    if (keyframe.corner) return;
+
     const current = type === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;
     if (!current) return;
     if (current.magSq() <= 0) return;

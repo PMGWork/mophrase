@@ -5,7 +5,7 @@
 
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
-import type { Path } from '../types';
+import type { Path, SelectionRange } from '../types';
 import { bezierCurve } from './bezier';
 import { applySketchModifiers } from './modifier';
 import { buildSketchCurves } from './keyframes';
@@ -146,6 +146,10 @@ export function drawSketchPath(
   colors: Pick<Colors, 'curve' | 'background' | 'handle' | 'selection'>,
   isSelected: boolean,
   isHandleSelected?: (curveIndex: number, pointIndex: number) => boolean,
+  highlightCurveRange?: Pick<
+    SelectionRange,
+    'startCurveIndex' | 'endCurveIndex'
+  >,
 ): void {
   const curves = buildSketchCurves(path.keyframes);
   const effectiveCurves = applySketchModifiers(
@@ -158,6 +162,25 @@ export function drawSketchPath(
   // ベジェ曲線の描画（modifiers適用後）
   const curveColor = isSelected ? colors.handle : '#4b5563';
   drawBezierCurve(p, effectiveCurves, config.lineWeight, curveColor);
+  if (isSelected && highlightCurveRange) {
+    const maxCurveIndex = effectiveCurves.length - 1;
+    const startCurveIndex = Math.max(
+      0,
+      Math.min(maxCurveIndex, highlightCurveRange.startCurveIndex),
+    );
+    const endCurveIndex = Math.max(
+      0,
+      Math.min(maxCurveIndex, highlightCurveRange.endCurveIndex),
+    );
+    if (startCurveIndex <= endCurveIndex) {
+      drawBezierCurve(
+        p,
+        effectiveCurves.slice(startCurveIndex, endCurveIndex + 1),
+        config.lineWeight,
+        colors.selection,
+      );
+    }
+  }
 
   // 制御点の描画（選択されたパスのみ）
   if (isSelected) {

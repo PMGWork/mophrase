@@ -8,7 +8,12 @@ import type { Colors, Config } from '../../config';
 import type { HandleManager } from '../../core/handleManager';
 import type { MotionManager } from '../../core/motionManager';
 import type { SuggestionManager } from '../../suggestion/suggestion';
-import type { HandleSelection, Path, ToolKind } from '../../types';
+import type {
+  HandleSelection,
+  Path,
+  SelectionRange,
+  ToolKind,
+} from '../../types';
 import { drawSketchPath } from '../../utils/rendering';
 import type { PenTool } from './penTool';
 import type { SelectTool } from './selectTool';
@@ -74,10 +79,7 @@ export function drawScene(p: p5, state: DrawSceneState): void {
     // 非再生時: 個別にオブジェクトを描画
     for (let i = 0; i < state.paths.length; i++) {
       const path = state.paths[i];
-      if (
-        state.isSuggestionLoopPlaying &&
-        state.suggestionLoopPath === path
-      ) {
+      if (state.isSuggestionLoopPlaying && state.suggestionLoopPath === path) {
         continue;
       }
       const isLatest = i === state.paths.length - 1;
@@ -109,16 +111,29 @@ export function drawScene(p: p5, state: DrawSceneState): void {
   // 3. 選択中のパスの軌跡とハンドルを描画（再生中はスキップ）
   if (!isPlaying && state.activePath) {
     const pathIndex = state.paths.indexOf(state.activePath);
+    const selectionRange = state.handleManager.getSelectionRange();
+    const activePathRange =
+      selectionRange && selectionRange.pathIndex === pathIndex
+        ? selectionRange
+        : null;
+
     drawSketchPath(
       p,
       state.activePath,
       state.config,
       state.colors,
       true,
-      (curveIndex, pointIndex) =>
-        state.handleManager.isSelected(
-          state.mapCurvePointToHandle(pathIndex, curveIndex, pointIndex),
-        ),
+      (curveIndex, pointIndex) => {
+        if (
+          state.handleManager.isSelected(
+            state.mapCurvePointToHandle(pathIndex, curveIndex, pointIndex),
+          )
+        ) {
+          return true;
+        }
+        return isPointInSelectionRange(curveIndex, activePathRange);
+      },
+      activePathRange ?? undefined,
     );
   }
 
@@ -133,4 +148,14 @@ export function drawScene(p: p5, state: DrawSceneState): void {
     // 提案をプレビュー
     state.suggestionManager.preview(p, state.colors);
   }
+}
+
+function isPointInSelectionRange(
+  curveIndex: number,
+  range: SelectionRange | null,
+): boolean {
+  if (!range) return false;
+  return (
+    curveIndex >= range.startCurveIndex && curveIndex <= range.endCurveIndex
+  );
 }
