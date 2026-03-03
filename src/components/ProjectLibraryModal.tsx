@@ -1,6 +1,8 @@
 import { FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ProjectSummary } from '../services/projectStorage';
+import { ModalBackdrop } from './ModalBackdrop';
 
+// プロジェクトライブラリモーダルコンポーネント
 type ProjectLibraryModalProps = {
   isOpen: boolean;
   projects: ProjectSummary[];
@@ -11,11 +13,13 @@ type ProjectLibraryModalProps = {
   onCreateNewProject: () => void;
 };
 
+// タイムスタンプをローカル日時文字列に変換
 const formatUpdatedAt = (timestamp: number): string => {
   if (!Number.isFinite(timestamp)) return '-';
   return new Date(timestamp).toLocaleString();
 };
 
+// プロジェクトライブラリモーダルコンポーネント
 export const ProjectLibraryModal = ({
   isOpen,
   projects,
@@ -26,14 +30,7 @@ export const ProjectLibraryModal = ({
   onCreateNewProject,
 }: ProjectLibraryModalProps) => {
   return (
-    <div
-      id="projectLibraryModal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      style={{ display: isOpen ? 'flex' : 'none' }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <ModalBackdrop isOpen={isOpen} onClose={onClose}>
       <div
         id="projectLibraryPanel"
         className="corner-xl border-border bg-panel w-full max-w-2xl border shadow-2xl"
@@ -110,6 +107,6 @@ export const ProjectLibraryModal = ({
           )}
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   );
 };

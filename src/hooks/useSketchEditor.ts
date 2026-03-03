@@ -37,6 +37,7 @@ import {
   deserializeProject,
   serializeProject,
 } from '../utils/serialization/project';
+import { useResizeObserver } from './useResizeObserver';
 
 // 設定更新用のパラメータ
 type SketchConfigUpdate = {
@@ -288,18 +289,10 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   }, []);
 
   // コンテナのリサイズを監視
-  useEffect(() => {
-    const container = canvasRef.current;
-    if (!container) return;
-
-    const observer = new ResizeObserver(() => {
-      editorRef.current?.resize();
-    });
-
-    observer.observe(container);
-
-    return () => observer.disconnect();
+  const resizeCallback = useCallback(() => {
+    editorRef.current?.resize();
   }, []);
+  useResizeObserver(canvasRef, resizeCallback);
 
   // ツールを設定
   const setTool = useCallback((tool: ToolKind) => {

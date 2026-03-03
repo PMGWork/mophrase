@@ -7,9 +7,12 @@ import type p5 from 'p5';
 
 import type { Colors, Config } from '../config';
 import type {
+  GraphModifier,
+  Keyframe,
   ModifierTarget,
   Path,
   SelectionRange,
+  SketchModifier,
   Suggestion,
 } from '../types';
 import { drawBezierCurve } from '../utils/rendering';
@@ -26,6 +29,72 @@ import {
 } from '../utils/modifier';
 import { getSelectionReference } from '../utils/path';
 import { deserializePathKeyframes } from '../utils/serialization/curves';
+
+// 提案パイプラインの共通結果
+export type SuggestionPipelineResult = {
+  llmKeyframes: Keyframe[];
+  allProgress: number[];
+  referenceProgress: number[];
+  sketchModifier: SketchModifier;
+  graphModifier: GraphModifier | null;
+};
+
+// 提案からモディファイアを生成する共通パイプライン
+export function buildSuggestionModifiers(
+  p: p5,
+  targetPath: Path,
+  suggestion: Suggestion,
+  selectionRange: SelectionRange | undefined,
+  strength: number,
+  modifierName: string = 'preview',
+): SuggestionPipelineResult | null {
+  const originalCurves = buildSketchCurves(targetPath.keyframes);
+  if (originalCurves.length === 0) return null;
+
+  const allProgress = computeKeyframeProgress(
+    targetPath.keyframes,
+    originalCurves,
+  );
+  const { keyframes: referenceKeyframes, progress: referenceProgress } =
+    getSelectionReference(targetPath, selectionRange, allProgress);
+
+  const llmKeyframes = deserializePathKeyframes(
+    suggestion.path,
+    referenceKeyframes,
+    referenceProgress,
+    p,
+  );
+  if (llmKeyframes.length === 0) return null;
+
+  const sketchModifier = createSketchModifier(
+    targetPath.keyframes,
+    llmKeyframes,
+    modifierName,
+    selectionRange,
+  );
+  sketchModifier.strength = strength;
+
+  let graphModifier: GraphModifier | null = null;
+  if (llmKeyframes.length > 1) {
+    graphModifier = createGraphModifier(
+      targetPath.keyframes,
+      allProgress,
+      llmKeyframes,
+      referenceProgress,
+      modifierName,
+      selectionRange,
+    );
+    graphModifier.strength = strength;
+  }
+
+  return {
+    llmKeyframes,
+    allProgress,
+    referenceProgress,
+    sketchModifier,
+    graphModifier,
+  };
+}
 
 // スケッチ提案のプレビュー描画パラメータ
 type SketchPreviewParams = {
@@ -114,38 +183,17 @@ export function getPreviewGraphCurves(
   } = params;
   if (modifierTarget === 'sketch') return null;
 
-  // 元のカーブとプログレスを計算
-  const baseSketchCurves = buildSketchCurves(targetPath.keyframes);
-  const baseProgress = computeKeyframeProgress(
-    targetPath.keyframes,
-    baseSketchCurves,
-  );
-  if (baseSketchCurves.length === 0) return null;
-
-  // LLM の提案をキーフレームに変換
-  const { keyframes: referenceKeyframes, progress: referenceProgress } =
-    getSelectionReference(targetPath, selectionRange, baseProgress);
-
-  const llmKeyframes = deserializePathKeyframes(
-    suggestion.path,
-    referenceKeyframes,
-    referenceProgress,
+  const result = buildSuggestionModifiers(
     p,
-  );
-  if (llmKeyframes.length < 2) return null;
-
-  const previewGraphModifier = createGraphModifier(
-    targetPath.keyframes,
-    baseProgress,
-    llmKeyframes,
-    referenceProgress,
-    'preview',
+    targetPath,
+    suggestion,
     selectionRange,
+    strength,
   );
-  previewGraphModifier.strength = strength;
+  if (!result || !result.graphModifier) return null;
 
   const effectiveSketchCurves = applySketchModifiers(
-    baseSketchCurves,
+    buildSketchCurves(targetPath.keyframes),
     targetPath.keyframes,
     targetPath.sketchModifiers,
     p,
@@ -163,7 +211,7 @@ export function getPreviewGraphCurves(
   const previewCurves = applyGraphModifiers(
     baseGraphCurves,
     targetPath.keyframes,
-    [...(targetPath.graphModifiers ?? []), previewGraphModifier],
+    [...(targetPath.graphModifiers ?? []), result.graphModifier],
     p,
   );
 
@@ -177,36 +225,22 @@ function buildSketchPreviewCurves(
   selectionRange: SelectionRange | undefined,
   strength: number,
 ): p5.Vector[][] | null {
+  const result = buildSuggestionModifiers(
+    p,
+    targetPath,
+    suggestion,
+    selectionRange,
+    strength,
+  );
+  if (!result) return null;
+
   const originalCurves = buildSketchCurves(targetPath.keyframes);
   if (originalCurves.length === 0) return null;
-
-  const baseProgress = computeKeyframeProgress(
-    targetPath.keyframes,
-    originalCurves,
-  );
-  const { keyframes: referenceKeyframes, progress: referenceProgress } =
-    getSelectionReference(targetPath, selectionRange, baseProgress);
-
-  const llmKeyframes = deserializePathKeyframes(
-    suggestion.path,
-    referenceKeyframes,
-    referenceProgress,
-    p,
-  );
-  if (llmKeyframes.length === 0) return null;
-
-  const previewSketchModifier = createSketchModifier(
-    targetPath.keyframes,
-    llmKeyframes,
-    'preview',
-    selectionRange,
-  );
-  previewSketchModifier.strength = strength;
 
   const previewCurves = applySketchModifiers(
     originalCurves,
     targetPath.keyframes,
-    [...(targetPath.sketchModifiers ?? []), previewSketchModifier],
+    [...(targetPath.sketchModifiers ?? []), result.sketchModifier],
     p,
   );
   if (!selectionRange) return previewCurves;

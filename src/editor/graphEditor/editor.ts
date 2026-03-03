@@ -4,35 +4,19 @@
  */
 
 import p5 from 'p5';
+import '../../utils/p5Setup';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
 import { clamp } from '../../utils/number';
 import { drawBezierCurve, drawControls } from '../../utils/rendering';
-import {
-  buildGraphCurves,
-  buildSketchCurves,
-  computeKeyframeProgress,
-} from '../../utils/keyframes';
-import {
-  applySketchModifiers,
-  applyGraphModifiers,
-} from '../../utils/modifier';
+import { resolveGraphCurves } from '../../utils/path';
 import {
   isLeftMouseButton,
   isPrimaryEditingPointer,
   toEditorPointerInput,
 } from '../../utils/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
-
-type P5WithErrorToggles = typeof p5 & {
-  disableFriendlyErrors?: boolean;
-  disableSketchChecker?: boolean;
-};
-
-const p5WithErrorToggles = p5 as P5WithErrorToggles;
-p5WithErrorToggles.disableFriendlyErrors = true;
-p5WithErrorToggles.disableSketchChecker = true;
 
 // グラフエディタ
 export class GraphEditor {
@@ -508,29 +492,11 @@ export class GraphEditor {
   } | null {
     if (!this.activePath) return null;
 
-    // 空間カーブを構築（Modifier 適用）
-    const originalSketchCurves = buildSketchCurves(this.activePath.keyframes);
-    const sketchCurves = applySketchModifiers(
-      originalSketchCurves,
-      this.activePath.keyframes,
-      this.activePath.sketchModifiers,
-    );
-
-    // 進行度を計算
-    const progress = computeKeyframeProgress(
-      this.activePath.keyframes,
-      sketchCurves,
-    );
-
-    // 時間カーブを構築
-    const curves = buildGraphCurves(this.activePath.keyframes, progress);
-
-    // Modifier 適用後の時間カーブ
-    const effectiveCurves = applyGraphModifiers(
-      curves,
-      this.activePath.keyframes,
-      this.activePath.graphModifiers,
-    );
+    const {
+      progress,
+      original: curves,
+      effective: effectiveCurves,
+    } = resolveGraphCurves(this.activePath);
 
     return { curves, effectiveCurves, progress };
   }

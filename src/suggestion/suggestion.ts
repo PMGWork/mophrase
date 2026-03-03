@@ -16,15 +16,13 @@ import type {
   SuggestionStatus,
 } from '../types';
 import { createId } from '../utils/id';
-import { buildSketchCurves, computeKeyframeProgress } from '../utils/keyframes';
-import { createSketchModifier, createGraphModifier } from '../utils/modifier';
-import { getSelectionReference, slicePath } from '../utils/path';
+import { slicePath } from '../utils/path';
 import {
-  deserializePathKeyframes,
   serializePaths,
 } from '../utils/serialization/curves';
 import { fetchSuggestions } from './suggestionService';
 import {
+  buildSuggestionModifiers,
   drawSketchPreview,
   getPreviewGraphCurves as buildPreviewGraphCurves,
 } from './suggestionPreview';
@@ -177,47 +175,24 @@ export class SuggestionManager {
     if (!suggestion) return null;
     const modifierTarget = this.resolveModifierTarget(suggestion);
 
-    const originalCurves = buildSketchCurves(this.targetPath.keyframes);
-    const allProgress = computeKeyframeProgress(
-      this.targetPath.keyframes,
-      originalCurves,
-    );
-    const { keyframes: referenceKeyframes, progress: referenceProgress } =
-      getSelectionReference(this.targetPath, this.selectionRange, allProgress);
-
-    const llmKeyframes = deserializePathKeyframes(
-      suggestion.path,
-      referenceKeyframes,
-      referenceProgress,
+    const result = buildSuggestionModifiers(
       p,
+      this.targetPath,
+      suggestion,
+      this.selectionRange,
+      this.hoveredStrength,
     );
-    if (llmKeyframes.length === 0) return null;
+    if (!result) return null;
 
     const sketchModifiers = [...(this.targetPath.sketchModifiers ?? [])];
     const graphModifiers = [...(this.targetPath.graphModifiers ?? [])];
 
     if (modifierTarget !== 'graph') {
-      const previewSketchModifier = createSketchModifier(
-        this.targetPath.keyframes,
-        llmKeyframes,
-        'preview',
-        this.selectionRange,
-      );
-      previewSketchModifier.strength = this.hoveredStrength;
-      sketchModifiers.push(previewSketchModifier);
+      sketchModifiers.push(result.sketchModifier);
     }
 
-    if (modifierTarget !== 'sketch' && llmKeyframes.length > 1) {
-      const previewGraphModifier = createGraphModifier(
-        this.targetPath.keyframes,
-        allProgress,
-        llmKeyframes,
-        referenceProgress,
-        'preview',
-        this.selectionRange,
-      );
-      previewGraphModifier.strength = this.hoveredStrength;
-      graphModifiers.push(previewGraphModifier);
+    if (modifierTarget !== 'sketch' && result.graphModifier) {
+      graphModifiers.push(result.graphModifier);
     }
 
     return {
@@ -377,60 +352,28 @@ export class SuggestionManager {
       return;
     }
 
-    // ターゲットのカーブを取得
-    const originalCurves = buildSketchCurves(this.targetPath.keyframes);
-
-    // 選択範囲の参照キーフレームと進行度を取得
-    const allProgress = computeKeyframeProgress(
-      this.targetPath.keyframes,
-      originalCurves,
-    );
-
-    const { keyframes: referenceKeyframes, progress: referenceProgress } =
-      getSelectionReference(this.targetPath, this.selectionRange, allProgress);
-
-    // LLM出力をキーフレームにデシリアライズ（Modifier生成用）
-    const llmKeyframes = deserializePathKeyframes(
-      suggestion.path,
-      referenceKeyframes,
-      referenceProgress,
-      this.pInstance,
-    );
-
-    // キーフレームがない場合はエラー
-    if (llmKeyframes.length === 0) {
-      this.setState('error');
-      this.updateUI();
-      return;
-    }
-
     // modifier名を設定
     const modifierName =
       this.prompts[this.prompts.length - 1] || suggestion.title;
     const modifierTarget = this.resolveModifierTarget(suggestion);
 
-    // SketchModifier を作成
-    const sketchModifier = createSketchModifier(
-      this.targetPath.keyframes,
-      llmKeyframes,
-      modifierName,
+    const result = buildSuggestionModifiers(
+      this.pInstance,
+      this.targetPath,
+      suggestion,
       this.selectionRange,
+      strength,
+      modifierName,
     );
-    sketchModifier.strength = strength;
 
-    // GraphModifier を作成（時間カーブの差分がある場合のみ）
-    let graphModifier: GraphModifier | null = null;
-    if (llmKeyframes.length > 1) {
-      graphModifier = createGraphModifier(
-        this.targetPath.keyframes,
-        allProgress,
-        llmKeyframes,
-        referenceProgress,
-        modifierName,
-        this.selectionRange,
-      );
-      graphModifier.strength = strength;
+    // キーフレームがない場合はエラー
+    if (!result) {
+      this.setState('error');
+      this.updateUI();
+      return;
     }
+
+    const { sketchModifier, graphModifier } = result;
 
     const shouldApplyGraph =
       (modifierTarget === 'graph' || modifierTarget === 'both') &&

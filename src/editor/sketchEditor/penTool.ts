@@ -9,14 +9,14 @@ import { resolveFitToleranceFromCanvasHeight } from '../../config';
 import { generateKeyframes } from '../../core/fitting/keyframes';
 import type { Path } from '../../types';
 import { bezierCurve, refineParameter } from '../../utils/bezier';
-import { buildSketchCurves, splitKeyframeSegment } from '../../utils/keyframes';
+import { splitKeyframeSegment } from '../../utils/keyframes';
 import {
-  applySketchModifiers,
   splitGraphModifierDeltas,
   splitSketchModifierDeltas,
 } from '../../utils/modifier';
 import { createId } from '../../utils/id';
 import { clamp } from '../../utils/number';
+import { resolveSketchCurves } from '../../utils/path';
 import { drawPoints } from '../../utils/rendering';
 import { isInRect } from '../../utils/input';
 import type { ToolContext } from './types';
@@ -181,14 +181,9 @@ export class PenTool {
     y: number,
     toleranceSq: number,
   ): PathSplitHit | null {
-    const curves = buildSketchCurves(path.keyframes);
-    if (curves.length === 0) return null;
+    const { effective: effectiveCurves } = resolveSketchCurves(path);
+    if (effectiveCurves.length === 0) return null;
 
-    const effectiveCurves = applySketchModifiers(
-      curves,
-      path.keyframes,
-      path.sketchModifiers,
-    );
     const sampleCount = Math.max(4, Math.round(1 / BEZIER_T_STEP));
 
     let best: {

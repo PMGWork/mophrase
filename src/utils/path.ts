@@ -1,9 +1,56 @@
 /**
  * 選択範囲に基づくパスのスライスと参照情報の取得。
+ * パスからスケッチ・グラフカーブを解決するヘルパーも提供する。
  */
 
+import type p5 from 'p5';
 import type { Path, SelectionRange } from '../types';
-import { buildSketchCurves, computeKeyframeProgress } from './keyframes';
+import {
+  buildGraphCurves,
+  buildSketchCurves,
+  computeKeyframeProgress,
+} from './keyframes';
+import {
+  applyGraphModifiers,
+  applySketchModifiers,
+} from './modifier';
+
+// パスからスケッチカーブを解決（Modifier 適用済み）
+export function resolveSketchCurves(
+  path: Pick<Path, 'keyframes' | 'sketchModifiers'>,
+  p?: p5,
+): { original: p5.Vector[][]; effective: p5.Vector[][] } {
+  const original = buildSketchCurves(path.keyframes);
+  const effective = applySketchModifiers(
+    original,
+    path.keyframes,
+    path.sketchModifiers,
+    p,
+  );
+  return { original, effective };
+}
+
+// パスからグラフカーブを解決（Modifier 適用済み）
+export function resolveGraphCurves(
+  path: Pick<Path, 'keyframes' | 'sketchModifiers' | 'graphModifiers'>,
+  p?: p5,
+): {
+  sketchCurves: p5.Vector[][];
+  progress: number[];
+  original: p5.Vector[][];
+  effective: p5.Vector[][];
+} {
+  const { effective: sketchCurves } = resolveSketchCurves(path, p);
+  const progress = computeKeyframeProgress(path.keyframes, sketchCurves);
+  const original = buildGraphCurves(path.keyframes, progress);
+  const effective = applyGraphModifiers(
+    original,
+    path.keyframes,
+    path.graphModifiers,
+    p,
+  );
+  return { sketchCurves, progress, original, effective };
+}
 
 // 部分パスを作成
 export function slicePath(path: Path, range?: SelectionRange): Path {

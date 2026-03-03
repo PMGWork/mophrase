@@ -147,6 +147,13 @@ export const Playback = ({
     seekingPointerId.current = null;
   };
 
+  // ボタンのクラス名
+  const btnClass = `corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
+    hasPaths
+      ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
+      : 'cursor-not-allowed opacity-40'
+  }`;
+
   return (
     <section
       id="playbackBar"
@@ -155,11 +162,7 @@ export const Playback = ({
       <div className="flex items-center gap-1">
         <button
           id="playbackResetButton"
-          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
-            hasPaths
-              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
-              : 'cursor-not-allowed opacity-40'
-          }`}
+          className={btnClass}
           title={hasPaths ? 'First Frame' : 'No objects to reset'}
           disabled={!hasPaths}
           onClick={() => {
@@ -171,11 +174,7 @@ export const Playback = ({
         </button>
         <button
           id="playbackPlayButton"
-          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
-            hasPaths
-              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
-              : 'cursor-not-allowed opacity-40'
-          }`}
+          className={btnClass}
           title={hasPaths ? (isPlaying ? 'Stop' : 'Play') : 'No objects to play'}
           disabled={!hasPaths}
           onClick={() => {
@@ -188,11 +187,7 @@ export const Playback = ({
         </button>
         <button
           id="playbackEndButton"
-          className={`corner-md flex h-7 w-7 shrink-0 items-center justify-center bg-gray-800 text-gray-300 transition-colors ${
-            hasPaths
-              ? 'cursor-pointer hover:bg-gray-700 hover:text-gray-100'
-              : 'cursor-not-allowed opacity-40'
-          }`}
+          className={btnClass}
           title={hasPaths ? 'Last Frame' : 'No objects to seek'}
           disabled={!hasPaths}
           onClick={() => {

@@ -9,6 +9,7 @@ import type p5 from 'p5';
 import type { Colors, Config } from '../config';
 import type { Path } from '../types';
 import { GraphEditor } from '../editor/graphEditor/editor';
+import { useResizeObserver } from './useResizeObserver';
 
 // グラフエディタのパラメータ
 type UseGraphEditorParams = {
@@ -74,18 +75,10 @@ export const useGraphEditor = ({
   }, [previewProvider]);
 
   // コンテナのリサイズを監視
-  useEffect(() => {
-    const container = graphCanvasRef.current;
-    if (!container) return;
-
-    const observer = new ResizeObserver(() => {
-      editorRef.current?.resize();
-    });
-
-    observer.observe(container);
-
-    return () => observer.disconnect();
+  const resizeCallback = useCallback(() => {
+    editorRef.current?.resize();
   }, []);
+  useResizeObserver(graphCanvasRef, resizeCallback);
 
   // グラフキャンバスをキャプチャ
   const captureGraphCanvas = useCallback((): string | null => {

@@ -9,10 +9,10 @@ import { bezierCurve } from '../utils/bezier';
 import { clamp } from '../utils/number';
 import {
   buildGraphCurves,
-  buildSketchCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applySketchModifiers, applyGraphModifiers } from '../utils/modifier';
+import { applyGraphModifiers } from '../utils/modifier';
+import { resolveSketchCurves } from '../utils/path';
 
 // 個別パスのアニメーション状態
 type PathAnimationState = {
@@ -160,11 +160,8 @@ export class MotionManager {
 
     // 再生していない場合は、設定されたパスの開始位置を表示
     if (this.staticPath && this.staticPath.keyframes.length > 0) {
-      const originalCurves = buildSketchCurves(this.staticPath.keyframes);
-      const effectiveCurves = applySketchModifiers(
-        originalCurves,
-        this.staticPath.keyframes,
-        this.staticPath.sketchModifiers,
+      const { effective: effectiveCurves } = resolveSketchCurves(
+        this.staticPath,
         this.p,
       );
       const startPosition =
@@ -207,13 +204,7 @@ export class MotionManager {
       }
 
       // 空間カーブと進行度を計算
-      const originalCurves = buildSketchCurves(path.keyframes);
-      const spatialCurves = applySketchModifiers(
-        originalCurves,
-        path.keyframes,
-        path.sketchModifiers,
-        this.p,
-      );
+      const { effective: spatialCurves } = resolveSketchCurves(path, this.p);
       const keyframeProgress = computeKeyframeProgress(
         path.keyframes,
         spatialCurves,

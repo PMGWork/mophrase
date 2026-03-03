@@ -11,6 +11,7 @@ import {
   getReasoningCapability,
   isGraphImageSupported,
 } from '../utils/llmCapabilities';
+import { ModalBackdrop } from './ModalBackdrop';
 
 export type SettingsChangePayload = {
   llmProvider: LLMProvider;
@@ -133,14 +134,7 @@ export const Settings = ({
   });
 
   return (
-    <div
-      id="settingsModal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      style={{ display: isOpen ? 'flex' : 'none' }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <ModalBackdrop isOpen={isOpen} onClose={onClose}>
       <div
         id="settingsPanel"
         className="corner-xl border-border bg-panel w-full max-w-md border shadow-2xl"
@@ -276,6 +270,6 @@ export const Settings = ({
 
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   );
 };

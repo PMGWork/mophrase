@@ -13,8 +13,7 @@ import type {
   HandleType,
   Path,
 } from '../types';
-import { buildSketchCurves } from '../utils/keyframes';
-import { applySketchModifiers } from '../utils/modifier';
+import { resolveSketchCurves } from '../utils/path';
 
 // ハンドル位置情報（曲線インデックスと制御点インデックス）
 type CurveHandleInfo = { curveIndex: number; pointIndex: number };
@@ -401,13 +400,7 @@ export class HandleManager {
     original: p5.Vector[][];
     effective: p5.Vector[][];
   } {
-    const original = buildSketchCurves(path.keyframes);
-    const effective = applySketchModifiers(
-      original,
-      path.keyframes,
-      path.sketchModifiers,
-    );
-    return { original, effective };
+    return resolveSketchCurves(path);
   }
 
   // ハンドルに対応する曲線と制御点インデックスを取得

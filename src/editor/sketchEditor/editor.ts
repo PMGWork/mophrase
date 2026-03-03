@@ -5,6 +5,7 @@
  */
 
 import p5 from 'p5';
+import '../../utils/p5Setup';
 import { type Colors, type Config } from '../../config';
 import { OBJECT_SIZE, resolveObjectSizeFromCanvasHeight } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
@@ -26,23 +27,13 @@ import {
   normalizeProjectSettings,
 } from '../../types';
 import { deserializePaths } from '../../utils/serialization/project';
-import { applySketchModifiers } from '../../utils/modifier';
-import { buildSketchCurves } from '../../utils/keyframes';
+import { resolveSketchCurves } from '../../utils/path';
 import { drawScene } from './drawScene';
 import { InputHandler, type InputDispatcher } from './inputHandler';
 import { PlaybackController } from './playbackController';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
 import type { SketchDomRefs, ToolContext } from './types';
-
-type P5WithErrorToggles = typeof p5 & {
-  disableFriendlyErrors?: boolean;
-  disableSketchChecker?: boolean;
-};
-
-const p5WithErrorToggles = p5 as P5WithErrorToggles;
-p5WithErrorToggles.disableFriendlyErrors = true;
-p5WithErrorToggles.disableSketchChecker = true;
 
 // スケッチエディタ
 export class SketchEditor {
@@ -258,11 +249,8 @@ export class SketchEditor {
     sourceY: number,
     outerMargin: number,
   ): void {
-    const curves = buildSketchCurves(path.keyframes);
-    const effectiveCurves = applySketchModifiers(
-      curves,
-      path.keyframes,
-      path.sketchModifiers,
+    const { effective: effectiveCurves } = resolveSketchCurves(
+      path,
       this.p ?? undefined,
     );
     if (effectiveCurves.length === 0 && path.keyframes.length === 0) return;
@@ -331,41 +319,16 @@ export class SketchEditor {
     path: Path,
     canvas: HTMLCanvasElement,
   ): { x: number; y: number; width: number; height: number } | null {
-    const curves = buildSketchCurves(path.keyframes);
-    const effectiveCurves = applySketchModifiers(
-      curves,
-      path.keyframes,
-      path.sketchModifiers,
+    const { effective: effectiveCurves } = resolveSketchCurves(
+      path,
       this.p ?? undefined,
     );
     if (effectiveCurves.length === 0) return null;
 
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
+    const bounds = this.computePointBounds(effectiveCurves.flat());
+    if (!bounds) return null;
 
-    for (const curve of effectiveCurves) {
-      if (!curve) continue;
-      for (const point of curve) {
-        if (!point) continue;
-        if (point.x < minX) minX = point.x;
-        if (point.y < minY) minY = point.y;
-        if (point.x > maxX) maxX = point.x;
-        if (point.y > maxY) maxY = point.y;
-      }
-    }
-
-    if (
-      !Number.isFinite(minX) ||
-      !Number.isFinite(minY) ||
-      !Number.isFinite(maxX) ||
-      !Number.isFinite(maxY)
-    ) {
-      return null;
-    }
-
-    return this.toCanvasCropRect({ minX, minY, maxX, maxY }, canvas);
+    return this.toCanvasCropRect(bounds, canvas);
   }
 
   // 選択セグメントを中心としたクロップ矩形をキャンバス座標で計算
@@ -374,11 +337,8 @@ export class SketchEditor {
     selectionRange: SelectionRange,
     canvas: HTMLCanvasElement,
   ): { x: number; y: number; width: number; height: number } | null {
-    const curves = buildSketchCurves(path.keyframes);
-    const effectiveCurves = applySketchModifiers(
-      curves,
-      path.keyframes,
-      path.sketchModifiers,
+    const { effective: effectiveCurves } = resolveSketchCurves(
+      path,
       this.p ?? undefined,
     );
     if (effectiveCurves.length === 0) return null;
@@ -418,33 +378,11 @@ export class SketchEditor {
     const end = Math.min(effectiveCurves.length - 1, selectionRange.endCurveIndex);
     if (start > end) return null;
 
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
+    const rangePoints = effectiveCurves.slice(start, end + 1).flat();
+    const bounds = this.computePointBounds(rangePoints);
+    if (!bounds) return null;
 
-    for (let i = start; i <= end; i += 1) {
-      const curve = effectiveCurves[i];
-      if (!curve) continue;
-      for (const point of curve) {
-        if (!point) continue;
-        if (point.x < minX) minX = point.x;
-        if (point.y < minY) minY = point.y;
-        if (point.x > maxX) maxX = point.x;
-        if (point.y > maxY) maxY = point.y;
-      }
-    }
-
-    if (
-      !Number.isFinite(minX) ||
-      !Number.isFinite(minY) ||
-      !Number.isFinite(maxX) ||
-      !Number.isFinite(maxY)
-    ) {
-      return null;
-    }
-
-    return this.toCanvasCropRect({ minX, minY, maxX, maxY }, canvas);
+    return this.toCanvasCropRect(bounds, canvas);
   }
 
   private computePointBounds(

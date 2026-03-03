@@ -5,8 +5,7 @@
 
 import type p5 from 'p5';
 import type { Path, SelectionRange } from '../types';
-import { buildSketchCurves } from '../utils/keyframes';
-import { applySketchModifiers } from '../utils/modifier';
+import { resolveSketchCurves } from '../utils/path';
 
 // ポップアップのオフセット値
 const POPUP_OFFSET = 20;
@@ -22,14 +21,8 @@ export function computeSuggestionPosition({
   if (!targetPath) return null;
 
   // curvesを構築してmodifierを適用
-  const originalCurves = buildSketchCurves(targetPath.keyframes);
+  const { original: originalCurves, effective: effectiveCurves } = resolveSketchCurves(targetPath);
   if (originalCurves.length === 0) return null;
-
-  const effectiveCurves = applySketchModifiers(
-    originalCurves,
-    targetPath.keyframes,
-    targetPath.sketchModifiers,
-  );
 
   if (selectionRange?.anchorKeyframeIndex !== undefined) {
     const anchor = getAnchorPointFromSelection(

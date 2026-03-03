@@ -7,8 +7,7 @@ import type p5 from 'p5';
 import { BEZIER_T_STEP, OBJECT_SIZE } from '../../constants';
 import type { MarqueeRect, Path } from '../../types';
 import { bezierCurve } from '../../utils/bezier';
-import { buildSketchCurves } from '../../utils/keyframes';
-import { applySketchModifiers } from '../../utils/modifier';
+import { resolveSketchCurves } from '../../utils/path';
 import type { ToolContext } from './types';
 
 // 選択ツール
@@ -172,15 +171,8 @@ export class SelectTool {
     y: number,
     toleranceSq: number,
   ): boolean {
-    const curves = buildSketchCurves(path.keyframes);
-    if (curves.length === 0) return false;
-
-    // modifier適用後の曲線で判定
-    const effectiveCurves = applySketchModifiers(
-      curves,
-      path.keyframes,
-      path.sketchModifiers,
-    );
+    const { effective: effectiveCurves } = resolveSketchCurves(path);
+    if (effectiveCurves.length === 0) return false;
 
     for (const curve of effectiveCurves) {
       for (let t = 0; t <= 1; t += BEZIER_T_STEP) {
