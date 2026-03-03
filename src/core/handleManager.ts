@@ -116,15 +116,6 @@ export class HandleManager {
     );
   }
 
-  // 単一アンカーのみが選択されているか
-  isSingleAnchorSelection(pathIndex?: number): boolean {
-    if (this.selectedHandles.length !== 1) return false;
-    const selected = this.selectedHandles[0];
-    if (selected.handleType !== 'ANCHOR') return false;
-    if (pathIndex !== undefined && selected.pathIndex !== pathIndex) return false;
-    return true;
-  }
-
   // 選択をクリア
   clearSelection(): void {
     this.selectedHandles = [];
@@ -236,6 +227,7 @@ export class HandleManager {
         pathIndex,
         startCurveIndex: curveIndex,
         endCurveIndex: curveIndex,
+        anchorKeyframeIndex: anchorIndex,
       };
     }
 

@@ -24,6 +24,7 @@ export interface SelectionRange {
   pathIndex: number;
   startCurveIndex: number;
   endCurveIndex: number;
+  anchorKeyframeIndex?: number;
 }
 
 // ベジエハンドルの選択情報

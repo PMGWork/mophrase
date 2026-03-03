@@ -207,8 +207,10 @@ export class SketchEditor {
       const src = this.canvasElement;
       const outerMargin = 32;
       const crop =
-        path && selectionRange
-          ? this.computeSelectionCropRect(path, selectionRange, src)
+        path
+          ? selectionRange
+            ? this.computeSelectionCropRect(path, selectionRange, src)
+            : this.computePathCropRect(path, src)
           : null;
       const sourceX = crop?.x ?? 0;
       const sourceY = crop?.y ?? 0;
@@ -235,10 +237,135 @@ export class SketchEditor {
         sourceW,
         sourceH,
       );
+
+      // キーフレームインデックスラベルを描画
+      if (path) {
+        this.drawKeyframeLabels(ctx, path, src, sourceX, sourceY, outerMargin);
+      }
+
       return offscreen.toDataURL('image/png');
     } catch {
       return null;
     }
+  }
+
+  // キーフレーム位置にインデックスラベルを描画（LLM向け対応づけ用）
+  private drawKeyframeLabels(
+    ctx: CanvasRenderingContext2D,
+    path: Path,
+    src: HTMLCanvasElement,
+    sourceX: number,
+    sourceY: number,
+    outerMargin: number,
+  ): void {
+    const curves = buildSketchCurves(path.keyframes);
+    const effectiveCurves = applySketchModifiers(
+      curves,
+      path.keyframes,
+      path.sketchModifiers,
+      this.p ?? undefined,
+    );
+    if (effectiveCurves.length === 0 && path.keyframes.length === 0) return;
+
+    // CSS→物理ピクセル変換比
+    const rect = src.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? src.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? src.height / rect.height : 1;
+
+    // モディファイア適用後の各キーフレームのアンカー座標を取得
+    const anchorPositions: { x: number; y: number }[] = [];
+    for (let i = 0; i < path.keyframes.length; i++) {
+      if (i === 0 && effectiveCurves.length > 0) {
+        // 最初のキーフレーム = 最初のカーブの始点
+        const pt = effectiveCurves[0][0];
+        anchorPositions.push({ x: pt.x, y: pt.y });
+      } else if (i > 0 && i - 1 < effectiveCurves.length) {
+        // i 番目のキーフレーム = (i-1) 番目のカーブの終点
+        const pt = effectiveCurves[i - 1][3];
+        anchorPositions.push({ x: pt.x, y: pt.y });
+      } else {
+        // フォールバック: 元の position を使う
+        const pos = path.keyframes[i].position;
+        anchorPositions.push({ x: pos.x, y: pos.y });
+      }
+    }
+
+    // ラベルスタイル設定
+    const fontSize = 20;
+    const padding = 5;
+    const offsetY = -14; // アンカー点の上にオフセット
+    ctx.font = `bold ${fontSize}px Geist, system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+
+    for (let i = 0; i < anchorPositions.length; i++) {
+      const pos = anchorPositions[i];
+      // CSS座標 → 物理ピクセル座標 → offscreen内座標に変換
+      const canvasX = pos.x * scaleX - sourceX + outerMargin;
+      const canvasY = pos.y * scaleY - sourceY + outerMargin;
+
+      const label = `[${i}]`;
+      const metrics = ctx.measureText(label);
+      const textWidth = metrics.width;
+      const textHeight = fontSize;
+
+      // 背景矩形
+      const bgX = canvasX - textWidth / 2 - padding;
+      const bgY = canvasY + offsetY - textHeight - padding;
+      const bgW = textWidth + padding * 2;
+      const bgH = textHeight + padding * 2;
+
+      ctx.fillStyle = '#22d3ee';
+      ctx.beginPath();
+      ctx.roundRect(bgX, bgY, bgW, bgH, 3);
+      ctx.fill();
+
+      // テキスト
+      ctx.fillStyle = '#000000';
+      ctx.fillText(label, canvasX, canvasY + offsetY);
+    }
+  }
+
+  // パス全体のバウンディングボックスでクロップ矩形を計算（未選択時用）
+  private computePathCropRect(
+    path: Path,
+    canvas: HTMLCanvasElement,
+  ): { x: number; y: number; width: number; height: number } | null {
+    const curves = buildSketchCurves(path.keyframes);
+    const effectiveCurves = applySketchModifiers(
+      curves,
+      path.keyframes,
+      path.sketchModifiers,
+      this.p ?? undefined,
+    );
+    if (effectiveCurves.length === 0) return null;
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const curve of effectiveCurves) {
+      if (!curve) continue;
+      for (const point of curve) {
+        if (!point) continue;
+        if (point.x < minX) minX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    if (
+      !Number.isFinite(minX) ||
+      !Number.isFinite(minY) ||
+      !Number.isFinite(maxX) ||
+      !Number.isFinite(maxY)
+    ) {
+      return null;
+    }
+
+    return this.toCanvasCropRect({ minX, minY, maxX, maxY }, canvas);
   }
 
   // 選択セグメントを中心としたクロップ矩形をキャンバス座標で計算
@@ -255,6 +382,37 @@ export class SketchEditor {
       this.p ?? undefined,
     );
     if (effectiveCurves.length === 0) return null;
+
+    if (selectionRange.anchorKeyframeIndex !== undefined) {
+      const anchorIndex = Math.max(
+        0,
+        Math.min(path.keyframes.length - 1, selectionRange.anchorKeyframeIndex),
+      );
+      const pointSet: p5.Vector[] = [];
+      const segmentCount = effectiveCurves.length;
+
+      if (anchorIndex < segmentCount) {
+        const forward = effectiveCurves[anchorIndex];
+        const anchor = forward?.[0];
+        const outHandle = forward?.[1];
+        if (anchor) pointSet.push(anchor);
+        if (outHandle) pointSet.push(outHandle);
+      }
+      if (anchorIndex > 0) {
+        const backward = effectiveCurves[anchorIndex - 1];
+        const inHandle = backward?.[2];
+        const anchor = backward?.[3];
+        if (inHandle) pointSet.push(inHandle);
+        if (anchor) pointSet.push(anchor);
+      }
+
+      if (pointSet.length > 0) {
+        const bounds = this.computePointBounds(pointSet);
+        if (bounds) {
+          return this.toCanvasCropRect(bounds, canvas);
+        }
+      }
+    }
 
     const start = Math.max(0, selectionRange.startCurveIndex);
     const end = Math.min(effectiveCurves.length - 1, selectionRange.endCurveIndex);
@@ -286,6 +444,42 @@ export class SketchEditor {
       return null;
     }
 
+    return this.toCanvasCropRect({ minX, minY, maxX, maxY }, canvas);
+  }
+
+  private computePointBounds(
+    points: p5.Vector[],
+  ): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const point of points) {
+      if (!point) continue;
+      if (point.x < minX) minX = point.x;
+      if (point.y < minY) minY = point.y;
+      if (point.x > maxX) maxX = point.x;
+      if (point.y > maxY) maxY = point.y;
+    }
+
+    if (
+      !Number.isFinite(minX) ||
+      !Number.isFinite(minY) ||
+      !Number.isFinite(maxX) ||
+      !Number.isFinite(maxY)
+    ) {
+      return null;
+    }
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  private toCanvasCropRect(
+    bounds: { minX: number; minY: number; maxX: number; maxY: number },
+    canvas: HTMLCanvasElement,
+  ): { x: number; y: number; width: number; height: number } {
+    const { minX, minY, maxX, maxY } = bounds;
     const cssW = Math.max(1, maxX - minX);
     const cssH = Math.max(1, maxY - minY);
     const padX = Math.max(24, cssW * 0.2);

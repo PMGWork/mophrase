@@ -14,6 +14,17 @@ export function slicePath(path: Path, range?: SelectionRange): Path {
       keyframes: [...path.keyframes],
     };
 
+  // 単一アンカー選択時は、そのアンカーのみを送信対象にする
+  if (range.anchorKeyframeIndex !== undefined) {
+    const index = Math.max(
+      0,
+      Math.min(path.keyframes.length - 1, range.anchorKeyframeIndex),
+    );
+    const keyframe = path.keyframes[index];
+    if (!keyframe) return { ...path, keyframes: [...path.keyframes] };
+    return { ...path, keyframes: [keyframe] };
+  }
+
   // 範囲指定がある場合は部分的に切り出す
   const start = Math.max(0, range.startCurveIndex);
   const end = Math.min(path.keyframes.length - 2, range.endCurveIndex);
@@ -30,6 +41,19 @@ export function getSelectionReference(
   progress: number[],
 ): { keyframes: Path['keyframes']; progress: number[] } {
   if (!range) return { keyframes: path.keyframes, progress };
+
+  if (range.anchorKeyframeIndex !== undefined) {
+    const index = Math.max(
+      0,
+      Math.min(path.keyframes.length - 1, range.anchorKeyframeIndex),
+    );
+    const keyframe = path.keyframes[index];
+    if (!keyframe) return { keyframes: path.keyframes, progress };
+    return {
+      keyframes: [keyframe],
+      progress: [progress[index] ?? 0],
+    };
+  }
 
   const sliced = slicePath(path, range);
   const start = Math.max(0, range.startCurveIndex);

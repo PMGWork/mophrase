@@ -130,7 +130,8 @@ function serializeKeyframes(
 export function serializePaths(paths: Path[]): SerializedPath[] {
   return paths.map((path) => {
     const curves = buildSketchCurves(path.keyframes);
-    const bbox = computeBbox(curves);
+    const bbox =
+      curves.length > 0 ? computeBbox(curves) : computeBboxFromKeyframes(path.keyframes);
     const progress = computeKeyframeProgress(path.keyframes, curves);
     const keyframes = serializeKeyframes(path.keyframes, bbox, progress);
     return { keyframes, bbox };
@@ -277,5 +278,51 @@ function computeBbox(curves: p5.Vector[][]): SerializedBoundingBox {
     y: minY,
     width,
     height,
+  };
+}
+
+// キーフレーム（アンカー + sketchハンドル）からバウンディングボックスを計算
+function computeBboxFromKeyframes(keyframes: Keyframe[]): SerializedBoundingBox {
+  if (keyframes.length === 0) {
+    return { x: 0, y: 0, width: 1, height: 1 };
+  }
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  const includePoint = (x: number, y: number): void => {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+  };
+
+  for (const keyframe of keyframes) {
+    const anchor = keyframe.position;
+    includePoint(anchor.x, anchor.y);
+
+    const sketchIn = keyframe.sketchIn;
+    if (sketchIn) {
+      includePoint(anchor.x + sketchIn.x, anchor.y + sketchIn.y);
+    }
+
+    const sketchOut = keyframe.sketchOut;
+    if (sketchOut) {
+      includePoint(anchor.x + sketchOut.x, anchor.y + sketchOut.y);
+    }
+  }
+
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+    return { x: 0, y: 0, width: 1, height: 1 };
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1e-6, maxX - minX),
+    height: Math.max(1e-6, maxY - minY),
   };
 }

@@ -116,9 +116,10 @@ export function drawScene(p: p5, state: DrawSceneState): void {
       selectionRange && selectionRange.pathIndex === pathIndex
         ? selectionRange
         : null;
-    const isSingleAnchorSelection =
-      state.handleManager.isSingleAnchorSelection(pathIndex);
-    const highlightedRange = isSingleAnchorSelection ? null : activePathRange;
+    const highlightedRange =
+      activePathRange?.anchorKeyframeIndex !== undefined
+        ? null
+        : activePathRange;
 
     drawSketchPath(
       p,

@@ -3,6 +3,7 @@
  * パス終点の座標からポップアップ表示位置を算出する。
  */
 
+import type p5 from 'p5';
 import type { Path, SelectionRange } from '../types';
 import { buildSketchCurves } from '../utils/keyframes';
 import { applySketchModifiers } from '../utils/modifier';
@@ -30,6 +31,24 @@ export function computeSuggestionPosition({
     targetPath.sketchModifiers,
   );
 
+  if (selectionRange?.anchorKeyframeIndex !== undefined) {
+    const anchor = getAnchorPointFromSelection(
+      effectiveCurves,
+      selectionRange.anchorKeyframeIndex,
+    );
+    if (!anchor) return null;
+
+    const canvasContainer = document.getElementById('canvasContainer');
+    const rect = canvasContainer?.getBoundingClientRect();
+    const offsetX = rect?.left ?? 0;
+    const offsetY = rect?.top ?? 0;
+
+    return {
+      left: offsetX + anchor.x + POPUP_OFFSET,
+      top: offsetY + anchor.y - POPUP_OFFSET,
+    };
+  }
+
   // 終点のインデックスを計算
   const endCurveIndex = selectionRange
     ? Math.min(effectiveCurves.length - 1, selectionRange.endCurveIndex)
@@ -52,4 +71,21 @@ export function computeSuggestionPosition({
   const top = offsetY + anchor.y - POPUP_OFFSET;
 
   return { left, top };
+}
+
+function getAnchorPointFromSelection(
+  effectiveCurves: p5.Vector[][],
+  anchorKeyframeIndex: number,
+): p5.Vector | null {
+  if (effectiveCurves.length === 0) return null;
+  const segmentCount = effectiveCurves.length;
+  const clampedIndex = Math.max(0, Math.min(segmentCount, anchorKeyframeIndex));
+
+  if (clampedIndex < segmentCount) {
+    const forwardAnchor = effectiveCurves[clampedIndex]?.[0];
+    if (forwardAnchor) return forwardAnchor;
+  }
+
+  const backwardAnchor = effectiveCurves[clampedIndex - 1]?.[3];
+  return backwardAnchor ?? null;
 }

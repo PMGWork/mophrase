@@ -120,6 +120,34 @@ export function createSketchModifier(
   name: string,
   selectionRange?: SelectionRange,
 ): SketchModifier {
+  const focusedIndex = selectionRange?.anchorKeyframeIndex;
+
+  // 単一アンカー選択時は、そのアンカーのみ差分化する
+  if (focusedIndex !== undefined) {
+    const deltas: SketchKeyframeDelta[] = keyframes.map(() => ({}));
+    const index = Math.max(0, Math.min(keyframes.length - 1, focusedIndex));
+    const original = keyframes[index];
+    const modified = modifiedKeyframes[0];
+
+    if (original && modified) {
+      const delta = deltas[index];
+      const pos = diffVec2(modified.position, original.position);
+      if (pos) delta.posDelta = pos;
+
+      const inDelta = diffVec2(modified.sketchIn, original.sketchIn, {
+        treatUndefinedAsZero: true,
+      });
+      if (inDelta) delta.inDelta = inDelta;
+
+      const outDelta = diffVec2(modified.sketchOut, original.sketchOut, {
+        treatUndefinedAsZero: true,
+      });
+      if (outDelta) delta.outDelta = outDelta;
+    }
+
+    return { id: createId(), name, strength: 1.0, deltas };
+  }
+
   const startIndex = selectionRange?.startCurveIndex ?? 0;
   const endIndex =
     selectionRange?.endCurveIndex ?? Math.max(0, keyframes.length - 2);
@@ -171,6 +199,31 @@ export function createGraphModifier(
   name: string,
   selectionRange?: SelectionRange,
 ): GraphModifier {
+  const focusedIndex = selectionRange?.anchorKeyframeIndex;
+
+  // 単一アンカー選択時は、そのアンカーの入出グラフハンドルのみ差分化する
+  if (focusedIndex !== undefined) {
+    const deltas: GraphKeyframeDelta[] = keyframes.map(() => ({}));
+    const index = Math.max(0, Math.min(keyframes.length - 1, focusedIndex));
+    const delta = deltas[index];
+
+    const originalOut = resolveGraphOutHandle(keyframes, progress, index);
+    const modifiedOut = resolveGraphOutHandle(modifiedKeyframes, modifiedProgress, 0);
+    if (originalOut && modifiedOut) {
+      const outDelta = diffVec2(modifiedOut, originalOut);
+      if (outDelta) delta.outDelta = outDelta;
+    }
+
+    const originalIn = resolveGraphInHandle(keyframes, progress, index);
+    const modifiedIn = resolveGraphInHandle(modifiedKeyframes, modifiedProgress, 0);
+    if (originalIn && modifiedIn) {
+      const inDelta = diffVec2(modifiedIn, originalIn);
+      if (inDelta) delta.inDelta = inDelta;
+    }
+
+    return { id: createId(), name, strength: 1.0, deltas };
+  }
+
   const startIndex = selectionRange?.startCurveIndex ?? 0;
   const endIndex =
     selectionRange?.endCurveIndex ?? Math.max(0, keyframes.length - 2);
