@@ -6,25 +6,17 @@ import {
   type Config,
 } from '../config';
 import type { LLMProvider, LLMReasoningEffort } from '../types';
-import { getModels } from '../services/llm';
+import { getModels } from '../services/llmService';
 import { ModalBackdrop } from './ModalBackdrop';
 
-
-// 設定パネルから親へ通知する更新値
+// 設定パネルから親コンポーネントへの更新内容
 export type SettingsUpdate = {
-  // 利用する LLM プロバイダ
   llmProvider: LLMProvider;
-  // 利用するモデル ID
   llmModel: string;
-  // 推論強度（モデルによっては hidden/toggle 制御）
   llmReasoningEffort: LLMReasoningEffort;
-  // 提案生成を並列化するか
   parallelGeneration: boolean;
-  // カーブ画像を LLM 入力として送るか
   graphImageEnabled: boolean;
-  // フィット許容誤差（キャンバス縦幅比）
   fitTolerance: number;
-  // ベンチマーク用テストモード
   testMode: boolean;
 };
 
@@ -45,6 +37,7 @@ type ReasoningCapability =
     }
   | { mode: 'hidden'; resolve: (current: LLMReasoningEffort) => LLMReasoningEffort };
 
+// LLM とモデルに応じて推論能力の表現方法を決定
 const getReasoningCapability = (
   provider: LLMProvider,
   modelId: string,
@@ -66,7 +59,7 @@ const getReasoningCapability = (
   };
 };
 
-// トグル行コンポーネント
+// トグルスイッチの行コンポーネント
 const ToggleRow = ({
   label,
   description,
