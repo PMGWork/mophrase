@@ -6,7 +6,7 @@
 
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
-import { OBJECT_SIZE, resolveObjectSize } from '../../constants';
+import { OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import {
@@ -75,7 +75,6 @@ export class SketchEditor {
   // p5.js インスタンス
   private p: p5 | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
-  private objectSize: number = OBJECT_SIZE;
 
   // コンストラクタ
   constructor(
@@ -185,7 +184,6 @@ export class SketchEditor {
     if (!this.p) return;
     const { width, height } = this.dom.getCanvasSize();
     this.p.resizeCanvas(width, height);
-    this.updateObjectSize(height);
   }
 
   // エディタの破棄
@@ -396,10 +394,9 @@ export class SketchEditor {
     p.background(this.colors.background);
     p.textFont('Geist');
 
-    this.updateObjectSize(height);
-    const mm = new MotionManager(p, this.objectSize);
+    const mm = new MotionManager(p, OBJECT_SIZE);
     this.playback.setMotionManager(mm);
-    this.suggestionMotionManager = new MotionManager(p, this.objectSize);
+    this.suggestionMotionManager = new MotionManager(p, OBJECT_SIZE);
 
     this.setProjectSettings(this.projectSettings);
   }
@@ -442,7 +439,7 @@ export class SketchEditor {
       colors: this.colors,
       config: this.config,
       objectColors: this.objectColors,
-      objectSize: this.objectSize,
+      objectSize: OBJECT_SIZE,
       currentTool: this.currentTool,
       isPreviewing: this.playback.isPreviewing,
       isSuggestionLoopPlaying,
@@ -530,13 +527,6 @@ export class SketchEditor {
   }
 
   // #region プライベートヘルパー
-
-  private updateObjectSize(canvasHeight: number): void {
-    this.objectSize = resolveObjectSize(canvasHeight);
-    this.selectTool.setObjectSize(this.objectSize);
-    this.playback.getMotionManager()?.setObjectSize(this.objectSize);
-    this.suggestionMotionManager?.setObjectSize(this.objectSize);
-  }
 
   private mapCurvePointToHandle(
     pathIndex: number,
