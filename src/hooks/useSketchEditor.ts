@@ -15,7 +15,12 @@ import {
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
-import type { Path, ProjectSettings, ToolKind } from '../types';
+import type {
+  Path,
+  ProjectSettings,
+  SelectionRange,
+  ToolKind,
+} from '../types';
 import { DEFAULT_PROJECT_SETTINGS, normalizeProjectSettings } from '../types';
 import { SketchEditor } from '../editor/sketchEditor/editor';
 import { loadConfig, saveConfig } from '../services/configStorage';
@@ -85,7 +90,13 @@ type UseSketchEditorResult = {
   submitPrompt: (prompt: string) => void;
   setSuggestionHover: (id: string | null, strength: number) => void;
   selectSuggestion: (id: string, strength: number) => void;
-  setGraphImageProvider: (provider: () => string | null) => void;
+  captureSketchCanvas: (
+    path?: Path,
+    selectionRange?: SelectionRange,
+  ) => string | null;
+  setGraphImageProvider: (
+    provider: (path?: Path, selectionRange?: SelectionRange) => string | null,
+  ) => void;
   getPreviewGraphCurves: (
     p: p5,
   ) => { curves: p5.Vector[][]; strength: number } | null;
@@ -335,9 +346,18 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     editorRef.current?.getSuggestionManager().selectSuggestion(id, strength);
   }, []);
 
+  // スケッチキャンバスをキャプチャ
+  const captureSketchCanvas = useCallback(
+    (path?: Path, selectionRange?: SelectionRange) =>
+      editorRef.current?.captureCanvas(path, selectionRange) ?? null,
+    [],
+  );
+
   // グラフ画像プロバイダーを設定
   const setGraphImageProvider = useCallback(
-    (provider: () => string | null) => {
+    (
+      provider: (path?: Path, selectionRange?: SelectionRange) => string | null,
+    ) => {
       editorRef.current?.getSuggestionManager().setGraphImageProvider(provider);
     },
     [],
@@ -682,6 +702,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     submitPrompt,
     setSuggestionHover,
     selectSuggestion,
+    captureSketchCanvas,
     setGraphImageProvider,
     getPreviewGraphCurves,
 

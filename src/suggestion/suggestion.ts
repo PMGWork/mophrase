@@ -47,8 +47,11 @@ export type SuggestionUIState = {
   position: { left: number; top: number } | null;
 };
 
-// グラフ画像プロバイダーの型
-export type GraphImageProvider = () => string | null;
+// 送信用画像プロバイダーの型
+export type GraphImageProvider = (
+  path?: Path,
+  selectionRange?: SelectionRange,
+) => string | null;
 
 // 提案マネージャー
 export class SuggestionManager {
@@ -80,7 +83,7 @@ export class SuggestionManager {
     this.config = config;
   }
 
-  // グラフ画像プロバイダーを設定
+  // 送信用画像プロバイダーを設定
   setGraphImageProvider(provider: GraphImageProvider): void {
     this.graphImageProvider = provider;
   }
@@ -284,9 +287,9 @@ export class SuggestionManager {
     const serializedPaths = serializePaths([partialPath]);
     const serializedPath = serializedPaths[0];
 
-    // グラフキャンバスをキャプチャ（設定で有効な場合のみ）
+    // 送信用画像をキャプチャ（設定で有効な場合のみ）
     const graphImageDataUrl = this.config.graphImageEnabled
-      ? (this.graphImageProvider?.() ?? undefined)
+      ? (this.graphImageProvider?.(path, selectionRange) ?? undefined)
       : undefined;
 
     // プロンプトの保存

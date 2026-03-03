@@ -242,7 +242,7 @@ export const Settings = ({
               label="Curve Image"
               description={
                 graphImageSupported
-                  ? 'Send easing curve screenshot to LLM'
+                  ? 'Send sketch canvas screenshot to LLM'
                   : 'Unavailable for GPT OSS models'
               }
               checked={resolvedGraphImageEnabled}

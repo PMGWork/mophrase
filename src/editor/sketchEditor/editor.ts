@@ -17,6 +17,7 @@ import type {
   HandleSelection,
   Path,
   ProjectSettings,
+  SelectionRange,
   SerializedProjectPath,
   ToolKind,
 } from '../../types';
@@ -25,6 +26,8 @@ import {
   normalizeProjectSettings,
 } from '../../types';
 import { deserializePaths } from '../../utils/serialization/project';
+import { applySketchModifiers } from '../../utils/modifier';
+import { buildSketchCurves } from '../../utils/keyframes';
 import { drawScene } from './drawScene';
 import { InputHandler, type InputDispatcher } from './inputHandler';
 import { PlaybackController } from './playbackController';
@@ -83,6 +86,7 @@ export class SketchEditor {
 
   // p5.js インスタンス
   private p: p5 | null = null;
+  private canvasElement: HTMLCanvasElement | null = null;
   private objectSize: number = OBJECT_SIZE;
 
   // コンストラクタ
@@ -192,7 +196,118 @@ export class SketchEditor {
     this.inputHandler.destroy();
     this.p?.remove();
     this.p = null;
+    this.canvasElement = null;
     this.suggestionMotionManager = null;
+  }
+
+  // キャンバスを PNG data URL としてキャプチャ（LLM送信用にマージン付き）
+  public captureCanvas(path?: Path, selectionRange?: SelectionRange): string | null {
+    if (!this.canvasElement) return null;
+    try {
+      const src = this.canvasElement;
+      const outerMargin = 32;
+      const crop =
+        path && selectionRange
+          ? this.computeSelectionCropRect(path, selectionRange, src)
+          : null;
+      const sourceX = crop?.x ?? 0;
+      const sourceY = crop?.y ?? 0;
+      const sourceW = crop?.width ?? src.width;
+      const sourceH = crop?.height ?? src.height;
+
+      const w = sourceW + outerMargin * 2;
+      const h = sourceH + outerMargin * 2;
+      const offscreen = document.createElement('canvas');
+      offscreen.width = w;
+      offscreen.height = h;
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) return src.toDataURL('image/png');
+      ctx.fillStyle = this.colors.background;
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(
+        src,
+        sourceX,
+        sourceY,
+        sourceW,
+        sourceH,
+        outerMargin,
+        outerMargin,
+        sourceW,
+        sourceH,
+      );
+      return offscreen.toDataURL('image/png');
+    } catch {
+      return null;
+    }
+  }
+
+  // 選択セグメントを中心としたクロップ矩形をキャンバス座標で計算
+  private computeSelectionCropRect(
+    path: Path,
+    selectionRange: SelectionRange,
+    canvas: HTMLCanvasElement,
+  ): { x: number; y: number; width: number; height: number } | null {
+    const curves = buildSketchCurves(path.keyframes);
+    const effectiveCurves = applySketchModifiers(
+      curves,
+      path.keyframes,
+      path.sketchModifiers,
+      this.p ?? undefined,
+    );
+    if (effectiveCurves.length === 0) return null;
+
+    const start = Math.max(0, selectionRange.startCurveIndex);
+    const end = Math.min(effectiveCurves.length - 1, selectionRange.endCurveIndex);
+    if (start > end) return null;
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (let i = start; i <= end; i += 1) {
+      const curve = effectiveCurves[i];
+      if (!curve) continue;
+      for (const point of curve) {
+        if (!point) continue;
+        if (point.x < minX) minX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y > maxY) maxY = point.y;
+      }
+    }
+
+    if (
+      !Number.isFinite(minX) ||
+      !Number.isFinite(minY) ||
+      !Number.isFinite(maxX) ||
+      !Number.isFinite(maxY)
+    ) {
+      return null;
+    }
+
+    const cssW = Math.max(1, maxX - minX);
+    const cssH = Math.max(1, maxY - minY);
+    const padX = Math.max(24, cssW * 0.2);
+    const padY = Math.max(24, cssH * 0.2);
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+
+    const rawX = Math.floor((minX - padX) * scaleX);
+    const rawY = Math.floor((minY - padY) * scaleY);
+    const rawW = Math.ceil((cssW + padX * 2) * scaleX);
+    const rawH = Math.ceil((cssH + padY * 2) * scaleY);
+
+    const x = Math.max(0, Math.min(canvas.width - 1, rawX));
+    const y = Math.max(0, Math.min(canvas.height - 1, rawY));
+    const maxW = canvas.width - x;
+    const maxH = canvas.height - y;
+    const width = Math.max(1, Math.min(maxW, rawW));
+    const height = Math.max(1, Math.min(maxH, rawH));
+
+    return { x, y, width, height };
   }
 
   /** 選択中のパスを削除 */
@@ -386,6 +501,7 @@ export class SketchEditor {
     const renderer = p.createCanvas(width, height);
     renderer.parent(this.dom.canvasContainer);
     const canvas = renderer.elt as HTMLCanvasElement;
+    this.canvasElement = canvas;
     this.inputHandler.attach(canvas);
     p.background(this.colors.background);
     p.textFont('Geist');

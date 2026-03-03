@@ -35,6 +35,32 @@ async function requestServer<T>(
   if (imageDataUrl) {
     body.imageDataUrl = imageDataUrl;
   }
+  console.log('[llm] input', {
+    provider,
+    model,
+    reasoningEffort,
+    prompt,
+    promptChars: prompt.length,
+    schema: body.schema,
+    hasImageDataUrl: Boolean(imageDataUrl),
+    imageDataUrlChars: imageDataUrl?.length,
+  });
+  if (imageDataUrl) {
+    console.log('[llm] input imageDataUrl', imageDataUrl);
+    console.log(
+      '%c ',
+      [
+        'font-size:1px',
+        'padding:72px 120px',
+        'background-repeat:no-repeat',
+        'background-position:center',
+        'background-size:contain',
+        `background-image:url("${imageDataUrl}")`,
+        'background-color:#111',
+        'border:1px solid #333',
+      ].join(';'),
+    );
+  }
   const response = await fetch(`${window.location.origin}/api/llm/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

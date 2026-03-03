@@ -36,6 +36,7 @@ const App = () => {
     submitPrompt,
     setSuggestionHover,
     selectSuggestion,
+    captureSketchCanvas,
     setGraphImageProvider,
 
     // 設定
@@ -64,17 +65,17 @@ const App = () => {
     createNewProject,
   } = useSketchEditor();
 
-  const { graphCanvasRef, captureGraphCanvas } = useGraphEditor({
+  const { graphCanvasRef } = useGraphEditor({
     activePath,
     config,
     colors,
     previewProvider: getPreviewGraphCurves,
   });
 
-  // グラフ画像プロバイダーをSuggestionManagerに接続
+  // 送信用画像プロバイダーをSuggestionManagerに接続
   useEffect(() => {
-    setGraphImageProvider(captureGraphCanvas);
-  }, [captureGraphCanvas, setGraphImageProvider]);
+    setGraphImageProvider(captureSketchCanvas);
+  }, [captureSketchCanvas, setGraphImageProvider]);
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {
