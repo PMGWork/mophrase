@@ -57,7 +57,7 @@ const getReasoningCapability = (
 
   return {
     mode: 'hidden',
-    resolve: (cur) => cur,
+    resolve: () => 'none',
   };
 };
 
