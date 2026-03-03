@@ -170,11 +170,12 @@ export interface ProjectData {
   paths: SerializedProjectPath[];
 }
 
+// プロジェクトの保存形式
 export const FIXED_PLAYBACK_DURATION_SECONDS = 30;
 export const PLAYBACK_FRAME_RATE_OPTIONS = [60, 30, 24] as const;
 export type PlaybackFrameRate = (typeof PLAYBACK_FRAME_RATE_OPTIONS)[number];
 
-// フレームレートを正規化する関数（許容される値以外はデフォルトの30fpsにフォールバック）
+// フレームレートを正規化する関数
 export const normalizePlaybackFrameRate = (
   frameRate: number | undefined,
 ): PlaybackFrameRate => {
@@ -183,7 +184,7 @@ export const normalizePlaybackFrameRate = (
     : 30;
 };
 
-// プロジェクト設定を正規化する関数（不足しているプロパティはデフォルト値で補完）
+// プロジェクト設定を正規化する関数
 export const normalizeProjectSettings = (
   settings: Partial<ProjectSettings> = {},
 ): ProjectSettings => ({

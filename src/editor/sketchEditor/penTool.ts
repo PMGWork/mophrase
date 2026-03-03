@@ -16,8 +16,8 @@ import {
 } from '../../utils/modifier';
 import { clamp } from '../../utils/math';
 import { resolveSketchCurves } from '../../utils/path';
-import { drawPoints } from '../../utils/rendering';
-import { isInRect } from '../../utils/input';
+import { drawPoints } from '../shared/rendering';
+import { isInRect } from '../shared/input';
 import type { ToolContext } from './types';
 
 type DraftPath = {

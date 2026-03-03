@@ -1,8 +1,9 @@
 /**
- * p5.js のマウス入力判定やヒットテストのヘルパー。
+ * エディタ共通の入力ユーティリティ。
+ * p5 のマウス入力と PointerEvent を同一の座標系・判定ルールに揃える。
  */
 
-// p5.jsのmouseButtonが左クリックかを判定する
+// p5.js の mouseButton が「左クリック」かを判定
 export function isLeftMouseButton(
   mouseButton: unknown,
   leftConst: unknown,
@@ -10,6 +11,7 @@ export function isLeftMouseButton(
   return mouseButton === leftConst;
 }
 
+// エディタ内で扱う標準化済みポインタ入力
 type EditorPointerInput = {
   pointerId: number;
   pointerType: string;
@@ -24,6 +26,7 @@ type EditorPointerInput = {
   isPrimary: boolean;
 };
 
+// iPad / iPadOS を判定（iPadOS の desktop UA も考慮）
 function isIPadDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
 
@@ -34,6 +37,7 @@ function isIPadDevice(): boolean {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
 }
 
+// ビューポート座標をキャンバスローカル座標へ変換
 function toCanvasPoint(
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
   canvas: HTMLCanvasElement,
@@ -45,6 +49,7 @@ function toCanvasPoint(
   };
 }
 
+// PointerEvent をエディタ内部で扱う入力形式へ正規化
 export function toEditorPointerInput(
   event: PointerEvent,
   canvas: HTMLCanvasElement,
@@ -65,6 +70,7 @@ export function toEditorPointerInput(
   };
 }
 
+// 編集対象として受け付けるポインタか判定（iPad はペン優先）
 export function isPrimaryEditingPointer(input: EditorPointerInput): boolean {
   if (isIPadDevice() && input.pointerType !== 'pen') {
     return false;

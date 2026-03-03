@@ -15,7 +15,7 @@ import type {
   SketchModifier,
   Suggestion,
 } from '../types';
-import { drawBezierCurve } from '../utils/rendering';
+import { drawBezierCurve } from '../editor/shared/rendering';
 import {
   buildGraphCurves,
   buildSketchCurves,

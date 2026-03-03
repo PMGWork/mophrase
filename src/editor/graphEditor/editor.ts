@@ -8,13 +8,13 @@ import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
 import { clamp } from '../../utils/math';
-import { drawBezierCurve, drawControls } from '../../utils/rendering';
+import { drawBezierCurve, drawControls } from '../shared/rendering';
 import { resolveGraphCurves } from '../../utils/path';
 import {
   isLeftMouseButton,
   isPrimaryEditingPointer,
   toEditorPointerInput,
-} from '../../utils/input';
+} from '../shared/input';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
 // グラフエディタ

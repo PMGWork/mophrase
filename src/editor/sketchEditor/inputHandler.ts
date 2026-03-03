@@ -8,7 +8,7 @@ import {
   isLeftMouseButton,
   isPrimaryEditingPointer,
   toEditorPointerInput,
-} from '../../utils/input';
+} from '../shared/input';
 
 // ポインタイベントのオプション
 const POINTER_LISTENER_OPTIONS: AddEventListenerOptions = { passive: false };

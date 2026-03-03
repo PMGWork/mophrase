@@ -4,10 +4,10 @@
  */
 
 import type p5 from 'p5';
-import type { Colors, Config } from '../config';
-import type { Path, SelectionRange } from '../types';
-import { bezierCurve } from './bezier';
-import { resolveSketchCurves } from './path';
+import type { Colors, Config } from '../../config';
+import type { Path, SelectionRange } from '../../types';
+import { bezierCurve } from '../../utils/bezier';
+import { resolveSketchCurves } from '../../utils/path';
 
 // 入力点の描画
 export function drawPoints(
