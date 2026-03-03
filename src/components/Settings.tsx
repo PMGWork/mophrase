@@ -93,7 +93,7 @@ export const Settings = ({
 
   const selectedProvider = config?.llmProvider ?? 'OpenAI';
   const selectedModel = config?.llmModel ?? '';
-  const reasoningEffort = config?.llmReasoningEffort ?? 'medium';
+  const reasoningEffort = config?.llmReasoningEffort ?? 'none';
   const reasoning = getReasoningCapability(selectedProvider, selectedModel);
   const resolvedEffort =
     reasoning.mode === 'locked'
@@ -102,7 +102,7 @@ export const Settings = ({
   const parallelGeneration = config?.parallelGeneration ?? false;
   const graphImageSupported = isGraphImageSupported(selectedProvider, selectedModel);
   const resolvedGraphImageEnabled = graphImageSupported
-    ? (config?.graphImageEnabled ?? false)
+    ? (config?.graphImageEnabled ?? true)
     : false;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;

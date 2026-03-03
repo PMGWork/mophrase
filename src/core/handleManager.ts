@@ -116,6 +116,15 @@ export class HandleManager {
     );
   }
 
+  // 単一アンカーのみが選択されているか
+  isSingleAnchorSelection(pathIndex?: number): boolean {
+    if (this.selectedHandles.length !== 1) return false;
+    const selected = this.selectedHandles[0];
+    if (selected.handleType !== 'ANCHOR') return false;
+    if (pathIndex !== undefined && selected.pathIndex !== pathIndex) return false;
+    return true;
+  }
+
   // 選択をクリア
   clearSelection(): void {
     this.selectedHandles = [];
@@ -214,13 +223,20 @@ export class HandleManager {
     }
 
     // アンカーポイントが1つだけ選択されている場合
-    // → そのアンカーに隣接する前後のカーブを範囲として返す
+    // → 1セグメントのみを選択範囲として返す
+    //   基本は前方（anchorIndex）のセグメントを優先し、
+    //   終端アンカーのみ後方（anchorIndex - 1）を採用する。
     if (anchorIndices.size === 1) {
       const anchorIndex = anchorIndices.values().next().value as number;
-      const startCurveIndex = Math.max(0, anchorIndex - 1);
-      const endCurveIndex = Math.min(segmentCount - 1, anchorIndex);
-      if (startCurveIndex > endCurveIndex) return null;
-      return { pathIndex, startCurveIndex, endCurveIndex };
+      const candidateForward = Math.min(segmentCount - 1, anchorIndex);
+      const candidateBackward = Math.max(0, anchorIndex - 1);
+      const curveIndex =
+        anchorIndex < segmentCount ? candidateForward : candidateBackward;
+      return {
+        pathIndex,
+        startCurveIndex: curveIndex,
+        endCurveIndex: curveIndex,
+      };
     }
 
     // アンカーが選択されておらず、制御点のみが選択されている場合

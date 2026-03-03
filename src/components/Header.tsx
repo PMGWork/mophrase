@@ -1,7 +1,7 @@
 import {
   Download,
   FolderOpen,
-  MousePointer,
+  Hand,
   PenTool,
   Save,
   Settings,
@@ -64,7 +64,7 @@ export const Header = ({
       <div className="flex flex-wrap items-center gap-2">
         <ToolButton
           title="Select Tool"
-          icon={MousePointer}
+          icon={Hand}
           isSelected={selectedTool === 'select'}
           onClick={() => onSelectTool('select')}
         />

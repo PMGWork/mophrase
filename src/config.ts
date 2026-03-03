@@ -64,9 +64,9 @@ export const DEFAULT_CONFIG: Config = {
   pointSize: 6,
   llmProvider: 'OpenAI',
   llmModel: 'gpt-5.2',
-  llmReasoningEffort: 'medium',
+  llmReasoningEffort: 'none',
   parallelGeneration: false,
-  graphImageEnabled: false,
+  graphImageEnabled: true,
   testMode: false,
   suggestionPrompt: composePrompt(keyframePromptCommon, suggestionPrompt),
   suggestionPromptParallel: composePrompt(

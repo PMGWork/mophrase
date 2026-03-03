@@ -134,7 +134,15 @@ export class PlaybackController {
   // タイムラインを再構築
   refreshPlaybackTimeline(): void {
     if (!this.motionManager) return;
-    if (this.motionManager.getIsPlaying()) return;
+    const paths = this.getPaths();
+    const colors = this.getPathColors(paths);
+    const elapsed = this.motionManager.getElapsedTime();
+
+    if (this.motionManager.getIsPlaying()) {
+      this.motionManager.startAll(paths, colors, elapsed);
+      return;
+    }
+
     this.prepareAllPaths();
   }
 

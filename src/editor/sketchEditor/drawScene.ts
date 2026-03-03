@@ -116,6 +116,9 @@ export function drawScene(p: p5, state: DrawSceneState): void {
       selectionRange && selectionRange.pathIndex === pathIndex
         ? selectionRange
         : null;
+    const isSingleAnchorSelection =
+      state.handleManager.isSingleAnchorSelection(pathIndex);
+    const highlightedRange = isSingleAnchorSelection ? null : activePathRange;
 
     drawSketchPath(
       p,
@@ -124,16 +127,30 @@ export function drawScene(p: p5, state: DrawSceneState): void {
       state.colors,
       true,
       (curveIndex, pointIndex) => {
+        const handle = state.mapCurvePointToHandle(
+          pathIndex,
+          curveIndex,
+          pointIndex,
+        );
         if (
-          state.handleManager.isSelected(
-            state.mapCurvePointToHandle(pathIndex, curveIndex, pointIndex),
-          )
+          state.handleManager.isSelected(handle)
         ) {
           return true;
         }
-        return isPointInSelectionRange(curveIndex, activePathRange);
+
+        // アンカー選択時は、そのアンカーに紐づく入出ハンドルも強調する。
+        const attachedAnchor = getAttachedAnchorSelection(
+          pathIndex,
+          curveIndex,
+          pointIndex,
+        );
+        if (attachedAnchor && state.handleManager.isSelected(attachedAnchor)) {
+          return true;
+        }
+
+        return isPointInSelectionRange(curveIndex, highlightedRange);
       },
-      activePathRange ?? undefined,
+      highlightedRange ?? undefined,
     );
   }
 
@@ -158,4 +175,18 @@ function isPointInSelectionRange(
   return (
     curveIndex >= range.startCurveIndex && curveIndex <= range.endCurveIndex
   );
+}
+
+function getAttachedAnchorSelection(
+  pathIndex: number,
+  curveIndex: number,
+  pointIndex: number,
+): HandleSelection | null {
+  if (pointIndex === 1) {
+    return { pathIndex, keyframeIndex: curveIndex, handleType: 'ANCHOR' };
+  }
+  if (pointIndex === 2) {
+    return { pathIndex, keyframeIndex: curveIndex + 1, handleType: 'ANCHOR' };
+  }
+  return null;
 }
