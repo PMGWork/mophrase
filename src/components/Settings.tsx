@@ -37,7 +37,11 @@ type ReasoningCapability =
       description: string;
       resolve: (current: LLMReasoningEffort) => LLMReasoningEffort;
     }
-  | { mode: 'hidden'; resolve: (current: LLMReasoningEffort) => LLMReasoningEffort };
+  | {
+      mode: 'disabled';
+      description: string;
+      resolve: (current: LLMReasoningEffort) => LLMReasoningEffort;
+    };
 
 // LLM とモデルに応じて推論能力の表現方法を決定
 const getReasoningCapability = (
@@ -56,7 +60,8 @@ const getReasoningCapability = (
   }
 
   return {
-    mode: 'hidden',
+    mode: 'disabled',
+    description: 'This model does not support reasoning',
     resolve: () => 'none',
   };
 };
@@ -239,17 +244,17 @@ export const Settings = ({
                 <ChevronDown className="text-text-muted pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
               </div>
             </div>
-            {reasoning.mode === 'toggle' && (
-              <ToggleRow
-                label="Reasoning"
-                description={reasoning.description}
-                checked={resolvedEffort !== 'none'}
-                onChange={() => {
-                  const next = resolvedEffort === 'none' ? 'medium' : 'none';
-                  emit({ llmReasoningEffort: next });
-                }}
-              />
-            )}
+            <ToggleRow
+              label="Reasoning"
+              description={reasoning.description}
+              checked={resolvedEffort !== 'none'}
+              disabled={reasoning.mode === 'disabled'}
+              onChange={() => {
+                if (reasoning.mode !== 'toggle') return;
+                const next = resolvedEffort === 'none' ? 'medium' : 'none';
+                emit({ llmReasoningEffort: next });
+              }}
+            />
             <ToggleRow
               label="Curve Image"
               description="Send sketch and graph canvas screenshots to LLM"
