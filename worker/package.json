@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "check": "wrangler types"
+    "dev": "wrangler dev --config ./wrangler.toml",
+    "deploy": "wrangler deploy --config ./wrangler.toml",
+    "check": "wrangler types --config ./wrangler.toml"
   },
   "dependencies": {
     "hono": "^4.6.3"
