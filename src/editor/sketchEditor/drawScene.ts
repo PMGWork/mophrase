@@ -14,7 +14,7 @@ import type {
   SelectionRange,
   ToolKind,
 } from '../../types';
-import { drawSketchPath } from '../shared/rendering';
+import { drawSketchPath } from '../shared/curveRendering';
 import type { PenTool } from './penTool';
 import type { SelectTool } from './selectTool';
 import type { ToolContext } from './types';

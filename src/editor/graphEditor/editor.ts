@@ -8,13 +8,14 @@ import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
 import type { Keyframe, Path } from '../../types';
 import { clamp } from '../../utils/math';
-import { drawBezierCurve, drawControls } from '../shared/rendering';
+import { drawBezierCurve, drawControls } from '../shared/curveRendering';
 import { resolveGraphCurves } from '../../utils/path';
 import {
   isLeftMouseButton,
   isPrimaryEditingPointer,
   toEditorPointerInput,
-} from '../shared/input';
+} from '../shared/pointerInput';
+import { PointerSession } from '../shared/pointerSession';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
 // グラフエディタ
@@ -52,27 +53,12 @@ export class GraphEditor {
   private p: p5 | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
   private pointerEventsEnabled: boolean = false;
-  private activePointerId: number | null = null;
-
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    this.pointerDown(event);
-  };
-
-  private readonly handlePointerMove = (event: PointerEvent): void => {
-    this.pointerMove(event);
-  };
-
-  private readonly handlePointerUp = (event: PointerEvent): void => {
-    this.pointerEnd(event);
-  };
-
-  private readonly handlePointerCancel = (event: PointerEvent): void => {
-    this.pointerEnd(event);
-  };
-
-  private readonly handleLostPointerCapture = (event: PointerEvent): void => {
-    this.pointerLostCapture(event);
-  };
+  private readonly pointerSession = new PointerSession({
+    onPointerDown: (event) => this.pointerDown(event),
+    onPointerMove: (event) => this.pointerMove(event),
+    onPointerEnd: (event) => this.pointerEnd(event),
+    onPointerLostCapture: (event) => this.pointerLostCapture(event),
+  });
 
   // #region メイン関数
 
@@ -124,14 +110,10 @@ export class GraphEditor {
   }
 
   public destroy(): void {
-    if (this.activePointerId !== null) {
-      this.releasePointerCapture(this.activePointerId);
-    }
-    this.removePointerListeners();
+    this.pointerSession.detach();
     this.p?.remove();
     this.p = null;
     this.canvasElement = null;
-    this.activePointerId = null;
     this.draggedHandle = null;
   }
 
@@ -164,7 +146,7 @@ export class GraphEditor {
     this.canvasElement = renderer.elt as HTMLCanvasElement;
     if (this.pointerEventsEnabled && this.canvasElement) {
       this.canvasElement.style.touchAction = 'none';
-      this.addPointerListeners();
+      this.pointerSession.attach(this.canvasElement);
     }
     p.textFont('Geist');
   }
@@ -319,7 +301,7 @@ export class GraphEditor {
   }
 
   private pointerDown(event: PointerEvent): void {
-    if (this.activePointerId !== null) return;
+    if (this.pointerSession.hasActivePointer()) return;
     const canvas = this.canvasElement;
     if (!canvas) return;
 
@@ -329,20 +311,19 @@ export class GraphEditor {
     const selection = this.hitTestHandle(input.x, input.y);
     if (!selection) return;
 
-    this.activePointerId = input.pointerId;
+    if (!this.pointerSession.activate(input.pointerId)) return;
     this.draggedHandle = selection;
-    this.capturePointer(input.pointerId);
-    if (event.cancelable) event.preventDefault();
+    this.pointerSession.preventDefaultIfCancelable(event);
   }
 
   private pointerMove(event: PointerEvent): void {
-    if (this.activePointerId !== event.pointerId) return;
+    if (!this.pointerSession.isActivePointer(event.pointerId)) return;
     const canvas = this.canvasElement;
     if (!canvas) return;
     if (!this.draggedHandle || !this.activePath) return;
 
     const input = toEditorPointerInput(event, canvas);
-    if (event.cancelable) event.preventDefault();
+    this.pointerSession.preventDefaultIfCancelable(event);
 
     const graphData = this.getGraphData();
     if (!graphData) return;
@@ -362,91 +343,16 @@ export class GraphEditor {
   }
 
   private pointerEnd(event: PointerEvent): void {
-    if (this.activePointerId !== event.pointerId) return;
-    if (event.cancelable) event.preventDefault();
-    const pointerId = this.activePointerId;
-    this.activePointerId = null;
+    if (!this.pointerSession.isActivePointer(event.pointerId)) return;
+    this.pointerSession.preventDefaultIfCancelable(event);
+    this.pointerSession.finishActivePointer({ releaseCapture: true });
     this.draggedHandle = null;
-    if (pointerId !== null) {
-      this.releasePointerCapture(pointerId);
-    }
   }
 
   private pointerLostCapture(event: PointerEvent): void {
-    if (this.activePointerId !== event.pointerId) return;
-    this.activePointerId = null;
+    if (!this.pointerSession.isActivePointer(event.pointerId)) return;
+    this.pointerSession.clearActivePointer();
     this.draggedHandle = null;
-  }
-
-  private addPointerListeners(): void {
-    if (!this.pointerEventsEnabled || !this.canvasElement) return;
-    this.removePointerListeners();
-    const options: AddEventListenerOptions = { passive: false };
-    this.canvasElement.addEventListener(
-      'pointerdown',
-      this.handlePointerDown,
-      options,
-    );
-    this.canvasElement.addEventListener(
-      'pointermove',
-      this.handlePointerMove,
-      options,
-    );
-    this.canvasElement.addEventListener(
-      'pointerup',
-      this.handlePointerUp,
-      options,
-    );
-    this.canvasElement.addEventListener(
-      'pointercancel',
-      this.handlePointerCancel,
-      options,
-    );
-    this.canvasElement.addEventListener(
-      'lostpointercapture',
-      this.handleLostPointerCapture,
-    );
-  }
-
-  private removePointerListeners(): void {
-    if (!this.canvasElement) return;
-    this.canvasElement.removeEventListener(
-      'pointerdown',
-      this.handlePointerDown,
-    );
-    this.canvasElement.removeEventListener(
-      'pointermove',
-      this.handlePointerMove,
-    );
-    this.canvasElement.removeEventListener('pointerup', this.handlePointerUp);
-    this.canvasElement.removeEventListener(
-      'pointercancel',
-      this.handlePointerCancel,
-    );
-    this.canvasElement.removeEventListener(
-      'lostpointercapture',
-      this.handleLostPointerCapture,
-    );
-  }
-
-  private capturePointer(pointerId: number): void {
-    if (!this.canvasElement) return;
-    try {
-      this.canvasElement.setPointerCapture(pointerId);
-    } catch {
-      // ignore
-    }
-  }
-
-  private releasePointerCapture(pointerId: number): void {
-    if (!this.canvasElement) return;
-    try {
-      if (this.canvasElement.hasPointerCapture(pointerId)) {
-        this.canvasElement.releasePointerCapture(pointerId);
-      }
-    } catch {
-      // ignore
-    }
   }
 
   // #region プライベート関数

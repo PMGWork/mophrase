@@ -8,10 +8,9 @@ import {
   isLeftMouseButton,
   isPrimaryEditingPointer,
   toEditorPointerInput,
-} from '../shared/input';
+} from '../shared/pointerInput';
+import { PointerSession } from '../shared/pointerSession';
 
-// ポインタイベントのオプション
-const POINTER_LISTENER_OPTIONS: AddEventListenerOptions = { passive: false };
 const IGNORE_CLICK_CONTAINERS = [
   'form',
   '#sketchSuggestionContainer',
@@ -30,13 +29,19 @@ export interface InputDispatcher {
 export class InputHandler {
   private canvas: HTMLCanvasElement | null = null;
   private readonly pointerEventsEnabled: boolean;
-  private activePointerId: number | null = null;
   private readonly dispatcher: InputDispatcher;
+  private readonly pointerSession: PointerSession;
 
   constructor(dispatcher: InputDispatcher) {
     this.dispatcher = dispatcher;
     this.pointerEventsEnabled =
       typeof window !== 'undefined' && 'PointerEvent' in window;
+    this.pointerSession = new PointerSession({
+      onPointerDown: this.pointerDown,
+      onPointerMove: this.pointerMove,
+      onPointerEnd: this.pointerEnd,
+      onPointerLostCapture: this.pointerLostCapture,
+    });
   }
 
   // ポインタイベントが利用可能か
@@ -49,17 +54,13 @@ export class InputHandler {
     this.canvas = canvas;
     if (this.pointerEventsEnabled) {
       canvas.style.touchAction = 'none';
-      this.addPointerListeners();
+      this.pointerSession.attach(canvas);
     }
   }
 
   // キャンバスからリスナーをデタッチする
   destroy(): void {
-    if (this.activePointerId !== null) {
-      this.releasePointerCapture(this.activePointerId);
-    }
-    this.removePointerListeners();
-    this.activePointerId = null;
+    this.pointerSession.detach();
     this.canvas = null;
   }
 
@@ -82,7 +83,7 @@ export class InputHandler {
   // #region ポインタイベント
 
   private readonly pointerDown = (event: PointerEvent): void => {
-    if (this.activePointerId !== null) return;
+    if (this.pointerSession.hasActivePointer()) return;
     const resolved = this.resolvePointerInput(event);
     if (!resolved) return;
     const { p, input } = resolved;
@@ -94,111 +95,40 @@ export class InputHandler {
     )
       return;
 
-    this.activePointerId = input.pointerId;
-    this.capturePointer(input.pointerId);
-    this.preventDefaultIfCancelable(event);
+    if (!this.pointerSession.activate(input.pointerId)) return;
+    this.pointerSession.preventDefaultIfCancelable(event);
 
     this.dispatcher.dispatchPress(p, input.x, input.y, input.shiftKey);
   };
 
   private readonly pointerMove = (event: PointerEvent): void => {
-    if (!this.isActivePointer(event.pointerId)) return;
+    if (!this.pointerSession.isActivePointer(event.pointerId)) return;
     const resolved = this.resolvePointerInput(event);
     if (!resolved) return;
     const { p, input } = resolved;
 
-    this.preventDefaultIfCancelable(event);
+    this.pointerSession.preventDefaultIfCancelable(event);
 
     this.dispatcher.dispatchDrag(p, input.x, input.y, input.altKey);
   };
 
   private readonly pointerEnd = (event: PointerEvent): void => {
-    if (!this.isActivePointer(event.pointerId)) return;
-    this.preventDefaultIfCancelable(event);
+    if (!this.pointerSession.isActivePointer(event.pointerId)) return;
+    this.pointerSession.preventDefaultIfCancelable(event);
     this.finishPointerInteraction(true);
   };
 
   // 何らかの理由でポインタキャプチャが失われた場合の処理
   private readonly pointerLostCapture = (event: PointerEvent): void => {
-    if (!this.isActivePointer(event.pointerId)) return;
+    if (!this.pointerSession.isActivePointer(event.pointerId)) return;
     this.finishPointerInteraction(false);
   };
 
   // ポインタ操作の終了処理。
   private finishPointerInteraction(releaseCapture: boolean): void {
-    const pointerId = this.activePointerId;
+    const pointerId = this.pointerSession.finishActivePointer({ releaseCapture });
     if (pointerId === null) return;
     this.dispatcher.dispatchRelease();
-    this.activePointerId = null;
-    if (releaseCapture) {
-      this.releasePointerCapture(pointerId);
-    }
-  }
-
-  // #region リスナー管理
-
-  // キャンバスに対してポインタイベントリスナーを追加する
-  private addPointerListeners(): void {
-    if (!this.pointerEventsEnabled || !this.canvas) return;
-    this.removePointerListeners();
-    this.canvas.addEventListener(
-      'pointerdown',
-      this.pointerDown,
-      POINTER_LISTENER_OPTIONS,
-    );
-    this.canvas.addEventListener(
-      'pointermove',
-      this.pointerMove,
-      POINTER_LISTENER_OPTIONS,
-    );
-    this.canvas.addEventListener(
-      'pointerup',
-      this.pointerEnd,
-      POINTER_LISTENER_OPTIONS,
-    );
-    this.canvas.addEventListener(
-      'pointercancel',
-      this.pointerEnd,
-      POINTER_LISTENER_OPTIONS,
-    );
-    this.canvas.addEventListener('lostpointercapture', this.pointerLostCapture);
-  }
-
-  // キャンバスからすべてのポインタイベントリスナーを削除する
-  private removePointerListeners(): void {
-    if (!this.canvas) return;
-    this.canvas.removeEventListener('pointerdown', this.pointerDown);
-    this.canvas.removeEventListener('pointermove', this.pointerMove);
-    this.canvas.removeEventListener('pointerup', this.pointerEnd);
-    this.canvas.removeEventListener('pointercancel', this.pointerEnd);
-    this.canvas.removeEventListener(
-      'lostpointercapture',
-      this.pointerLostCapture,
-    );
-  }
-
-  // #region ポインタキャプチャ
-
-  // ポインタキャプチャを取得。例外は無視して安全に呼び出せるようにする
-  private capturePointer(pointerId: number): void {
-    if (!this.canvas) return;
-    try {
-      this.canvas.setPointerCapture(pointerId);
-    } catch {
-      // ignore
-    }
-  }
-
-  // ポインタキャプチャの解除。保持しているかをチェックしてから呼ぶ
-  private releasePointerCapture(pointerId: number): void {
-    if (!this.canvas) return;
-    try {
-      if (this.canvas.hasPointerCapture(pointerId)) {
-        this.canvas.releasePointerCapture(pointerId);
-      }
-    } catch {
-      // ignore
-    }
   }
 
   // #region クリック判定
@@ -224,15 +154,6 @@ export class InputHandler {
     return { p, input: toEditorPointerInput(event, canvas) };
   }
 
-  // 与えられたポインタ ID が現在操作中のポインタと一致するかチェック
-  private isActivePointer(pointerId: number): boolean {
-    return this.activePointerId === pointerId;
-  }
-
-  // イベントがキャンセル可能であれば preventDefault を呼び出すユーティリティ
-  private preventDefaultIfCancelable(event: PointerEvent): void {
-    if (event.cancelable) event.preventDefault();
-  }
 }
 
 // UI要素クリック判定
