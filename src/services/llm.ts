@@ -46,7 +46,6 @@ async function requestServer<T>(
     imageDataUrlChars: imageDataUrl?.length,
   });
   if (imageDataUrl) {
-    console.log('[llm] input imageDataUrl', imageDataUrl);
     console.log(
       '%c ',
       [
