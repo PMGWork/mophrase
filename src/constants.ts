@@ -8,7 +8,7 @@ const OBJECT_SIZE_MIN = 30;
 const OBJECT_SIZE_MAX = 90;
 
 // キャンバスの高さに応じてオブジェクトのサイズを調整する関数
-export const resolveObjectSizeFromCanvasHeight = (
+export const resolveObjectSize = (
   canvasHeight: number,
 ): number => {
   if (canvasHeight <= 0) return OBJECT_SIZE;

@@ -6,7 +6,7 @@
 
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
-import { OBJECT_SIZE, resolveObjectSizeFromCanvasHeight } from '../../constants';
+import { OBJECT_SIZE, resolveObjectSize } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import {
@@ -26,12 +26,13 @@ import {
   normalizeProjectSettings,
 } from '../../types';
 import { deserializePaths } from '../../utils/serialization/project';
-import { resolveSketchCurves } from '../../utils/path';
+import { captureCanvas } from './canvasCapture';
 import { drawScene } from './drawScene';
 import { InputHandler, type InputDispatcher } from './inputHandler';
 import { PlaybackController } from './playbackController';
 import { PenTool } from './penTool';
 import { SelectTool } from './selectTool';
+import { SuggestionLoopController } from './suggestionLoopController';
 import type { SketchDomRefs, ToolContext } from './types';
 
 // スケッチエディタ
@@ -39,10 +40,6 @@ export class SketchEditor {
   // データ構造
   private paths: Path[] = [];
   private activePath: Path | null = null;
-  private isSuggestionLoopPlayback: boolean = false;
-  private suggestionLoopPath: Path | null = null;
-  private hoveredSuggestionId: string | null = null;
-  private hasHoverableSuggestions: boolean = false;
 
   // プロジェクト設定
   private projectSettings: ProjectSettings = { ...DEFAULT_PROJECT_SETTINGS };
@@ -57,6 +54,7 @@ export class SketchEditor {
   private handleManager: HandleManager;
   private suggestionMotionManager: MotionManager | null = null;
   private suggestionManager: SuggestionManager;
+  private suggestionLoop: SuggestionLoopController;
 
   // 委譲先
   private inputHandler: InputHandler;
@@ -117,11 +115,21 @@ export class SketchEditor {
     };
     this.inputHandler = new InputHandler(dispatcher);
 
+    // 提案ループコントローラー
+    this.suggestionLoop = new SuggestionLoopController({
+      getP5: () => this.p,
+      getPaths: () => this.paths,
+      getMotionManager: () => this.playback.getMotionManager(),
+      getSuggestionMotionManager: () => this.suggestionMotionManager,
+      getSuggestionManager: () => this.suggestionManager,
+      getPathColor: (path) => this.playback.getPathColor(path),
+    });
+
     // 再生コントローラー
     this.playback = new PlaybackController(
       () => this.paths,
       this.objectColors,
-      () => this.stopSuggestionLoopPlayback(),
+      () => this.suggestionLoop.stop(),
     );
 
     // 提案マネージャー
@@ -157,12 +165,12 @@ export class SketchEditor {
     this.onToolChanged?.(tool);
 
     if (tool === 'pen') {
-      this.resetSuggestionLoopPlaybackContext();
+      this.suggestionLoop.reset();
       this.suggestionManager.close();
     }
 
     if (tool === 'select' && this.activePath) {
-      this.suggestionLoopPath = this.activePath;
+      this.suggestionLoop.suggestionLoopPath = this.activePath;
       this.suggestionManager.open(this.activePath);
     }
   }
@@ -192,252 +200,13 @@ export class SketchEditor {
   // キャンバスを PNG data URL としてキャプチャ（LLM送信用にマージン付き）
   public captureCanvas(path?: Path, selectionRange?: SelectionRange): string | null {
     if (!this.canvasElement) return null;
-    try {
-      const src = this.canvasElement;
-      const outerMargin = 32;
-      const crop =
-        path
-          ? selectionRange
-            ? this.computeSelectionCropRect(path, selectionRange, src)
-            : this.computePathCropRect(path, src)
-          : null;
-      const sourceX = crop?.x ?? 0;
-      const sourceY = crop?.y ?? 0;
-      const sourceW = crop?.width ?? src.width;
-      const sourceH = crop?.height ?? src.height;
-
-      const w = sourceW + outerMargin * 2;
-      const h = sourceH + outerMargin * 2;
-      const offscreen = document.createElement('canvas');
-      offscreen.width = w;
-      offscreen.height = h;
-      const ctx = offscreen.getContext('2d');
-      if (!ctx) return src.toDataURL('image/png');
-      ctx.fillStyle = this.colors.background;
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(
-        src,
-        sourceX,
-        sourceY,
-        sourceW,
-        sourceH,
-        outerMargin,
-        outerMargin,
-        sourceW,
-        sourceH,
-      );
-
-      // キーフレームインデックスラベルを描画
-      if (path) {
-        this.drawKeyframeLabels(ctx, path, src, sourceX, sourceY, outerMargin);
-      }
-
-      return offscreen.toDataURL('image/png');
-    } catch {
-      return null;
-    }
-  }
-
-  // キーフレーム位置にインデックスラベルを描画（LLM向け対応づけ用）
-  private drawKeyframeLabels(
-    ctx: CanvasRenderingContext2D,
-    path: Path,
-    src: HTMLCanvasElement,
-    sourceX: number,
-    sourceY: number,
-    outerMargin: number,
-  ): void {
-    const { effective: effectiveCurves } = resolveSketchCurves(
+    return captureCanvas(
+      this.canvasElement,
+      this.colors.background,
+      this.p,
       path,
-      this.p ?? undefined,
+      selectionRange,
     );
-    if (effectiveCurves.length === 0 && path.keyframes.length === 0) return;
-
-    // CSS→物理ピクセル変換比
-    const rect = src.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? src.width / rect.width : 1;
-    const scaleY = rect.height > 0 ? src.height / rect.height : 1;
-
-    // モディファイア適用後の各キーフレームのアンカー座標を取得
-    const anchorPositions: { x: number; y: number }[] = [];
-    for (let i = 0; i < path.keyframes.length; i++) {
-      if (i === 0 && effectiveCurves.length > 0) {
-        // 最初のキーフレーム = 最初のカーブの始点
-        const pt = effectiveCurves[0][0];
-        anchorPositions.push({ x: pt.x, y: pt.y });
-      } else if (i > 0 && i - 1 < effectiveCurves.length) {
-        // i 番目のキーフレーム = (i-1) 番目のカーブの終点
-        const pt = effectiveCurves[i - 1][3];
-        anchorPositions.push({ x: pt.x, y: pt.y });
-      } else {
-        // フォールバック: 元の position を使う
-        const pos = path.keyframes[i].position;
-        anchorPositions.push({ x: pos.x, y: pos.y });
-      }
-    }
-
-    // ラベルスタイル設定
-    const fontSize = 20;
-    const padding = 5;
-    const offsetY = -14; // アンカー点の上にオフセット
-    ctx.font = `bold ${fontSize}px Geist, system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-
-    for (let i = 0; i < anchorPositions.length; i++) {
-      const pos = anchorPositions[i];
-      // CSS座標 → 物理ピクセル座標 → offscreen内座標に変換
-      const canvasX = pos.x * scaleX - sourceX + outerMargin;
-      const canvasY = pos.y * scaleY - sourceY + outerMargin;
-
-      const label = `[${i}]`;
-      const metrics = ctx.measureText(label);
-      const textWidth = metrics.width;
-      const textHeight = fontSize;
-
-      // 背景矩形
-      const bgX = canvasX - textWidth / 2 - padding;
-      const bgY = canvasY + offsetY - textHeight - padding;
-      const bgW = textWidth + padding * 2;
-      const bgH = textHeight + padding * 2;
-
-      ctx.fillStyle = '#22d3ee';
-      ctx.beginPath();
-      ctx.roundRect(bgX, bgY, bgW, bgH, 3);
-      ctx.fill();
-
-      // テキスト
-      ctx.fillStyle = '#000000';
-      ctx.fillText(label, canvasX, canvasY + offsetY);
-    }
-  }
-
-  // パス全体のバウンディングボックスでクロップ矩形を計算（未選択時用）
-  private computePathCropRect(
-    path: Path,
-    canvas: HTMLCanvasElement,
-  ): { x: number; y: number; width: number; height: number } | null {
-    const { effective: effectiveCurves } = resolveSketchCurves(
-      path,
-      this.p ?? undefined,
-    );
-    if (effectiveCurves.length === 0) return null;
-
-    const bounds = this.computePointBounds(effectiveCurves.flat());
-    if (!bounds) return null;
-
-    return this.toCanvasCropRect(bounds, canvas);
-  }
-
-  // 選択セグメントを中心としたクロップ矩形をキャンバス座標で計算
-  private computeSelectionCropRect(
-    path: Path,
-    selectionRange: SelectionRange,
-    canvas: HTMLCanvasElement,
-  ): { x: number; y: number; width: number; height: number } | null {
-    const { effective: effectiveCurves } = resolveSketchCurves(
-      path,
-      this.p ?? undefined,
-    );
-    if (effectiveCurves.length === 0) return null;
-
-    if (selectionRange.anchorKeyframeIndex !== undefined) {
-      const anchorIndex = Math.max(
-        0,
-        Math.min(path.keyframes.length - 1, selectionRange.anchorKeyframeIndex),
-      );
-      const pointSet: p5.Vector[] = [];
-      const segmentCount = effectiveCurves.length;
-
-      if (anchorIndex < segmentCount) {
-        const forward = effectiveCurves[anchorIndex];
-        const anchor = forward?.[0];
-        const outHandle = forward?.[1];
-        if (anchor) pointSet.push(anchor);
-        if (outHandle) pointSet.push(outHandle);
-      }
-      if (anchorIndex > 0) {
-        const backward = effectiveCurves[anchorIndex - 1];
-        const inHandle = backward?.[2];
-        const anchor = backward?.[3];
-        if (inHandle) pointSet.push(inHandle);
-        if (anchor) pointSet.push(anchor);
-      }
-
-      if (pointSet.length > 0) {
-        const bounds = this.computePointBounds(pointSet);
-        if (bounds) {
-          return this.toCanvasCropRect(bounds, canvas);
-        }
-      }
-    }
-
-    const start = Math.max(0, selectionRange.startCurveIndex);
-    const end = Math.min(effectiveCurves.length - 1, selectionRange.endCurveIndex);
-    if (start > end) return null;
-
-    const rangePoints = effectiveCurves.slice(start, end + 1).flat();
-    const bounds = this.computePointBounds(rangePoints);
-    if (!bounds) return null;
-
-    return this.toCanvasCropRect(bounds, canvas);
-  }
-
-  private computePointBounds(
-    points: p5.Vector[],
-  ): { minX: number; minY: number; maxX: number; maxY: number } | null {
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
-
-    for (const point of points) {
-      if (!point) continue;
-      if (point.x < minX) minX = point.x;
-      if (point.y < minY) minY = point.y;
-      if (point.x > maxX) maxX = point.x;
-      if (point.y > maxY) maxY = point.y;
-    }
-
-    if (
-      !Number.isFinite(minX) ||
-      !Number.isFinite(minY) ||
-      !Number.isFinite(maxX) ||
-      !Number.isFinite(maxY)
-    ) {
-      return null;
-    }
-
-    return { minX, minY, maxX, maxY };
-  }
-
-  private toCanvasCropRect(
-    bounds: { minX: number; minY: number; maxX: number; maxY: number },
-    canvas: HTMLCanvasElement,
-  ): { x: number; y: number; width: number; height: number } {
-    const { minX, minY, maxX, maxY } = bounds;
-    const cssW = Math.max(1, maxX - minX);
-    const cssH = Math.max(1, maxY - minY);
-    const padX = Math.max(24, cssW * 0.2);
-    const padY = Math.max(24, cssH * 0.2);
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
-
-    const rawX = Math.floor((minX - padX) * scaleX);
-    const rawY = Math.floor((minY - padY) * scaleY);
-    const rawW = Math.ceil((cssW + padX * 2) * scaleX);
-    const rawH = Math.ceil((cssH + padY * 2) * scaleY);
-
-    const x = Math.max(0, Math.min(canvas.width - 1, rawX));
-    const y = Math.max(0, Math.min(canvas.height - 1, rawY));
-    const maxW = canvas.width - x;
-    const maxH = canvas.height - y;
-    const width = Math.max(1, Math.min(maxW, rawW));
-    const height = Math.max(1, Math.min(maxH, rawH));
-
-    return { x, y, width, height };
   }
 
   /** 選択中のパスを削除 */
@@ -449,8 +218,8 @@ export class SketchEditor {
       this.paths.splice(index, 1);
     }
 
-    if (this.suggestionLoopPath === this.activePath) {
-      this.resetSuggestionLoopPlaybackContext();
+    if (this.suggestionLoop.suggestionLoopPath === this.activePath) {
+      this.suggestionLoop.reset();
     }
 
     this.activePath = null;
@@ -465,7 +234,7 @@ export class SketchEditor {
     if (!this.activePath) return;
     const updatedPath = this.activePath;
     updater(updatedPath);
-    this.restartSuggestionLoopPlaybackForPath(updatedPath);
+    this.suggestionLoop.restartForPath(updatedPath);
     this.playback.refreshPlaybackTimeline();
     this.onPathUpdated?.(updatedPath);
   }
@@ -523,7 +292,7 @@ export class SketchEditor {
     if (!targetPath) return;
 
     const selectionRange = this.handleManager.getSelectionRange();
-    this.suggestionLoopPath = targetPath;
+    this.suggestionLoop.suggestionLoopPath = targetPath;
     this.suggestionManager.open(targetPath);
     void this.suggestionManager.submit(
       targetPath,
@@ -540,8 +309,8 @@ export class SketchEditor {
 
   public setSuggestionHover(id: string | null, strength: number): void {
     this.suggestionManager.setHover(id, strength);
-    this.hoveredSuggestionId = id;
-    this.syncSuggestionLoopPlaybackByState({ restartIfPlaying: true });
+    this.suggestionLoop.hoveredSuggestionId = id;
+    this.suggestionLoop.syncOnHoverChange();
   }
 
   // #region プロジェクト設定
@@ -574,7 +343,7 @@ export class SketchEditor {
     this.paths = paths;
     this.activePath = null;
     this.playback.isPreviewing = false;
-    this.resetSuggestionLoopPlaybackContext();
+    this.suggestionLoop.reset();
 
     this.setProjectSettings(settings);
     this.suggestionManager.close();
@@ -658,12 +427,12 @@ export class SketchEditor {
   }
 
   private draw(p: p5): void {
-    const suggestionLoopPath = this.getSuggestionLoopPath();
+    const suggestionLoopPath = this.suggestionLoop.getResolvedLoopPath();
     const isPlaying =
       this.playback.getMotionManager()?.getIsPlaying() ?? false;
     const isSuggestionLoopPlaying =
       !isPlaying &&
-      this.isSuggestionLoopPlayback &&
+      this.suggestionLoop.isSuggestionLoopPlayback &&
       !!suggestionLoopPath &&
       (this.suggestionMotionManager?.getIsPlaying() ?? false);
 
@@ -753,101 +522,17 @@ export class SketchEditor {
   // #region 提案ループ再生
 
   private handleSuggestionUIStateChange(state: SuggestionUIState): void {
-    this.hasHoverableSuggestions = state.suggestions.length > 0;
-    if (!state.isVisible || !this.hasHoverableSuggestions) {
-      this.hoveredSuggestionId = null;
-    }
-    this.syncSuggestionLoopPlaybackByState();
-    this.onSuggestionUIChange?.(state);
-  }
-
-  private shouldPlaySuggestionLoopPlayback(): boolean {
-    return this.hasHoverableSuggestions && this.hoveredSuggestionId !== null;
-  }
-
-  private syncSuggestionLoopPlaybackByState(
-    options: { restartIfPlaying?: boolean } = {},
-  ): void {
-    if (!this.shouldPlaySuggestionLoopPlayback()) {
-      this.stopSuggestionLoopPlayback();
-      return;
-    }
-
-    if (options.restartIfPlaying && this.isSuggestionLoopPlayback) {
-      this.restartSuggestionLoopPlayback();
-      return;
-    }
-
-    if (!this.isSuggestionLoopPlayback) {
-      this.startSuggestionLoopPlayback();
-    }
-  }
-
-  private getSuggestionLoopPath(): Path | null {
-    if (!this.suggestionLoopPath) return null;
-    const index = this.paths.indexOf(this.suggestionLoopPath);
-    return index >= 0 ? this.paths[index] : null;
-  }
-
-  private startSuggestionLoopPlayback(startAtMs: number = 0): void {
-    if (!this.suggestionMotionManager) return;
-    if (this.playback.getMotionManager()?.getIsPlaying()) return;
-
-    if (!this.p) return;
-    const path = this.suggestionManager.getHoveredPreviewPath(this.p);
-    if (!path) return;
-
-    const duration = Number.isFinite(path.duration)
-      ? Math.max(path.duration, 0.01)
-      : 0.01;
-    const loopPath: Path = { ...path, startTime: 0, duration };
-
-    const originalPath = this.getSuggestionLoopPath();
-    const colorSource = originalPath ?? path;
-    this.suggestionMotionManager.startAll(
-      [loopPath],
-      [this.playback.getPathColor(colorSource)],
-      startAtMs,
+    this.suggestionLoop.handleSuggestionUIStateChange(
+      state.suggestions.length,
+      state.isVisible,
     );
-    if (!this.suggestionMotionManager.getIsPlaying()) return;
-    this.isSuggestionLoopPlayback = true;
-  }
-
-  private stopSuggestionLoopPlayback(): void {
-    if (
-      !this.isSuggestionLoopPlayback &&
-      !this.suggestionMotionManager?.getIsPlaying()
-    ) {
-      return;
-    }
-    this.suggestionMotionManager?.stop();
-    this.isSuggestionLoopPlayback = false;
-  }
-
-  private restartSuggestionLoopPlayback(): void {
-    if (!this.isSuggestionLoopPlayback) return;
-    const elapsedMs = this.suggestionMotionManager?.getElapsedTime() ?? 0;
-    this.stopSuggestionLoopPlayback();
-    this.startSuggestionLoopPlayback(elapsedMs);
-  }
-
-  private restartSuggestionLoopPlaybackForPath(path: Path): void {
-    const loopPath = this.getSuggestionLoopPath();
-    if (!loopPath || loopPath !== path) return;
-    this.restartSuggestionLoopPlayback();
-  }
-
-  private resetSuggestionLoopPlaybackContext(): void {
-    this.stopSuggestionLoopPlayback();
-    this.suggestionLoopPath = null;
-    this.hoveredSuggestionId = null;
-    this.hasHoverableSuggestions = false;
+    this.onSuggestionUIChange?.(state);
   }
 
   // #region プライベートヘルパー
 
   private updateObjectSize(canvasHeight: number): void {
-    this.objectSize = resolveObjectSizeFromCanvasHeight(canvasHeight);
+    this.objectSize = resolveObjectSize(canvasHeight);
     this.selectTool.setObjectSize(this.objectSize);
     this.playback.getMotionManager()?.setObjectSize(this.objectSize);
     this.suggestionMotionManager?.setObjectSize(this.objectSize);
