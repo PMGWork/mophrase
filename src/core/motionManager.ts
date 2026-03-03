@@ -11,7 +11,7 @@ import {
   buildGraphCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applyGraphModifiers } from '../utils/modifier';
+import { applyGraphModifiers, resolveEffectiveTimes } from '../utils/modifier';
 import { resolveSketchCurves } from '../utils/path';
 
 // 個別パスのアニメーション状態
@@ -21,6 +21,7 @@ type PathAnimationState = {
   spatialCurves: p5.Vector[][];
   graphCurves: p5.Vector[][];
   keyframeProgress: number[];
+  effectiveTimes: number[];
   startTime: number; // ミリ秒
   duration: number; // ミリ秒
 };
@@ -204,11 +205,13 @@ export class MotionManager {
         path.keyframes,
         spatialCurves,
       );
+      const effectiveTimes = resolveEffectiveTimes(path.keyframes, path.graphModifiers);
 
       // 時間カーブを生成
       const baseGraphCurves = buildGraphCurves(
         path.keyframes,
         keyframeProgress,
+        effectiveTimes,
       );
       const graphCurves = applyGraphModifiers(
         baseGraphCurves,
@@ -223,6 +226,7 @@ export class MotionManager {
         spatialCurves,
         graphCurves,
         keyframeProgress,
+        effectiveTimes,
         startTime,
         duration,
       });
@@ -241,6 +245,7 @@ export class MotionManager {
       spatialCurves,
       graphCurves,
       keyframeProgress,
+      effectiveTimes,
       startTime,
       duration,
     } = state;
@@ -265,6 +270,7 @@ export class MotionManager {
     return this.evaluatePosition(
       time,
       path.keyframes,
+      effectiveTimes,
       spatialCurves,
       graphCurves,
       keyframeProgress,
@@ -302,6 +308,7 @@ export class MotionManager {
   private evaluatePosition(
     time: number,
     keyframes: Path['keyframes'],
+    effectiveTimes: number[],
     spatialCurves: p5.Vector[][],
     graphCurves: p5.Vector[][],
     keyframeProgress: number[],
@@ -312,14 +319,19 @@ export class MotionManager {
 
     if (keyframes.length === 1) return keyframes[0].position;
 
-    if (time <= keyframes[0].time)
+    const firstTime = effectiveTimes[0] ?? keyframes[0].time;
+    const lastTime =
+      effectiveTimes[effectiveTimes.length - 1] ??
+      keyframes[keyframes.length - 1].time;
+
+    if (time <= firstTime)
       return spatialCurves[0]?.[0] ?? keyframes[0].position;
-    if (time >= keyframes[keyframes.length - 1].time) {
+    if (time >= lastTime) {
       const lastCurve = spatialCurves[spatialCurves.length - 1];
       return lastCurve?.[3] ?? keyframes[keyframes.length - 1].position;
     }
 
-    const segmentIndex = this.findSegmentIndex(time, keyframes);
+    const segmentIndex = this.findSegmentIndex(time, effectiveTimes);
     const graphCurve = graphCurves[segmentIndex];
     const spatialCurve = spatialCurves[segmentIndex];
     if (!graphCurve || !spatialCurve) return keyframes[segmentIndex].position;
@@ -349,14 +361,14 @@ export class MotionManager {
   }
 
   // timeが含まれるセグメントを二分探索で取得
-  private findSegmentIndex(time: number, keyframes: Path['keyframes']): number {
+  private findSegmentIndex(time: number, effectiveTimes: number[]): number {
     let low = 0;
-    let high = Math.max(0, keyframes.length - 2);
+    let high = Math.max(0, effectiveTimes.length - 2);
 
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
-      const t0 = keyframes[mid].time;
-      const t1 = keyframes[mid + 1].time;
+      const t0 = effectiveTimes[mid] ?? 0;
+      const t1 = effectiveTimes[mid + 1] ?? t0;
       if (time < t0) {
         high = mid - 1;
       } else if (time > t1) {
@@ -366,6 +378,6 @@ export class MotionManager {
       }
     }
 
-    return clamp(low, 0, keyframes.length - 2);
+    return clamp(low, 0, effectiveTimes.length - 2);
   }
 }

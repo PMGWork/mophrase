@@ -44,7 +44,7 @@ VITE_PROVIDER=cerebras
 # Model name (optional)
 # OpenAI: gpt-5.2 など
 # Cerebras: gpt-oss-120b など
-# Google AI Studio: gemini-3-flash-preview など
+# Google AI Studio: gemini-3-flash-preview / gemini-3.1-flash-lite-preview など
 VITE_MODEL=gpt-oss-120b
 ```
 

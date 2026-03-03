@@ -3,7 +3,9 @@ import { useMemo } from 'react';
 import { ChevronDown, Settings as SettingsIcon, X } from 'lucide-react';
 import {
   FIT_TOLERANCE_DEFAULT,
+  isParallelGenerationForced,
   type Config,
+  resolveParallelGeneration,
 } from '../config';
 import type { LLMProvider, LLMReasoningEffort } from '../types';
 import { getModels } from '../services/llmService';
@@ -126,7 +128,11 @@ export const Settings = ({
   const reasoningEffort = config?.llmReasoningEffort ?? 'none';
   const reasoning = getReasoningCapability(selectedProvider, selectedModel);
   const resolvedEffort = reasoning.resolve(reasoningEffort);
-  const parallelGeneration = config?.parallelGeneration ?? false;
+  const parallelGeneration = resolveParallelGeneration(
+    selectedProvider,
+    config?.parallelGeneration ?? false,
+  );
+  const isParallelGenerationLocked = isParallelGenerationForced(selectedProvider);
   const resolvedGraphImageEnabled = config?.graphImageEnabled ?? true;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
@@ -143,6 +149,10 @@ export const Settings = ({
       testMode,
       ...patch,
     };
+    next.parallelGeneration = resolveParallelGeneration(
+      next.llmProvider,
+      next.parallelGeneration,
+    );
 
     onChange(next);
   };
@@ -203,7 +213,10 @@ export const Settings = ({
                         llmProvider: parsed.provider,
                         llmModel: parsed.modelId,
                         llmReasoningEffort: effort,
-                        parallelGeneration: false,
+                        parallelGeneration: resolveParallelGeneration(
+                          parsed.provider,
+                          false,
+                        ),
                         graphImageEnabled: true,
                       });
                     } catch {
@@ -239,7 +252,7 @@ export const Settings = ({
             )}
             <ToggleRow
               label="Curve Image"
-              description="Send sketch canvas screenshot to LLM"
+              description="Send sketch and graph canvas screenshots to LLM"
               checked={resolvedGraphImageEnabled}
               disabled={false}
               onChange={() =>
@@ -256,10 +269,17 @@ export const Settings = ({
             </div>
             <ToggleRow
               label="Parallel Generation"
-              description="Run all requests concurrently"
+              description={
+                isParallelGenerationLocked
+                  ? 'Gemini models always run concurrently'
+                  : 'Run all requests concurrently'
+              }
               checked={parallelGeneration}
-              disabled={false}
-              onChange={() => emit({ parallelGeneration: !parallelGeneration })}
+              disabled={isParallelGenerationLocked}
+              onChange={() => {
+                if (isParallelGenerationLocked) return;
+                emit({ parallelGeneration: !parallelGeneration });
+              }}
             />
             <ToggleRow
               label="Test Mode"

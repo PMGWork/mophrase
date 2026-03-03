@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import type p5 from 'p5';
-import { DEFAULT_COLORS } from '../config';
+import { DEFAULT_COLORS, resolveParallelGeneration } from '../config';
 import { OBJECT_COLORS } from '../constants';
 import {
   resolveCssColorList,
@@ -16,6 +16,7 @@ import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
 import type { SuggestionUIState } from '../suggestion/suggestion';
 import type {
+  HandleSelection,
   Path,
   ProjectSettings,
   SelectionRange,
@@ -96,8 +97,13 @@ type UseSketchEditorResult = {
     path?: Path,
     selectionRange?: SelectionRange,
   ) => string | null;
+  getSelectionRange: () => SelectionRange | undefined;
+  getSelectedHandlesForActivePath: () => HandleSelection[];
   setGraphImageProvider: (
-    provider: (path?: Path, selectionRange?: SelectionRange) => string | null,
+    provider: (
+      path?: Path,
+      selectionRange?: SelectionRange,
+    ) => string[] | null,
   ) => void;
   getPreviewGraphCurves: (
     p: p5,
@@ -347,10 +353,23 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     [],
   );
 
+  const getSelectionRange = useCallback(
+    () => editorRef.current?.getSelectionRange(),
+    [],
+  );
+
+  const getSelectedHandlesForActivePath = useCallback(
+    () => editorRef.current?.getSelectedHandlesForActivePath() ?? [],
+    [],
+  );
+
   // グラフ画像プロバイダーを設定
   const setGraphImageProvider = useCallback(
     (
-      provider: (path?: Path, selectionRange?: SelectionRange) => string | null,
+      provider: (
+        path?: Path,
+        selectionRange?: SelectionRange,
+      ) => string[] | null,
     ) => {
       editorRef.current?.getSuggestionManager().setGraphImageProvider(provider);
     },
@@ -369,9 +388,16 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   const updateConfig = useCallback((next: SketchConfigUpdate) => {
     setConfig((prev) => {
       const updated = { ...prev, ...next };
-      editorRef.current?.getSuggestionManager().updateConfig(updated);
-      saveConfig(updated);
-      return updated;
+      const normalized = {
+        ...updated,
+        parallelGeneration: resolveParallelGeneration(
+          updated.llmProvider,
+          updated.parallelGeneration,
+        ),
+      };
+      editorRef.current?.getSuggestionManager().updateConfig(normalized);
+      saveConfig(normalized);
+      return normalized;
     });
   }, []);
 
@@ -697,6 +723,8 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     setSuggestionHover,
     selectSuggestion,
     captureSketchCanvas,
+    getSelectionRange,
+    getSelectedHandlesForActivePath,
     setGraphImageProvider,
     getPreviewGraphCurves,
 

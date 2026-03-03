@@ -214,6 +214,7 @@ function mapGraphDelta(
 ): void {
   if (isVector2(raw.inDelta)) delta.inDelta = toVector2(raw.inDelta);
   if (isVector2(raw.outDelta)) delta.outDelta = toVector2(raw.outDelta);
+  if (isFiniteNumber(raw.timeDelta)) delta.timeDelta = raw.timeDelta;
 }
 
 function sanitizeSketchDelta(delta: SketchKeyframeDelta): SketchKeyframeDelta {
@@ -230,6 +231,7 @@ function sanitizeGraphDelta(delta: GraphKeyframeDelta): GraphKeyframeDelta {
     ...delta,
     inDelta: delta.inDelta ? sanitizeVector2(delta.inDelta) : undefined,
     outDelta: delta.outDelta ? sanitizeVector2(delta.outDelta) : undefined,
+    timeDelta: isFiniteNumber(delta.timeDelta) ? delta.timeDelta : undefined,
   };
 }
 

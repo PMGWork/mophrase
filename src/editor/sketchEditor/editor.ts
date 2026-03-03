@@ -305,6 +305,24 @@ export class SketchEditor {
     );
   }
 
+  public getSelectionRange(): SelectionRange | undefined {
+    const selectionRange = this.handleManager.getSelectionRange();
+    if (!selectionRange || !this.activePath) return undefined;
+    const activePathIndex = this.paths.indexOf(this.activePath);
+    if (activePathIndex < 0) return undefined;
+    if (selectionRange.pathIndex !== activePathIndex) return undefined;
+    return selectionRange;
+  }
+
+  public getSelectedHandlesForActivePath(): HandleSelection[] {
+    if (!this.activePath) return [];
+    const activePathIndex = this.paths.indexOf(this.activePath);
+    if (activePathIndex < 0) return [];
+    return this.handleManager
+      .getSelectedHandles()
+      .filter((handle) => handle.pathIndex === activePathIndex);
+  }
+
   public setSuggestionHover(id: string | null, strength: number): void {
     this.suggestionManager.setHover(id, strength);
     this.suggestionLoop.hoveredSuggestionId = id;

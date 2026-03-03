@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import type p5 from 'p5';
 import type { Colors, Config } from '../config';
-import type { Path } from '../types';
+import type { HandleSelection, Path, SelectionRange } from '../types';
 import { GraphEditor } from '../editor/graphEditor/editor';
 import { useResizeObserver } from './useResizeObserver';
 
@@ -19,6 +19,8 @@ type UseGraphEditorParams = {
   previewProvider?: (
     p: p5,
   ) => { curves: p5.Vector[][]; strength: number } | null; // プレビュー用のグラフ曲線を提供
+  selectionRangeProvider?: () => SelectionRange | undefined; // スケッチエディタの選択範囲を提供
+  selectedHandlesProvider?: () => HandleSelection[]; // スケッチエディタの選択ハンドル一覧を提供
 };
 
 // グラフエディタの結果
@@ -33,6 +35,8 @@ export const useGraphEditor = ({
   config,
   colors,
   previewProvider,
+  selectionRangeProvider,
+  selectedHandlesProvider,
 }: UseGraphEditorParams): UseGraphEditorResult => {
   // リファレンス
   const graphCanvasRef = useRef<HTMLDivElement | null>(null);
@@ -73,6 +77,16 @@ export const useGraphEditor = ({
     if (!previewProvider) return;
     editorRef.current?.setPreviewProvider(previewProvider);
   }, [previewProvider]);
+
+  // selectionRangeProvider が変更されたら既存エディタに反映
+  useEffect(() => {
+    editorRef.current?.setSelectionRangeProvider(selectionRangeProvider);
+  }, [selectionRangeProvider]);
+
+  // selectedHandlesProvider が変更されたら既存エディタに反映
+  useEffect(() => {
+    editorRef.current?.setSelectedHandlesProvider(selectedHandlesProvider);
+  }, [selectedHandlesProvider]);
 
   // コンテナのリサイズを監視
   const resizeCallback = useCallback(() => {

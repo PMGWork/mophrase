@@ -15,6 +15,9 @@ import type {
 import { splitKeyframeSegment } from './keyframes';
 import { clamp } from './math';
 
+const MIN_TIME_STEP = 1e-4;
+const DELTA_EPSILON = 1e-9;
+
 // #region 適用
 
 // スケッチモディファイアを適用
@@ -108,6 +111,76 @@ export function applyGraphModifiers(
       return offsetPoint(point, dx, dy, p);
     });
   });
+}
+
+// GraphModifier を加味した実効時刻（0-1, 単調増加）を解決
+export function resolveEffectiveTimes(
+  keyframes: Keyframe[],
+  modifiers: GraphModifier[] | undefined,
+): number[] {
+  if (keyframes.length === 0) return [];
+  if (keyframes.length === 1) return [0];
+
+  const baseTimes = keyframes.map((keyframe, index) =>
+    Number.isFinite(keyframe.time)
+      ? keyframe.time
+      : index / Math.max(1, keyframes.length - 1),
+  );
+  const resolved = [...baseTimes];
+  let hasTimeDelta = false;
+
+  if (modifiers && modifiers.length > 0) {
+    for (const modifier of modifiers) {
+      const len = Math.min(modifier.deltas.length, keyframes.length);
+      for (let idx = 0; idx < len; idx++) {
+        const delta = modifier.deltas[idx]?.timeDelta;
+        if (typeof delta !== 'number' || !Number.isFinite(delta)) continue;
+        const weighted = delta * modifier.strength;
+        if (Math.abs(weighted) < DELTA_EPSILON) continue;
+        resolved[idx] += weighted;
+        hasTimeDelta = true;
+      }
+    }
+  }
+
+  if (!hasTimeDelta) return baseTimes;
+
+  for (let i = 1; i < resolved.length; i++) {
+    const minimum = resolved[i - 1] + MIN_TIME_STEP;
+    if (!Number.isFinite(resolved[i]) || resolved[i] < minimum) {
+      resolved[i] = minimum;
+    }
+  }
+
+  const span = resolved[resolved.length - 1] - resolved[0];
+  let normalized: number[];
+  if (!Number.isFinite(span) || span < MIN_TIME_STEP) {
+    normalized = evenTimes(resolved.length);
+  } else {
+    normalized = resolved.map((time) => (time - resolved[0]) / span);
+  }
+
+  if (MIN_TIME_STEP * (normalized.length - 1) >= 1) {
+    return evenTimes(normalized.length);
+  }
+
+  normalized[0] = 0;
+  normalized[normalized.length - 1] = 1;
+  for (let i = 1; i < normalized.length; i++) {
+    normalized[i] = clamp(normalized[i], 0, 1);
+    const minimum = normalized[i - 1] + MIN_TIME_STEP;
+    if (normalized[i] < minimum) normalized[i] = minimum;
+  }
+
+  normalized[normalized.length - 1] = 1;
+  for (let i = normalized.length - 2; i >= 0; i--) {
+    const maximum = normalized[i + 1] - MIN_TIME_STEP;
+    if (normalized[i] > maximum) normalized[i] = maximum;
+  }
+
+  normalized[0] = 0;
+  normalized[normalized.length - 1] = 1;
+  return normalized;
 }
 
 // #region 作成
@@ -205,19 +278,32 @@ export function createGraphModifier(
     const deltas: GraphKeyframeDelta[] = keyframes.map(() => ({}));
     const index = Math.max(0, Math.min(keyframes.length - 1, focusedIndex));
     const delta = deltas[index];
+    const original = keyframes[index];
+    const modified = modifiedKeyframes[0];
 
-    const originalOut = resolveGraphOutHandle(keyframes, progress, index);
-    const modifiedOut = resolveGraphOutHandle(modifiedKeyframes, modifiedProgress, 0);
-    if (originalOut && modifiedOut) {
-      const outDelta = diffVec2(modifiedOut, originalOut);
-      if (outDelta) delta.outDelta = outDelta;
-    }
+    const outDelta = diffGraphOutHandle(
+      keyframes,
+      progress,
+      index,
+      modifiedKeyframes,
+      modifiedProgress,
+      0,
+    );
+    if (outDelta) delta.outDelta = outDelta;
 
-    const originalIn = resolveGraphInHandle(keyframes, progress, index);
-    const modifiedIn = resolveGraphInHandle(modifiedKeyframes, modifiedProgress, 0);
-    if (originalIn && modifiedIn) {
-      const inDelta = diffVec2(modifiedIn, originalIn);
-      if (inDelta) delta.inDelta = inDelta;
+    const inDelta = diffGraphInHandle(
+      keyframes,
+      progress,
+      index,
+      modifiedKeyframes,
+      modifiedProgress,
+      0,
+    );
+    if (inDelta) delta.inDelta = inDelta;
+
+    if (original && modified) {
+      const timeDelta = diffScalar(modified.time, original.time);
+      if (timeDelta !== undefined) delta.timeDelta = timeDelta;
     }
 
     return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
@@ -240,33 +326,34 @@ export function createGraphModifier(
 
     // outデルタ（出力カーブが範囲内の場合のみ）
     if (i <= endIndex) {
-      const originalOut = resolveGraphOutHandle(keyframes, progress, i);
-      const modifiedOut = resolveGraphOutHandle(
+      const v = diffGraphOutHandle(
+        keyframes,
+        progress,
+        i,
         modifiedKeyframes,
         modifiedProgress,
         localIndex,
       );
-      // 欠落セグメント時は差分を作らずスキップ（既存イージング破壊を防ぐ）
-      if (originalOut && modifiedOut) {
-        const v = diffVec2(modifiedOut, originalOut);
-        if (v) delta.outDelta = v;
-      }
+      if (v) delta.outDelta = v;
     }
 
     // inデルタ（入力カーブが範囲内の場合のみ）
     if (i > startIndex) {
-      const originalIn = resolveGraphInHandle(keyframes, progress, i);
-      const modifiedIn = resolveGraphInHandle(
+      const v = diffGraphInHandle(
+        keyframes,
+        progress,
+        i,
         modifiedKeyframes,
         modifiedProgress,
         localIndex,
       );
-      // 欠落セグメント時は差分を作らずスキップ（既存イージング破壊を防ぐ）
-      if (originalIn && modifiedIn) {
-        const v = diffVec2(modifiedIn, originalIn);
-        if (v) delta.inDelta = v;
-      }
+      if (v) delta.inDelta = v;
     }
+
+    const original = keyframes[i];
+    const modified = modifiedKeyframes[localIndex];
+    const timeDelta = diffScalar(modified?.time, original?.time);
+    if (timeDelta !== undefined) delta.timeDelta = timeDelta;
   }
 
   return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
@@ -398,6 +485,10 @@ export function splitGraphModifierDeltas(
       baseSplit[insertIndex]?.graphOut,
       { treatUndefinedAsZero: true },
     );
+    insertedDelta.timeDelta = diffScalar(
+      modifiedSplit[insertIndex]?.time,
+      baseSplit[insertIndex]?.time,
+    );
 
     // 終点: 入力ハンドルのみ更新
     endDelta.inDelta = diffVec2(
@@ -501,6 +592,7 @@ function computeGraphModified(
         delta?.outDelta,
         keyframe.position,
       ),
+      time: addTimeDelta(keyframe.time, delta?.timeDelta),
     };
   });
 }
@@ -549,6 +641,77 @@ function diffVec2(
   const dy = (a?.y ?? 0) - (b?.y ?? 0);
   if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return undefined;
   return { x: dx, y: dy };
+}
+
+function diffGraphOutHandle(
+  keyframes: Keyframe[],
+  progress: number[],
+  index: number,
+  modifiedKeyframes: Keyframe[],
+  modifiedProgress: number[],
+  modifiedIndex: number,
+): { x: number; y: number } | undefined {
+  const original = keyframes[index];
+  const modified = modifiedKeyframes[modifiedIndex];
+  if (!original || !modified) return undefined;
+  if (!original.graphOut && !modified.graphOut) return undefined;
+
+  const originalOut = resolveGraphOutHandle(keyframes, progress, index);
+  const modifiedOut = resolveGraphOutHandle(
+    modifiedKeyframes,
+    modifiedProgress,
+    modifiedIndex,
+  );
+  if (!originalOut || !modifiedOut) return undefined;
+  return diffVec2(modifiedOut, originalOut);
+}
+
+function diffGraphInHandle(
+  keyframes: Keyframe[],
+  progress: number[],
+  index: number,
+  modifiedKeyframes: Keyframe[],
+  modifiedProgress: number[],
+  modifiedIndex: number,
+): { x: number; y: number } | undefined {
+  const original = keyframes[index];
+  const modified = modifiedKeyframes[modifiedIndex];
+  if (!original || !modified) return undefined;
+  if (!original.graphIn && !modified.graphIn) return undefined;
+
+  const originalIn = resolveGraphInHandle(keyframes, progress, index);
+  const modifiedIn = resolveGraphInHandle(
+    modifiedKeyframes,
+    modifiedProgress,
+    modifiedIndex,
+  );
+  if (!originalIn || !modifiedIn) return undefined;
+  return diffVec2(modifiedIn, originalIn);
+}
+
+function diffScalar(
+  a: number | undefined,
+  b: number | undefined,
+): number | undefined {
+  if (typeof a !== 'number' || typeof b !== 'number') return undefined;
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return undefined;
+  const delta = a - b;
+  if (Math.abs(delta) < DELTA_EPSILON) return undefined;
+  return delta;
+}
+
+function addTimeDelta(
+  time: number,
+  delta: number | undefined,
+): number {
+  if (typeof delta !== 'number' || !Number.isFinite(delta)) return time;
+  const next = time + delta;
+  return Number.isFinite(next) ? next : time;
+}
+
+function evenTimes(length: number): number[] {
+  if (length <= 1) return [0];
+  return Array.from({ length }, (_, index) => index / (length - 1));
 }
 
 // graphOut を実効ベクトルとして取得（未指定時はデフォルトを返す）

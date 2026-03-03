@@ -56,6 +56,7 @@ export function computeKeyframeProgress(
 export function buildGraphCurves(
   keyframes: Keyframe[],
   progress: number[],
+  timesOverride?: number[],
 ): p5.Vector[][] {
   if (keyframes.length < 2) return [];
 
@@ -63,8 +64,8 @@ export function buildGraphCurves(
   for (let i = 0; i < keyframes.length - 1; i++) {
     const start = keyframes[i];
     const end = keyframes[i + 1];
-    const t0 = start.time;
-    const t1 = end.time;
+    const t0 = timesOverride?.[i] ?? start.time;
+    const t1 = timesOverride?.[i + 1] ?? end.time;
     const v0 = progress[i] ?? 0;
     const v1 = progress[i + 1] ?? v0;
     const dt = t1 - t0;

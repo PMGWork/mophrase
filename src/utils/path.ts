@@ -13,6 +13,7 @@ import {
 import {
   applyGraphModifiers,
   applySketchModifiers,
+  resolveEffectiveTimes,
 } from './modifier';
 
 // パスからスケッチカーブを解決（Modifier 適用済み）
@@ -37,19 +38,21 @@ export function resolveGraphCurves(
 ): {
   sketchCurves: p5.Vector[][];
   progress: number[];
+  effectiveTimes: number[];
   original: p5.Vector[][];
   effective: p5.Vector[][];
 } {
   const { effective: sketchCurves } = resolveSketchCurves(path, p);
   const progress = computeKeyframeProgress(path.keyframes, sketchCurves);
-  const original = buildGraphCurves(path.keyframes, progress);
+  const effectiveTimes = resolveEffectiveTimes(path.keyframes, path.graphModifiers);
+  const original = buildGraphCurves(path.keyframes, progress, effectiveTimes);
   const effective = applyGraphModifiers(
     original,
     path.keyframes,
     path.graphModifiers,
     p,
   );
-  return { sketchCurves, progress, original, effective };
+  return { sketchCurves, progress, effectiveTimes, original, effective };
 }
 
 // 部分パスを作成

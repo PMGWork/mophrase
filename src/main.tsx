@@ -37,6 +37,8 @@ const App = () => {
     setSuggestionHover,
     selectSuggestion,
     captureSketchCanvas,
+    getSelectionRange,
+    getSelectedHandlesForActivePath,
     setGraphImageProvider,
 
     // 設定
@@ -65,17 +67,25 @@ const App = () => {
     createNewProject,
   } = useSketchEditor();
 
-  const { graphCanvasRef } = useGraphEditor({
+  const { graphCanvasRef, captureGraphCanvas } = useGraphEditor({
     activePath,
     config,
     colors,
     previewProvider: getPreviewGraphCurves,
+    selectionRangeProvider: getSelectionRange,
+    selectedHandlesProvider: getSelectedHandlesForActivePath,
   });
 
   // 送信用画像プロバイダーをSuggestionManagerに接続
   useEffect(() => {
-    setGraphImageProvider(captureSketchCanvas);
-  }, [captureSketchCanvas, setGraphImageProvider]);
+    setGraphImageProvider((path, selectionRange) => {
+      const images = [
+        captureSketchCanvas(path, selectionRange),
+        captureGraphCanvas(),
+      ].filter((value): value is string => !!value);
+      return images.length > 0 ? images : null;
+    });
+  }, [captureGraphCanvas, captureSketchCanvas, setGraphImageProvider]);
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {

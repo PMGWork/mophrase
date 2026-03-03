@@ -79,6 +79,7 @@ flowchart LR
 3. `fetchSuggestions` が `parallelGeneration` に応じて `keyframePrompt.common` とモード差分（直列/並列）を結合し、履歴とあわせて `generateStructured` を呼ぶ（`src/suggestion/suggestionService.ts`, `src/services/llm.ts`, `src/config.ts`）。
 4. Worker がプロバイダに問い合わせ、JSON を返却（`worker/src/index.ts`）。
 5. 返却キーフレームを `deserializePathKeyframes` で復元し、元キーフレームとの差分から `Modifier` を生成（`src/utils/modifier.ts`）。
+   - 時間編集は `GraphModifier.deltas[].timeDelta` として保持される。
 6. `Path.sketchModifiers` / `Path.graphModifiers` に蓄積し、強度スライダで再調整する。
 
 ### 3.4 再生・プレビュー
@@ -102,7 +103,7 @@ flowchart LR
 ## 5. 設計上の不変条件
 
 - `Keyframe` の順序と接続順を維持する。
-- `time` は 0-1 の正規化時刻として扱い、ロード時に単調増加へ補正する。
+- `time` は 0-1 の正規化時刻として扱い、ロード時に単調増加へ補正する。`GraphModifier.timeDelta` 適用時は実効時刻を単調増加へ補正し、0-1 に再正規化する。
 - LLM 提案は上書きではなく `Modifier` 差分として合成する。
 - スケッチ編集とグラフ編集は分離しつつ、`progress` を介して同期する。
 - 設定永続化では結合後の `suggestionPrompt` / `suggestionPromptParallel` を除外し、`keyframePrompt.common` + モード差分を実行時に `raw` 読み込みして組み立てる（`src/services/configStorage.ts`, `src/config.ts`）。

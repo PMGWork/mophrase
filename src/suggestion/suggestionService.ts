@@ -5,7 +5,7 @@
 
 import { encode } from '@toon-format/toon';
 
-import type { Config } from '../config';
+import { resolveParallelGeneration, type Config } from '../config';
 import { generateStructured } from '../services/llmService';
 import type {
   SerializedPath,
@@ -21,7 +21,7 @@ import {
 // 提案を取得する際のオプション
 type FetchSuggestionsOptions = {
   onSuggestion?: (suggestion: SuggestionItem) => void;
-  graphImageDataUrl?: string;
+  graphImageDataUrls?: string[];
 };
 
 // 提案を取得
@@ -32,12 +32,15 @@ export async function fetchSuggestions(
   options: FetchSuggestionsOptions = {},
 ): Promise<SuggestionItem[]> {
   // 設定に応じて直列/並列用のプロンプトを切り替える。
-  const parallelGeneration = config.parallelGeneration ?? false;
+  const parallelGeneration = resolveParallelGeneration(
+    config.llmProvider,
+    config.parallelGeneration ?? false,
+  );
   const basePrompt = parallelGeneration
     ? config.suggestionPromptParallel
     : config.suggestionPrompt;
   const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
-  const imageDataUrl = options.graphImageDataUrl;
+  const imageDataUrls = options.graphImageDataUrls;
   const parallelRequestCount = 3;
   const benchmarkRuns = 5;
   const requiresSingleResponseSchema = config.llmProvider === 'Google';
@@ -56,7 +59,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
-      imageDataUrl,
+      imageDataUrls,
     );
   };
   const requestBatchOnce = (): Promise<SuggestionBatchResponse> =>
@@ -66,7 +69,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
-      imageDataUrl,
+      imageDataUrls,
     );
 
   if (config.testMode) {

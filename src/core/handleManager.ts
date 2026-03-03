@@ -115,6 +115,11 @@ export class HandleManager {
     );
   }
 
+  // 現在選択中のハンドル一覧を取得
+  getSelectedHandles(): HandleSelection[] {
+    return this.selectedHandles.map((handle) => ({ ...handle }));
+  }
+
   // 選択をクリア
   clearSelection(): void {
     this.selectedHandles = [];

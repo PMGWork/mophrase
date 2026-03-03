@@ -180,7 +180,10 @@ export function deserializePathKeyframes(
       : undefined;
 
     keyframes.push({
-      time: reference.time,
+      time:
+        serialized.time !== undefined && Number.isFinite(serialized.time)
+          ? serialized.time
+          : reference.time,
       position,
       sketchIn,
       sketchOut,

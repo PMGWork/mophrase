@@ -74,6 +74,7 @@ export interface SketchKeyframeDelta {
 export interface GraphKeyframeDelta {
   inDelta?: { x: number; y: number };
   outDelta?: { x: number; y: number };
+  timeDelta?: number;
 }
 
 // スケッチモディファイア

@@ -21,6 +21,7 @@ type LlmGenerateRequest = {
   prompt: string;
   schema: Record<string, unknown>;
   reasoningEffort?: ReasoningEffort;
+  imageDataUrls?: string[];
   imageDataUrl?: string;
 };
 
@@ -198,7 +199,7 @@ const generateWithOpenAI = async (
   prompt: string,
   schema: Record<string, unknown>,
   reasoningEffort?: OpenAIReasoningEffort,
-  imageDataUrl?: string,
+  imageDataUrls?: string[],
 ): Promise<ProviderResult> => {
   const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -221,13 +222,16 @@ const generateWithOpenAI = async (
     },
   };
   // 画像がある場合はマルチモーダル入力を構築
-  if (imageDataUrl) {
+  if (Array.isArray(imageDataUrls) && imageDataUrls.length > 0) {
     requestBody.input = [
       {
         role: 'user',
         content: [
           { type: 'input_text', text: prompt },
-          { type: 'input_image', image_url: imageDataUrl },
+          ...imageDataUrls.map((imageDataUrl) => ({
+            type: 'input_image',
+            image_url: imageDataUrl,
+          })),
         ],
       },
     ];
@@ -363,7 +367,7 @@ const generateWithGoogle = async (
   prompt: string,
   schema: Record<string, unknown>,
   reasoningEffort?: GoogleReasoningEffort,
-  imageDataUrl?: string,
+  imageDataUrls?: string[],
 ): Promise<ProviderResult> => {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -391,16 +395,17 @@ const generateWithGoogle = async (
     }
     // 画像がある場合はマルチモーダルパーツを構築
     const parts: Record<string, unknown>[] = [{ text: prompt }];
-    if (imageDataUrl) {
-      const imageInfo = parseDataUrl(imageDataUrl);
-      if (imageInfo) {
+    if (Array.isArray(imageDataUrls) && imageDataUrls.length > 0) {
+      imageDataUrls.forEach((imageDataUrl) => {
+        const imageInfo = parseDataUrl(imageDataUrl);
+        if (!imageInfo) return;
         parts.push({
           inline_data: {
             mime_type: imageInfo.mimeType,
             data: imageInfo.base64,
           },
         });
-      }
+      });
     }
     return {
       contents: [
@@ -566,7 +571,22 @@ const serveAssetOrSpaIndex = async (
 app.post('/api/llm/generate', async (c) => {
   const requestStart = nowMs();
   const body = await c.req.json<LlmGenerateRequest>();
-  const { provider, model, prompt, schema, reasoningEffort, imageDataUrl } = body;
+  const {
+    provider,
+    model,
+    prompt,
+    schema,
+    reasoningEffort,
+    imageDataUrls,
+    imageDataUrl,
+  } = body;
+  const normalizedImageDataUrls = (
+    Array.isArray(imageDataUrls)
+      ? imageDataUrls
+      : typeof imageDataUrl === 'string'
+        ? [imageDataUrl]
+        : []
+  ).filter((value): value is string => typeof value === 'string' && value.length > 0);
   const resolvedOpenAIReasoningEffort = isOpenAIReasoningEffort(reasoningEffort)
     ? reasoningEffort
     : undefined;
@@ -589,7 +609,7 @@ app.post('/api/llm/generate', async (c) => {
         prompt,
         schema,
         resolvedOpenAIReasoningEffort,
-        imageDataUrl,
+        normalizedImageDataUrls,
       );
       const totalMs = nowMs() - requestStart;
       if (result.meta) {
@@ -615,7 +635,7 @@ app.post('/api/llm/generate', async (c) => {
         prompt,
         schema,
         resolvedGoogleReasoningEffort,
-        imageDataUrl,
+        normalizedImageDataUrls,
       );
       const totalMs = nowMs() - requestStart;
       if (result.meta) {

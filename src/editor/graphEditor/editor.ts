@@ -6,7 +6,12 @@
 import p5 from 'p5';
 import type { Colors, Config } from '../../config';
 import { HANDLE_RADIUS } from '../../constants';
-import type { Keyframe, Path } from '../../types';
+import type {
+  HandleSelection,
+  Keyframe,
+  Path,
+  SelectionRange,
+} from '../../types';
 import { clamp } from '../../utils/math';
 import { drawBezierCurve, drawControls } from '../shared/curveRendering';
 import { resolveGraphCurves } from '../../utils/path';
@@ -17,6 +22,12 @@ import {
 } from '../shared/pointerInput';
 import { PointerSession } from '../shared/pointerSession';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
+
+type SelectedHandleIndexSets = {
+  anchors: Set<number>;
+  sketchOut: Set<number>;
+  sketchIn: Set<number>;
+};
 
 // グラフエディタ
 export class GraphEditor {
@@ -31,6 +42,8 @@ export class GraphEditor {
   private previewProvider?: (
     p: p5,
   ) => { curves: p5.Vector[][]; strength: number } | null;
+  private selectionRangeProvider?: () => SelectionRange | undefined;
+  private selectedHandlesProvider?: () => HandleSelection[];
 
   // 設定
   private config: Config;
@@ -77,6 +90,20 @@ export class GraphEditor {
     provider: (p: p5) => { curves: p5.Vector[][]; strength: number } | null,
   ): void {
     this.previewProvider = provider;
+  }
+
+  // 選択範囲プロバイダーを設定
+  public setSelectionRangeProvider(
+    provider?: () => SelectionRange | undefined,
+  ): void {
+    this.selectionRangeProvider = provider;
+  }
+
+  // 選択ハンドルプロバイダーを設定
+  public setSelectedHandlesProvider(
+    provider?: () => HandleSelection[],
+  ): void {
+    this.selectedHandlesProvider = provider;
   }
 
   // リサイズ
@@ -201,6 +228,12 @@ export class GraphEditor {
     }
 
     const { effectiveCurves } = graphData;
+    const selectedHandles = this.selectedHandlesProvider?.() ?? [];
+    const selectedHandleSets =
+      this.buildSelectedHandleIndexSets(selectedHandles);
+    const highlightedRange = this.resolveHighlightedCurveRange(
+      effectiveCurves.length - 1,
+    );
 
     // ベジェ曲線（Modifier 適用後）
     p.push();
@@ -213,6 +246,17 @@ export class GraphEditor {
       this.config.lineWeight / Math.min(graphW, graphH),
       this.colors.curve,
     );
+    if (highlightedRange) {
+      drawBezierCurve(
+        p,
+        effectiveCurves.slice(
+          highlightedRange.startCurveIndex,
+          highlightedRange.endCurveIndex + 1,
+        ),
+        this.config.lineWeight / Math.min(graphW, graphH),
+        this.colors.selection,
+      );
+    }
     p.pop();
 
     // 制御点と制御ポリゴン（Modifier 適用後のカーブを使用）
@@ -230,6 +274,18 @@ export class GraphEditor {
           const isOut = this.draggedHandle.type === 'GRAPH_OUT';
           if (isOut && pointIndex === 1) return this.colors.selection;
           if (!isOut && pointIndex === 2) return this.colors.selection;
+        }
+        if (
+          this.isGraphPointMappedFromSelection(
+            curveIndex,
+            pointIndex,
+            selectedHandleSets,
+          )
+        ) {
+          return this.colors.selection;
+        }
+        if (this.isCurveInHighlightedRange(curveIndex, highlightedRange)) {
+          return this.colors.selection;
         }
         return this.colors.handle;
       },
@@ -262,6 +318,86 @@ export class GraphEditor {
     }
 
     p.pop();
+  }
+
+  private resolveHighlightedCurveRange(
+    maxCurveIndex: number,
+  ): Pick<SelectionRange, 'startCurveIndex' | 'endCurveIndex'> | null {
+    if (maxCurveIndex < 0) return null;
+    const selectionRange = this.selectionRangeProvider?.();
+    if (!selectionRange) return null;
+    if (selectionRange.anchorKeyframeIndex !== undefined) return null;
+    const startCurveIndex = Math.max(
+      0,
+      Math.min(maxCurveIndex, selectionRange.startCurveIndex),
+    );
+    const endCurveIndex = Math.max(
+      0,
+      Math.min(maxCurveIndex, selectionRange.endCurveIndex),
+    );
+    if (startCurveIndex > endCurveIndex) return null;
+    return { startCurveIndex, endCurveIndex };
+  }
+
+  private isCurveInHighlightedRange(
+    curveIndex: number,
+    range: Pick<SelectionRange, 'startCurveIndex' | 'endCurveIndex'> | null,
+  ): boolean {
+    if (!range) return false;
+    return (
+      curveIndex >= range.startCurveIndex && curveIndex <= range.endCurveIndex
+    );
+  }
+
+  private buildSelectedHandleIndexSets(
+    selectedHandles: HandleSelection[],
+  ): SelectedHandleIndexSets {
+    const anchors = new Set<number>();
+    const sketchOut = new Set<number>();
+    const sketchIn = new Set<number>();
+    selectedHandles.forEach((handle) => {
+      if (handle.handleType === 'ANCHOR') {
+        anchors.add(handle.keyframeIndex);
+        return;
+      }
+      if (handle.handleType === 'SKETCH_OUT') {
+        sketchOut.add(handle.keyframeIndex);
+        return;
+      }
+      if (handle.handleType === 'SKETCH_IN') {
+        sketchIn.add(handle.keyframeIndex);
+      }
+    });
+    return { anchors, sketchOut, sketchIn };
+  }
+
+  private isGraphPointMappedFromSelection(
+    curveIndex: number,
+    pointIndex: number,
+    selected: SelectedHandleIndexSets,
+  ): boolean {
+    const startKeyframeIndex = curveIndex;
+    const endKeyframeIndex = curveIndex + 1;
+
+    if (pointIndex === 0) {
+      return selected.anchors.has(startKeyframeIndex);
+    }
+    if (pointIndex === 1) {
+      return (
+        selected.sketchOut.has(startKeyframeIndex) ||
+        selected.anchors.has(startKeyframeIndex)
+      );
+    }
+    if (pointIndex === 2) {
+      return (
+        selected.sketchIn.has(endKeyframeIndex) ||
+        selected.anchors.has(endKeyframeIndex)
+      );
+    }
+    if (pointIndex === 3) {
+      return selected.anchors.has(endKeyframeIndex);
+    }
+    return false;
   }
 
   // p5.js マウス押下

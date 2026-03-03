@@ -4,6 +4,7 @@ import {
   FIT_TOLERANCE_BASE_CANVAS_HEIGHT,
   FIT_TOLERANCE_MAX,
   FIT_TOLERANCE_MIN,
+  resolveParallelGeneration,
 } from '../config';
 
 // localStorageのキー
@@ -83,6 +84,9 @@ const migrateConfig = (
   ) {
     next.llmModel = 'gpt-5.2';
   }
+  if (next.llmProvider === 'Google') {
+    next.parallelGeneration = true;
+  }
 
   return next;
 };
@@ -109,9 +113,16 @@ export const loadConfig = (): Config => {
 
     const parsed = JSON.parse(stored) as Partial<PersistentConfigFields>;
     const migrated = migrateConfig(parsed);
-    return {
+    const merged = {
       ...DEFAULT_CONFIG,
       ...migrated,
+    };
+    return {
+      ...merged,
+      parallelGeneration: resolveParallelGeneration(
+        merged.llmProvider,
+        merged.parallelGeneration,
+      ),
     };
   } catch (error) {
     console.warn('[config] Failed to load config from localStorage:', error);

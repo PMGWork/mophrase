@@ -26,6 +26,7 @@ import {
   applyGraphModifiers,
   createSketchModifier,
   createGraphModifier,
+  resolveEffectiveTimes,
 } from '../utils/modifier';
 import { getSelectionReference } from '../utils/path';
 import { deserializePathKeyframes } from '../utils/serialization/curves';
@@ -65,6 +66,8 @@ export function buildSuggestionModifiers(
     p,
   );
   if (llmKeyframes.length === 0) return null;
+  const modifiedCurves = buildSketchCurves(llmKeyframes);
+  const modifiedProgress = computeKeyframeProgress(llmKeyframes, modifiedCurves);
 
   const sketchModifier = createSketchModifier(
     targetPath.keyframes,
@@ -80,7 +83,7 @@ export function buildSuggestionModifiers(
       targetPath.keyframes,
       allProgress,
       llmKeyframes,
-      referenceProgress,
+      modifiedProgress,
       modifierName,
       selectionRange,
     );
@@ -202,16 +205,25 @@ export function getPreviewGraphCurves(
     targetPath.keyframes,
     effectiveSketchCurves,
   );
+  const previewGraphModifiers = [
+    ...(targetPath.graphModifiers ?? []),
+    result.graphModifier,
+  ];
+  const effectiveTimes = resolveEffectiveTimes(
+    targetPath.keyframes,
+    previewGraphModifiers,
+  );
   const baseGraphCurves = buildGraphCurves(
     targetPath.keyframes,
     effectiveProgress,
+    effectiveTimes,
   );
   if (baseGraphCurves.length === 0) return null;
 
   const previewCurves = applyGraphModifiers(
     baseGraphCurves,
     targetPath.keyframes,
-    [...(targetPath.graphModifiers ?? []), result.graphModifier],
+    previewGraphModifiers,
     p,
   );
 

@@ -13,11 +13,22 @@ export interface Config {
   llmModel: string; // LLMモデル名
   llmReasoningEffort: LLMReasoningEffort; // 推論強度
   parallelGeneration: boolean; // 提案生成を並列で実行するか
-  graphImageEnabled: boolean; // グラフ画像をLLMに送信するか
+  graphImageEnabled: boolean; // スケッチ/グラフ画像をLLMに送信するか
   testMode: boolean; // テストモード（5回生成してベンチマーク）
   suggestionPrompt: string; // 直列生成用キーフレーム補正プロンプト
   suggestionPromptParallel: string; // 並列生成用キーフレーム補正プロンプト
 }
+
+// プロバイダごとの並列生成強制設定
+export const isParallelGenerationForced = (
+  provider: LLMProvider,
+): boolean => provider === 'Google';
+
+// 並列生成設定をプロバイダ制約込みで解決
+export const resolveParallelGeneration = (
+  provider: LLMProvider,
+  parallelGeneration: boolean,
+): boolean => (isParallelGenerationForced(provider) ? true : parallelGeneration);
 
 // プロジェクト設定の型定義
 const composePrompt = (common: string, modeSpecific: string): string => {

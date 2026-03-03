@@ -15,6 +15,22 @@ type ProviderModelOption = {
   name: string;
 };
 
+const previewImageInConsole = (dataUrl: string): void => {
+  console.log(
+    '%c ',
+    [
+      'font-size:1px',
+      'padding:72px 120px',
+      'background-repeat:no-repeat',
+      'background-position:center',
+      'background-size:contain',
+      `background-image:url("${dataUrl}")`,
+      'background-color:#111',
+      'border:1px solid #333',
+    ].join(';'),
+  );
+};
+
 // サーバーにリクエストを送信して構造化データを取得
 async function requestServer<T>(
   provider: LLMProvider,
@@ -22,8 +38,12 @@ async function requestServer<T>(
   prompt: string,
   schema: z.ZodType<T>,
   reasoningEffort?: LLMReasoningEffort,
-  imageDataUrl?: string,
+  imageDataUrls?: string[],
 ): Promise<T> {
+  const requestId =
+    typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const body: Record<string, unknown> = {
     provider,
     model,
@@ -31,24 +51,102 @@ async function requestServer<T>(
     schema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
     reasoningEffort,
   };
-  if (imageDataUrl) {
-    body.imageDataUrl = imageDataUrl;
+  if (Array.isArray(imageDataUrls) && imageDataUrls.length > 0) {
+    body.imageDataUrls = imageDataUrls;
   }
-  const response = await fetch(`${window.location.origin}/api/llm/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  const promptPreview = prompt.length > 400 ? `${prompt.slice(0, 400)}...` : prompt;
+  console.log('[llm] input', {
+    requestId,
+    provider,
+    model,
+    reasoningEffort: reasoningEffort ?? 'none',
+    promptPreview,
+    promptChars: prompt.length,
+    schema: body.schema,
+    imageCount: imageDataUrls?.length ?? 0,
   });
+  imageDataUrls?.forEach((imageDataUrl) => {
+    previewImageInConsole(imageDataUrl);
+  });
+  let response: Response;
+  try {
+    response = await fetch(`${window.location.origin}/api/llm/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-llm-request-id': requestId,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    console.error('[llm] network error', {
+      requestId,
+      provider,
+      model,
+      error,
+    });
+    throw error;
+  }
+  const responseMeta = {
+    requestId: response.headers.get('x-llm-request-id') ?? requestId,
+    provider: response.headers.get('x-llm-provider'),
+    model: response.headers.get('x-llm-model'),
+    upstreamMs: response.headers.get('x-llm-upstream-ms'),
+    totalMs: response.headers.get('x-llm-total-ms'),
+    outputChars: response.headers.get('x-llm-output-chars'),
+    schemaBytes: response.headers.get('x-llm-schema-bytes'),
+    promptChars: response.headers.get('x-llm-prompt-chars'),
+  };
+  if (
+    responseMeta.totalMs ||
+    responseMeta.upstreamMs ||
+    responseMeta.schemaBytes
+  ) {
+    console.log('[llm] latency', {
+      requestId,
+      provider: responseMeta.provider ?? provider,
+      model: responseMeta.model ?? model,
+      totalMs: responseMeta.totalMs
+        ? Number(responseMeta.totalMs)
+        : undefined,
+      upstreamMs: responseMeta.upstreamMs
+        ? Number(responseMeta.upstreamMs)
+        : undefined,
+      schemaBytes: responseMeta.schemaBytes
+        ? Number(responseMeta.schemaBytes)
+        : undefined,
+      promptChars: responseMeta.promptChars
+        ? Number(responseMeta.promptChars)
+        : undefined,
+      outputChars: responseMeta.outputChars
+        ? Number(responseMeta.outputChars)
+        : undefined,
+    });
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
+    console.error('[llm] error', {
+      requestId,
+      status: response.status,
+      meta: responseMeta,
+      body: errorBody,
+    });
     throw new Error(
       `LLM server error (${provider}): ${response.status} ${JSON.stringify(errorBody)}`,
     );
   }
 
-  const data = (await response.json()) as T;
-  return schema.parse(data);
+  const data = (await response.json()) as unknown;
+  console.log('[llm] output', {
+    requestId,
+    status: response.status,
+    meta: responseMeta,
+    body: data,
+  });
+  const parsed = schema.parse(data);
+  console.log('[llm] parsed', { requestId, body: parsed });
+  return parsed;
 }
 
 // 各LLMプロバイダの設定
@@ -59,7 +157,13 @@ const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   },
   Google: {
     defaultModel: 'gemini-3-flash-preview',
-    models: [{ id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' }],
+    models: [
+      { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash' },
+      {
+        id: 'gemini-3.1-flash-lite-preview',
+        name: 'Gemini 3.1 Flash Lite',
+      },
+    ],
   },
 };
 
@@ -70,7 +174,7 @@ export async function generateStructured<T>(
   provider: LLMProvider,
   model?: string,
   reasoningEffort?: LLMReasoningEffort,
-  imageDataUrl?: string,
+  imageDataUrls?: string[],
 ): Promise<T> {
   const config = PROVIDERS[provider];
   if (!config) {
@@ -84,7 +188,7 @@ export async function generateStructured<T>(
     prompt,
     schema,
     reasoningEffort,
-    imageDataUrl,
+    imageDataUrls,
   );
 }
 
