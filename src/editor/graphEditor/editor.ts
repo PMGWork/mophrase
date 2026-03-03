@@ -130,9 +130,71 @@ export class GraphEditor {
       ctx.fillStyle = this.colors.background;
       ctx.fillRect(0, 0, w, h);
       ctx.drawImage(src, margin, margin);
+      if (this.activePath) {
+        this.drawKeyframeLabels(ctx, margin);
+      }
       return offscreen.toDataURL('image/png');
     } catch {
       return null;
+    }
+  }
+
+  // キャプチャ画像へキーフレームインデックスを描画
+  private drawKeyframeLabels(
+    ctx: CanvasRenderingContext2D,
+    outerMargin: number,
+  ): void {
+    const graphData = this.getGraphData();
+    const src = this.canvasElement;
+    if (!graphData || !src) return;
+
+    const { effectiveCurves } = graphData;
+    if (effectiveCurves.length === 0) return;
+
+    const anchors: p5.Vector[] = [effectiveCurves[0][0]];
+    for (let i = 0; i < effectiveCurves.length; i++) {
+      anchors.push(effectiveCurves[i][3]);
+    }
+
+    const graphMargin = GraphEditor.GRAPH_MARGIN;
+    const graphW = src.width - graphMargin * 2;
+    const graphH = src.height - graphMargin * 2;
+    if (graphW <= 0 || graphH <= 0) return;
+
+    const fontSize = 24;
+    const paddingX = 10;
+    const paddingY = 8;
+    const offsetY = -24;
+    ctx.font = `bold ${fontSize}px Geist, system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let i = 0; i < anchors.length; i++) {
+      const point = anchors[i];
+      if (!point) continue;
+      const canvasX = outerMargin + graphMargin + point.x * graphW;
+      const canvasY = outerMargin + graphMargin + (1 - point.y) * graphH;
+
+      const label = `${i}`;
+      const metrics = ctx.measureText(label);
+      const textWidth = metrics.width;
+      const diameter = Math.max(
+        fontSize + paddingY * 2,
+        textWidth + paddingX * 2,
+      );
+      const radius = diameter / 2;
+      const centerY = canvasY + offsetY;
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(canvasX, centerY, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(label, canvasX, centerY);
     }
   }
 
@@ -417,7 +479,7 @@ export class GraphEditor {
     const graphData = this.getGraphData();
     if (!graphData) return;
 
-    const { curves, effectiveCurves, progress } = graphData;
+    const { curves, effectiveCurves, progress, effectiveTimes } = graphData;
     const target = this.pixelToNorm(p.mouseX, p.mouseY);
     const sync = !p.keyIsDown(p.ALT);
     this.applyHandleDrag(
@@ -425,6 +487,7 @@ export class GraphEditor {
       target.x,
       target.y,
       progress,
+      effectiveTimes,
       curves,
       effectiveCurves,
       sync,
@@ -464,7 +527,7 @@ export class GraphEditor {
     const graphData = this.getGraphData();
     if (!graphData) return;
 
-    const { curves, effectiveCurves, progress } = graphData;
+    const { curves, effectiveCurves, progress, effectiveTimes } = graphData;
     const target = this.pixelToNorm(input.x, input.y);
     const sync = !input.altKey;
     this.applyHandleDrag(
@@ -472,6 +535,7 @@ export class GraphEditor {
       target.x,
       target.y,
       progress,
+      effectiveTimes,
       curves,
       effectiveCurves,
       sync,
@@ -530,16 +594,18 @@ export class GraphEditor {
     curves: p5.Vector[][];
     effectiveCurves: p5.Vector[][];
     progress: number[];
+    effectiveTimes: number[];
   } | null {
     if (!this.activePath) return null;
 
     const {
       progress,
+      effectiveTimes,
       original: curves,
       effective: effectiveCurves,
     } = resolveGraphCurves(this.activePath);
 
-    return { curves, effectiveCurves, progress };
+    return { curves, effectiveCurves, progress, effectiveTimes };
   }
 
   // ハンドルのヒットテスト
@@ -574,6 +640,7 @@ export class GraphEditor {
     targetX: number,
     targetY: number,
     progress: number[],
+    effectiveTimes: number[],
     originalCurves: p5.Vector[][],
     effectiveCurves: p5.Vector[][],
     sync: boolean,
@@ -597,8 +664,8 @@ export class GraphEditor {
       .copy()
       .sub(originalCurve[pointIndex]);
 
-    const t0 = start.time;
-    const t1 = end.time;
+    const t0 = effectiveTimes[segmentIndex] ?? start.time;
+    const t1 = effectiveTimes[segmentIndex + 1] ?? end.time;
     const v0 = progress[segmentIndex] ?? 0;
     const v1 = progress[segmentIndex + 1] ?? v0;
     const dt = t1 - t0;

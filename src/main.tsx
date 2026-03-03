@@ -79,11 +79,16 @@ const App = () => {
   // 送信用画像プロバイダーをSuggestionManagerに接続
   useEffect(() => {
     setGraphImageProvider((path, selectionRange) => {
-      const images = [
-        captureSketchCanvas(path, selectionRange),
-        captureGraphCanvas(),
-      ].filter((value): value is string => !!value);
-      return images.length > 0 ? images : null;
+      const sketchImageDataUrl =
+        captureSketchCanvas(path, selectionRange) ?? undefined;
+      const graphImageDataUrl = captureGraphCanvas() ?? undefined;
+      if (!sketchImageDataUrl && !graphImageDataUrl) {
+        return null;
+      }
+      return {
+        sketchImageDataUrl,
+        graphImageDataUrl,
+      };
     });
   }, [captureGraphCanvas, captureSketchCanvas, setGraphImageProvider]);
 

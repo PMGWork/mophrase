@@ -195,10 +195,14 @@ export function getPreviewGraphCurves(
   );
   if (!result || !result.graphModifier) return null;
 
+  const previewSketchModifiers =
+    modifierTarget === 'both'
+      ? [...(targetPath.sketchModifiers ?? []), result.sketchModifier]
+      : targetPath.sketchModifiers;
   const effectiveSketchCurves = applySketchModifiers(
     buildSketchCurves(targetPath.keyframes),
     targetPath.keyframes,
-    targetPath.sketchModifiers,
+    previewSketchModifiers,
     p,
   );
   const effectiveProgress = computeKeyframeProgress(

@@ -190,18 +190,23 @@ export function deserializePathKeyframes(
     });
   }
 
+  const deserializedCurves = buildSketchCurves(keyframes);
+  const deserializedProgress = computeKeyframeProgress(
+    keyframes,
+    deserializedCurves,
+  );
+
   for (let i = 0; i < keyframes.length - 1; i++) {
     const startSerialized = serializedPath.keyframes[i];
     const endSerialized = serializedPath.keyframes[i + 1];
-    const startRef = referenceKeyframes[i];
-    const endRef = referenceKeyframes[i + 1];
     const start = keyframes[i];
     const end = keyframes[i + 1];
-    if (!startSerialized || !endSerialized || !startRef || !endRef) continue;
+    if (!startSerialized || !endSerialized || !start || !end) continue;
 
-    const dt = endRef.time - startRef.time;
-    const v0 = referenceProgress[i] ?? 0;
-    const v1 = referenceProgress[i + 1] ?? v0;
+    const dt = end.time - start.time;
+    const v0 = deserializedProgress[i] ?? referenceProgress[i] ?? 0;
+    const v1 =
+      deserializedProgress[i + 1] ?? referenceProgress[i + 1] ?? v0;
     const dv = v1 - v0;
     const segmentDiag = Math.hypot(dt, dv);
 

@@ -44,11 +44,16 @@ export type SuggestionUIState = {
   position: { left: number; top: number } | null;
 };
 
+export type SuggestionImagePayload = {
+  sketchImageDataUrl?: string;
+  graphImageDataUrl?: string;
+};
+
 // 送信用画像プロバイダーの型
 export type GraphImageProvider = (
   path?: Path,
   selectionRange?: SelectionRange,
-) => string[] | null;
+) => SuggestionImagePayload | null;
 
 // 提案マネージャー
 export class SuggestionManager {
@@ -262,7 +267,7 @@ export class SuggestionManager {
     const serializedPath = serializedPaths[0];
 
     // 送信用画像をキャプチャ（設定で有効な場合のみ）
-    const graphImageDataUrls = this.config.graphImageEnabled
+    const graphImageData = this.config.graphImageEnabled
       ? (this.graphImageProvider?.(path, selectionRange) ?? undefined)
       : undefined;
 
@@ -308,7 +313,7 @@ export class SuggestionManager {
         serializedPaths,
         this.config,
         this.prompts,
-        { onSuggestion: pushSuggestion, graphImageDataUrls },
+        { onSuggestion: pushSuggestion, graphImageData },
       );
 
       // 選択/クローズなどで世代が進んでいた場合、完了処理を行わない。

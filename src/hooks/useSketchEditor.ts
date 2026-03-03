@@ -14,7 +14,10 @@ import {
 } from '../utils/resolveCssColor';
 import type { Colors, Config } from '../config';
 import type { PlaybackController } from '../components/Playback';
-import type { SuggestionUIState } from '../suggestion/suggestion';
+import type {
+  GraphImageProvider,
+  SuggestionUIState,
+} from '../suggestion/suggestion';
 import type {
   HandleSelection,
   Path,
@@ -100,10 +103,7 @@ type UseSketchEditorResult = {
   getSelectionRange: () => SelectionRange | undefined;
   getSelectedHandlesForActivePath: () => HandleSelection[];
   setGraphImageProvider: (
-    provider: (
-      path?: Path,
-      selectionRange?: SelectionRange,
-    ) => string[] | null,
+    provider: GraphImageProvider,
   ) => void;
   getPreviewGraphCurves: (
     p: p5,
@@ -365,12 +365,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
 
   // グラフ画像プロバイダーを設定
   const setGraphImageProvider = useCallback(
-    (
-      provider: (
-        path?: Path,
-        selectionRange?: SelectionRange,
-      ) => string[] | null,
-    ) => {
+    (provider: GraphImageProvider) => {
       editorRef.current?.getSuggestionManager().setGraphImageProvider(provider);
     },
     [],

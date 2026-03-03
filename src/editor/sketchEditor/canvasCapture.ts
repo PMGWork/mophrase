@@ -101,37 +101,40 @@ function drawKeyframeLabels(
   }
 
   // ラベルスタイル設定
-  const fontSize = 20;
-  const padding = 5;
-  const offsetY = -14;
+  const fontSize = 24;
+  const paddingX = 10;
+  const paddingY = 8;
+  const offsetY = -24;
   ctx.font = `bold ${fontSize}px Geist, system-ui, sans-serif`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
+  ctx.textBaseline = 'middle';
 
   for (let i = 0; i < anchorPositions.length; i++) {
     const pos = anchorPositions[i];
     const canvasX = pos.x * scaleX - sourceX + outerMargin;
     const canvasY = pos.y * scaleY - sourceY + outerMargin;
 
-    const label = `[${i}]`;
+    const label = `${i}`;
     const metrics = ctx.measureText(label);
     const textWidth = metrics.width;
-    const textHeight = fontSize;
+    const diameter = Math.max(
+      fontSize + paddingY * 2,
+      textWidth + paddingX * 2,
+    );
+    const radius = diameter / 2;
+    const centerY = canvasY + offsetY;
 
-    // 背景矩形
-    const bgX = canvasX - textWidth / 2 - padding;
-    const bgY = canvasY + offsetY - textHeight - padding;
-    const bgW = textWidth + padding * 2;
-    const bgH = textHeight + padding * 2;
-
-    ctx.fillStyle = '#22d3ee';
+    ctx.fillStyle = '#ef4444';
     ctx.beginPath();
-    ctx.roundRect(bgX, bgY, bgW, bgH, 3);
+    ctx.arc(canvasX, centerY, radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
 
     // テキスト
-    ctx.fillStyle = '#000000';
-    ctx.fillText(label, canvasX, canvasY + offsetY);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, canvasX, centerY);
   }
 }
 

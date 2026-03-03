@@ -7,6 +7,7 @@ import { encode } from '@toon-format/toon';
 
 import { resolveParallelGeneration, type Config } from '../config';
 import { generateStructured } from '../services/llmService';
+import type { SuggestionImagePayload } from './suggestion';
 import type {
   SerializedPath,
   SuggestionBatchResponse,
@@ -21,7 +22,12 @@ import {
 // 提案を取得する際のオプション
 type FetchSuggestionsOptions = {
   onSuggestion?: (suggestion: SuggestionItem) => void;
-  graphImageDataUrls?: string[];
+  graphImageData?: SuggestionImagePayload;
+};
+
+type PromptImageRole = {
+  index: number;
+  role: 'sketch' | 'graph';
 };
 
 // 提案を取得
@@ -39,8 +45,15 @@ export async function fetchSuggestions(
   const basePrompt = parallelGeneration
     ? config.suggestionPromptParallel
     : config.suggestionPrompt;
-  const prompt = buildPrompt(serializedPaths, basePrompt, promptHistory);
-  const imageDataUrls = options.graphImageDataUrls;
+  const imageDataUrls = buildImageDataUrls(options.graphImageData);
+  const imageRoles = buildPromptImageRoles(options.graphImageData);
+  const prompt = buildPrompt(
+    serializedPaths,
+    basePrompt,
+    promptHistory,
+    undefined,
+    imageRoles,
+  );
   const parallelRequestCount = 3;
   const benchmarkRuns = 5;
   const requiresSingleResponseSchema = config.llmProvider === 'Google';
@@ -52,6 +65,7 @@ export async function fetchSuggestions(
       basePrompt,
       promptHistory,
       { index: slotIndex, total: parallelRequestCount },
+      imageRoles,
     );
     return generateStructured<SuggestionResponse>(
       slottedPrompt,
@@ -200,6 +214,7 @@ function buildPrompt(
   basePrompt: string,
   promptHistory: string[],
   slot?: { index: number; total: number },
+  imageRoles: PromptImageRole[] = [],
 ): string {
   const promptParts = [basePrompt];
 
@@ -207,6 +222,21 @@ function buildPrompt(
     promptParts.push(
       '',
       `[SLOT ${slot.index} of ${slot.total}]`,
+    );
+  }
+
+  if (imageRoles.length > 0) {
+    promptParts.push('', '## Attached Images');
+    imageRoles.forEach((imageRole) => {
+      const roleDescription =
+        imageRole.role === 'sketch'
+          ? 'Sketch canvas (spatial motion path)'
+          : 'Graph editor canvas (timing/easing curve)';
+      promptParts.push(`- Image ${imageRole.index}: ${roleDescription}`);
+    });
+    promptParts.push(
+      '',
+      'Use this mapping when interpreting images. Never swap Sketch and Graph roles.',
     );
   }
 
@@ -229,3 +259,33 @@ function buildPrompt(
 
   return promptParts.join('\n');
 }
+
+const buildImageDataUrls = (
+  imageData?: SuggestionImagePayload,
+): string[] | undefined => {
+  if (!imageData) return undefined;
+  const urls: string[] = [];
+  if (imageData.sketchImageDataUrl) {
+    urls.push(imageData.sketchImageDataUrl);
+  }
+  if (imageData.graphImageDataUrl) {
+    urls.push(imageData.graphImageDataUrl);
+  }
+  return urls.length > 0 ? urls : undefined;
+};
+
+const buildPromptImageRoles = (
+  imageData?: SuggestionImagePayload,
+): PromptImageRole[] => {
+  if (!imageData) return [];
+  const roles: PromptImageRole[] = [];
+  let index = 1;
+  if (imageData.sketchImageDataUrl) {
+    roles.push({ index, role: 'sketch' });
+    index += 1;
+  }
+  if (imageData.graphImageDataUrl) {
+    roles.push({ index, role: 'graph' });
+  }
+  return roles;
+};
