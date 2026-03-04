@@ -15,15 +15,46 @@ type ProviderModelOption = {
   name: string;
 };
 
+const CONSOLE_IMAGE_MAX_WIDTH = 320;
+const CONSOLE_IMAGE_MAX_HEIGHT = 240;
+
+// コンソールに画像をプレビュー表示するための関数
+const clampConsolePreviewSize = (
+  width: number,
+  height: number,
+): { width: number; height: number } => {
+  const safeWidth = Math.max(1, width);
+  const safeHeight = Math.max(1, height);
+  const scale = Math.min(
+    1,
+    CONSOLE_IMAGE_MAX_WIDTH / safeWidth,
+    CONSOLE_IMAGE_MAX_HEIGHT / safeHeight,
+  );
+
+  return {
+    width: Math.max(1, Math.round(safeWidth * scale)),
+    height: Math.max(1, Math.round(safeHeight * scale)),
+  };
+};
+
+// 画像データURLをコンソールにプレビュー表示する関数
 const previewImageInConsole = (dataUrl: string): void => {
   const image = new Image();
   image.onload = () => {
     const naturalWidth = image.naturalWidth || 1;
     const naturalHeight = image.naturalHeight || 1;
-    const paddingY = Math.max(1, Math.ceil(naturalHeight / 2));
-    const paddingX = Math.max(1, Math.ceil(naturalWidth / 2));
+    const previewSize = clampConsolePreviewSize(naturalWidth, naturalHeight);
+    const paddingY = Math.max(1, Math.ceil(previewSize.height / 2));
+    const paddingX = Math.max(1, Math.ceil(previewSize.width / 2));
 
-    console.log('[llm] image', { width: naturalWidth, height: naturalHeight });
+    console.log('[llm] image', {
+      width: naturalWidth,
+      height: naturalHeight,
+      previewWidth: previewSize.width,
+      previewHeight: previewSize.height,
+      maxWidth: CONSOLE_IMAGE_MAX_WIDTH,
+      maxHeight: CONSOLE_IMAGE_MAX_HEIGHT,
+    });
     console.log(
       '%c ',
       [
@@ -31,7 +62,7 @@ const previewImageInConsole = (dataUrl: string): void => {
         `padding:${paddingY}px ${paddingX}px`,
         'background-repeat:no-repeat',
         'background-position:center',
-        `background-size:${naturalWidth}px ${naturalHeight}px`,
+        `background-size:${previewSize.width}px ${previewSize.height}px`,
         `background-image:url("${dataUrl}")`,
         'background-color:#111',
         'border:1px solid #333',
@@ -39,15 +70,15 @@ const previewImageInConsole = (dataUrl: string): void => {
     );
   };
   image.onerror = () => {
-    // 画像読み込みに失敗した場合は従来どおり固定サイズで表示する。
+    // 画像読み込みに失敗した場合は制限サイズ内で固定表示する。
     console.log(
       '%c ',
       [
         'font-size:1px',
-        'padding:72px 120px',
+        `padding:${Math.ceil(CONSOLE_IMAGE_MAX_HEIGHT / 2)}px ${Math.ceil(CONSOLE_IMAGE_MAX_WIDTH / 2)}px`,
         'background-repeat:no-repeat',
         'background-position:center',
-        'background-size:contain',
+        `background-size:${CONSOLE_IMAGE_MAX_WIDTH}px ${CONSOLE_IMAGE_MAX_HEIGHT}px`,
         `background-image:url("${dataUrl}")`,
         'background-color:#111',
         'border:1px solid #333',
