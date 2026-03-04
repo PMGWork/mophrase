@@ -158,7 +158,7 @@
 
 ```json
 {
-  "title": "string（ユーザー指示と同じ言語・10文字以内）",
+  "title": "string（ユーザー指示と同じ言語・最大16文字）",
   "modifierTarget": "sketch | graph | both",
   "confidence": 0.0,
   "keyframes": [
@@ -173,7 +173,8 @@
 }
 ```
 
-- `title`: 同じ言語、10文字以内、編集方針が判別できる具体語
+- `title`: 同じ言語、10文字より少し長め（12〜16文字を目安、最大16文字）で、編集方針が判別できる具体語
+  - 日本語の場合は、助詞を含む自然な語順の短句にする（不自然な省略語・直訳調・ラベル語の羅列を避ける）
 - `modifierTarget`: `sketch` / `graph` / `both`
 - `confidence`: 0〜1 の有限値
 - `keyframes`: 要素数・並びは入力と同一。各フィールド省略禁止

@@ -1,10 +1,11 @@
+import { ChartSpline, Layers2, Pencil } from 'lucide-react';
 import type { Suggestion } from '../types';
 
-const targetTint: Record<Suggestion['modifierTarget'], string> = {
-  sketch: 'rgba(56, 189, 248, 0.2)',
-  graph: 'rgba(167, 139, 250, 0.2)',
-  both: 'rgba(52, 211, 153, 0.2)',
-};
+const targetIcon = {
+  sketch: Pencil,
+  graph: ChartSpline,
+  both: Layers2,
+} as const;
 
 // Props
 type SuggestionItemProps = {
@@ -36,7 +37,7 @@ export const SuggestionItem = ({
   onClick,
 }: SuggestionItemProps) => {
   const indicatorWidth = isHovered ? `${(strength / 2) * 100}%` : '0';
-  const indicatorColor = targetTint[suggestion.modifierTarget];
+  const TargetIcon = targetIcon[suggestion.modifierTarget];
 
   return (
     <button
@@ -54,9 +55,15 @@ export const SuggestionItem = ({
     >
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ width: indicatorWidth, backgroundColor: indicatorColor }}
+        style={{ width: indicatorWidth, background: 'rgba(255,255,255,0.1)' }}
       />
-      <span style={{ position: 'relative' }}>{suggestion.title}</span>
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="min-w-0 flex-1 truncate">{suggestion.title}</span>
+        <TargetIcon
+          className="h-3.5 w-3.5 shrink-0 text-gray-300"
+          aria-hidden="true"
+        />
+      </div>
     </button>
   );
 };

@@ -1,4 +1,5 @@
 import type { AnyModifier, Path, ModifierKind } from '../types';
+import { resolveEffectiveDurationScale } from '../utils/modifier';
 import { ModifierSection } from './ModifierSection';
 import { TimeSection } from './TimeSection';
 
@@ -35,6 +36,13 @@ export const PropertyEditor = ({
   const duration = Number.isFinite(activePath?.duration)
     ? activePath!.duration
     : 0;
+  const durationScale = activePath
+    ? resolveEffectiveDurationScale(
+        activePath.keyframes,
+        activePath.graphModifiers,
+      )
+    : 1;
+  const effectiveDuration = duration * durationScale;
 
   // モディファイアの取得
   const sketchModifiers = activePath?.sketchModifiers ?? [];
@@ -85,6 +93,8 @@ export const PropertyEditor = ({
         <TimeSection
           startTime={startTime}
           duration={duration}
+          effectiveDuration={effectiveDuration}
+          durationScale={durationScale}
           onChange={handleTimeChange}
           activePathId={activePath?.id}
         />
