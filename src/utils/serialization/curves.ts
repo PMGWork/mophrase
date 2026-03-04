@@ -83,6 +83,7 @@ function serializeKeyframes(
   progress: number[],
 ): SerializedKeyframe[] {
   const diag = Math.hypot(bbox.width, bbox.height);
+  const lastIndex = keyframes.length - 1;
   const serialized: SerializedKeyframe[] = keyframes.map((keyframe, index) => {
     const anchor = keyframe.position;
     const inHandle = keyframe.sketchIn
@@ -95,8 +96,9 @@ function serializeKeyframes(
     return {
       ...serializePosition(anchor, bbox),
       time: round(resolveFiniteTime(serializedTimes[index], keyframe.time), 3),
-      sketchIn: serializeHandle(inHandle, anchor, diag),
-      sketchOut: serializeHandle(outHandle, anchor, diag),
+      // 端点の外側ハンドルは null（前後にセグメントが存在しないため LLM に渡さない）
+      sketchIn: index === 0 ? null : serializeHandle(inHandle, anchor, diag),
+      sketchOut: index === lastIndex ? null : serializeHandle(outHandle, anchor, diag),
       ...(keyframe.corner ? { corner: true } : {}),
     };
   });
