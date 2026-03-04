@@ -699,11 +699,11 @@ export class GraphEditor {
       const maxCurveIndex = curves.length - 1;
       const start = Math.max(
         0,
-        Math.min(maxCurveIndex, selectionRange.startCurveIndex),
+        Math.min(maxCurveIndex, selectionRange.startCurveIndex - 1),
       );
       const end = Math.max(
         0,
-        Math.min(maxCurveIndex, selectionRange.endCurveIndex),
+        Math.min(maxCurveIndex, selectionRange.endCurveIndex + 1),
       );
       if (start <= end) {
         points = curves.slice(start, end + 1).flat();

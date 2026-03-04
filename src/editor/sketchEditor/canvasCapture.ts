@@ -226,10 +226,10 @@ function computeSelectionCropRect(
     }
   }
 
-  const start = Math.max(0, selectionRange.startCurveIndex);
+  const start = Math.max(0, selectionRange.startCurveIndex - 1);
   const end = Math.min(
     effectiveCurves.length - 1,
-    selectionRange.endCurveIndex,
+    selectionRange.endCurveIndex + 1,
   );
   if (start > end) return null;
 
