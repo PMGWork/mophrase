@@ -192,6 +192,37 @@ const parseDataUrl = (
   return { mimeType: match[1], base64: match[2] };
 };
 
+// OpenAI structured outputs (strict=true) 向けに、
+// object の required を properties の全キーに揃える。
+const sanitizeSchemaForOpenAIStrict = (
+  schema: Record<string, unknown>,
+): Record<string, unknown> => {
+  const sanitize = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+      return value.map(sanitize);
+    }
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
+
+    const record = value as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+
+    for (const [key, child] of Object.entries(record)) {
+      result[key] = sanitize(child);
+    }
+
+    const properties = result.properties;
+    if (properties && typeof properties === 'object' && !Array.isArray(properties)) {
+      result.required = Object.keys(properties as Record<string, unknown>);
+    }
+
+    return result;
+  };
+
+  return sanitize(schema) as Record<string, unknown>;
+};
+
 // OpenAIによる生成
 const generateWithOpenAI = async (
   env: Env,
@@ -210,6 +241,7 @@ const generateWithOpenAI = async (
   // o1系列とGPT-5.2のモデルでreasoning effortを送信
   const supportsReasoningEffort =
     model.startsWith('o1') || model.startsWith('gpt-5.2');
+  const sanitizedSchema = sanitizeSchemaForOpenAIStrict(schema);
   const requestBody: Record<string, unknown> = {
     model,
     text: {
@@ -217,7 +249,7 @@ const generateWithOpenAI = async (
         type: 'json_schema',
         name: 'structured_output',
         strict: true,
-        schema,
+        schema: sanitizedSchema,
       },
     },
   };

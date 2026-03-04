@@ -141,7 +141,8 @@ export function generateKeyframes(
       sourcePointIndex !== undefined &&
       discontinuitySet.has(sourcePointIndex)
     ) {
-      keyframes[i].corner = true;
+      keyframes[i].sketchCorner = true;
+      keyframes[i].graphCorner = true;
     }
   }
 

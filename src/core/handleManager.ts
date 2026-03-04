@@ -13,6 +13,7 @@ import type {
   HandleType,
   Path,
 } from '../types';
+import { isSketchCorner } from '../utils/keyframeCorner';
 import { resolveSketchCurves } from '../utils/path';
 
 // ハンドル位置情報（曲線インデックスと制御点インデックス）
@@ -513,7 +514,7 @@ export class HandleManager {
     type: HandleType,
   ): void {
     if (type === 'ANCHOR') return;
-    if (keyframe.corner) return;
+    if (isSketchCorner(keyframe)) return;
 
     const oppositeType: HandleType =
       type === 'SKETCH_IN' ? 'SKETCH_OUT' : 'SKETCH_IN';

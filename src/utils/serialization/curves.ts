@@ -12,6 +12,10 @@ import type {
   SerializedKeyframe,
   SerializedPath,
 } from '../../types';
+import {
+  isGraphCorner,
+  isSketchCorner,
+} from '../keyframeCorner';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
 import { round } from '../math';
 
@@ -96,12 +100,16 @@ function serializeKeyframes(
       ? anchor.copy().add(keyframe.sketchOut)
       : anchor;
 
+    const sketchCorner = isSketchCorner(keyframe);
+    const graphCorner = isGraphCorner(keyframe);
+
     return {
       ...serializePosition(anchor, bbox),
       time: round(resolveFiniteTime(serializedTimes[index], keyframe.time), 3),
       sketchIn: serializeHandle(inHandle, anchor, bbox),
       sketchOut: serializeHandle(outHandle, anchor, bbox),
-      ...(keyframe.corner ? { corner: true } : {}),
+      ...(sketchCorner ? { sketchCorner: true } : {}),
+      ...(graphCorner ? { graphCorner: true } : {}),
     };
   });
 
@@ -225,6 +233,9 @@ export function deserializePathKeyframes(
           .sub(position)
       : undefined;
 
+    const sketchCorner = isSketchCorner(serialized);
+    const graphCorner = isGraphCorner(serialized);
+
     keyframes.push({
       time:
         serialized.time !== undefined && Number.isFinite(serialized.time)
@@ -233,8 +244,11 @@ export function deserializePathKeyframes(
       position,
       sketchIn,
       sketchOut,
+      ...(sketchCorner ? { sketchCorner: true } : {}),
+      ...(graphCorner ? { graphCorner: true } : {}),
     });
   }
+  stabilizeDeserializedTimes(keyframes, referenceTimes);
 
   const deserializedCurves = buildSketchCurves(keyframes);
   const deserializedProgress = computeKeyframeProgress(
@@ -306,6 +320,39 @@ export function deserializePathKeyframes(
   }
 
   return keyframes;
+}
+
+function stabilizeDeserializedTimes(
+  keyframes: Keyframe[],
+  referenceTimes: number[],
+): void {
+  if (keyframes.length === 0) return;
+
+  const evenDenominator = Math.max(1, keyframes.length - 1);
+  for (let i = 0; i < keyframes.length; i++) {
+    const keyframe = keyframes[i];
+    if (!keyframe) continue;
+    const fallbackReference = referenceTimes[i];
+    const fallbackTime =
+      Number.isFinite(fallbackReference)
+        ? (fallbackReference as number)
+        : i / evenDenominator;
+    if (!Number.isFinite(keyframe.time)) {
+      keyframe.time = fallbackTime;
+    }
+  }
+
+  for (let i = 1; i < keyframes.length; i++) {
+    const previous = keyframes[i - 1];
+    const current = keyframes[i];
+    if (!previous || !current) continue;
+
+    const previousTime = Number.isFinite(previous.time) ? previous.time : 0;
+    const minimum = previousTime + 1e-4;
+    if (!Number.isFinite(current.time) || current.time < minimum) {
+      current.time = minimum;
+    }
+  }
 }
 
 function normalizePathTimes(keyframes: Keyframe[]): number[] {

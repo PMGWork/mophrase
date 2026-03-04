@@ -12,6 +12,7 @@ import type {
   Path,
   SelectionRange,
 } from '../../types';
+import { isGraphCorner } from '../../utils/keyframeCorner';
 import { clamp } from '../../utils/math';
 import { drawBezierCurve, drawControls } from '../shared/curveRendering';
 import { resolveGraphCurves } from '../../utils/path';
@@ -875,8 +876,8 @@ export class GraphEditor {
     keyframe: Keyframe,
     type: 'GRAPH_OUT' | 'GRAPH_IN',
   ): void {
-    // 不連続点（corner）はハンドルを独立で扱う
-    if (keyframe.corner) return;
+    // 不連続点（graphCorner）はハンドルを独立で扱う
+    if (isGraphCorner(keyframe)) return;
 
     const current = type === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;
     if (!current) return;

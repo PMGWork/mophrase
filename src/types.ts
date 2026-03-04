@@ -50,7 +50,8 @@ export interface Keyframe {
   sketchOut?: p5.Vector;
   graphIn?: p5.Vector;
   graphOut?: p5.Vector;
-  corner?: boolean;
+  sketchCorner?: boolean;
+  graphCorner?: boolean;
 }
 
 // 描画パス情報
@@ -113,7 +114,8 @@ export interface SerializedKeyframe {
   sketchOut?: SerializedHandle | null;
   graphIn?: SerializedHandle | null;
   graphOut?: SerializedHandle | null;
-  corner?: boolean;
+  sketchCorner?: boolean;
+  graphCorner?: boolean;
 }
 
 // シリアライズされたパスのバウンディングボックス
@@ -224,6 +226,8 @@ const keyframeSchema = z.object({
   sketchOut: handleSchema.nullable(),
   graphIn: handleSchema.nullable(),
   graphOut: handleSchema.nullable(),
+  sketchCorner: z.boolean().optional(),
+  graphCorner: z.boolean().optional(),
 });
 
 // 提案アイテム

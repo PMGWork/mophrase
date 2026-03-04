@@ -17,6 +17,7 @@ import {
   computeKeyframeProgress,
   splitKeyframeSegment,
 } from './keyframes';
+import { isGraphCorner } from './keyframeCorner';
 import { clamp } from './math';
 
 const MIN_TIME_STEP = 1e-4;
@@ -316,12 +317,28 @@ export function createGraphModifier(
     return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
   }
 
-  const startIndex = selectionRange?.startCurveIndex ?? 0;
-  const endIndex =
-    selectionRange?.endCurveIndex ?? Math.max(0, keyframes.length - 2);
+  const maxCurveIndex = Math.max(0, keyframes.length - 2);
+  const startIndex = Math.max(
+    0,
+    Math.min(
+      maxCurveIndex,
+      selectionRange?.startCurveIndex ?? 0,
+    ),
+  );
+  const endIndex = Math.max(
+    startIndex,
+    Math.min(
+      maxCurveIndex,
+      selectionRange?.endCurveIndex ?? maxCurveIndex,
+    ),
+  );
+  const isScopedRange = !!selectionRange;
+  const rangeAlignedModifiedKeyframes = isScopedRange
+    ? alignRangeStartTime(keyframes, modifiedKeyframes, startIndex)
+    : modifiedKeyframes;
   const adjustedModifiedKeyframes = expandTrailingModifiedTimes(
     keyframes,
-    modifiedKeyframes,
+    rangeAlignedModifiedKeyframes,
     startIndex,
     endIndex,
   );
@@ -341,9 +358,19 @@ export function createGraphModifier(
     const localIndex = i - startIndex;
     if (localIndex < 0 || localIndex >= adjustedModifiedKeyframes.length) continue;
     const delta = deltas[i];
+    const rangeBoundaryStart = startIndex;
+    const rangeBoundaryEnd = endIndex + 1;
+    const shouldWriteOut =
+      i < keyframes.length - 1 &&
+      (!isScopedRange || i !== rangeBoundaryEnd);
+    const shouldWriteIn =
+      i > 0 &&
+      (!isScopedRange || i !== rangeBoundaryStart);
+    const shouldWriteTimeDelta =
+      !isScopedRange || i !== rangeBoundaryStart;
 
     // outデルタ（外側ハンドルを含む）
-    if (i < keyframes.length - 1) {
+    if (shouldWriteOut) {
       const v = diffGraphOutHandle(
         keyframes,
         progress,
@@ -356,7 +383,7 @@ export function createGraphModifier(
     }
 
     // inデルタ（外側ハンドルを含む）
-    if (i > 0) {
+    if (shouldWriteIn) {
       const v = diffGraphInHandle(
         keyframes,
         progress,
@@ -368,10 +395,12 @@ export function createGraphModifier(
       if (v) delta.inDelta = v;
     }
 
-    const original = keyframes[i];
-    const modified = adjustedModifiedKeyframes[localIndex];
-    const timeDelta = diffScalar(modified?.time, original?.time);
-    if (timeDelta !== undefined) delta.timeDelta = timeDelta;
+    if (shouldWriteTimeDelta) {
+      const original = keyframes[i];
+      const modified = adjustedModifiedKeyframes[localIndex];
+      const timeDelta = diffScalar(modified?.time, original?.time);
+      if (timeDelta !== undefined) delta.timeDelta = timeDelta;
+    }
   }
 
   return { id: globalThis.crypto.randomUUID(), name, strength: 1.0, deltas };
@@ -747,8 +776,8 @@ function resolveRawTimes(
   if (modifiers && modifiers.length > 0) {
     for (const modifier of modifiers) {
       const len = Math.min(modifier.deltas.length, keyframes.length);
+      const beforeModifierTimes = [...rawTimes];
       let lastSignificantIndex = -1;
-      let lastSignificantDelta = 0;
 
       for (let idx = 0; idx < len; idx++) {
         const delta = modifier.deltas[idx]?.timeDelta;
@@ -758,13 +787,14 @@ function resolveRawTimes(
         rawTimes[idx] += weighted;
         hasTimeDelta = true;
         lastSignificantIndex = idx;
-        lastSignificantDelta = delta;
       }
 
       // 最後に編集された時刻オフセットを末尾まで伝播させる。
       // これにより「一部区間を伸ばしたら後続を圧縮せず、全体長を増やす」挙動にする。
       if (lastSignificantIndex >= 0 && lastSignificantIndex < len - 1) {
-        const tailWeighted = lastSignificantDelta * modifier.strength;
+        const tailWeighted =
+          rawTimes[lastSignificantIndex] -
+          beforeModifierTimes[lastSignificantIndex];
         if (Math.abs(tailWeighted) >= DELTA_EPSILON) {
           for (let idx = lastSignificantIndex + 1; idx < len; idx++) {
             rawTimes[idx] += tailWeighted;
@@ -787,6 +817,29 @@ function resolveRawTimes(
   }
 
   return { baseTimes, rawTimes, hasTimeDelta };
+}
+
+function alignRangeStartTime(
+  keyframes: Keyframe[],
+  modifiedKeyframes: Keyframe[],
+  startIndex: number,
+): Keyframe[] {
+  if (modifiedKeyframes.length === 0) return modifiedKeyframes;
+  const originalStartTime = keyframes[startIndex]?.time;
+  if (
+    typeof originalStartTime !== 'number' ||
+    !Number.isFinite(originalStartTime)
+  ) {
+    return modifiedKeyframes.map(cloneGraphComparableKeyframe);
+  }
+
+  return modifiedKeyframes.map((keyframe, localIndex) => {
+    const aligned = cloneGraphComparableKeyframe(keyframe);
+    if (localIndex === 0) {
+      aligned.time = originalStartTime;
+    }
+    return aligned;
+  });
 }
 
 function expandTrailingModifiedTimes(
@@ -877,7 +930,7 @@ function syncOppositeGraphHandleForSmoothKeyframe(
   keyframe: Keyframe,
   changedType: 'GRAPH_OUT' | 'GRAPH_IN',
 ): void {
-  if (keyframe.corner) return;
+  if (isGraphCorner(keyframe)) return;
 
   const changed =
     changedType === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;

@@ -19,6 +19,10 @@ import type {
 } from '../../types';
 import { DEFAULT_PROJECT_SETTINGS, normalizeProjectSettings } from '../../types';
 import { buildSketchCurves, computeKeyframeProgress } from '../keyframes';
+import {
+  isGraphCorner,
+  isSketchCorner,
+} from '../keyframeCorner';
 import { clamp, isFiniteNumber } from '../math';
 import {
   deserializeGraphHandle,
@@ -297,6 +301,8 @@ export function deserializePaths(
         ? keyframe.time
         : fallbackTime;
       const time = clamp(rawTime, 0, 1);
+      const sketchCorner = isSketchCorner(keyframe);
+      const graphCorner = isGraphCorner(keyframe);
 
       return {
         time,
@@ -304,7 +310,8 @@ export function deserializePaths(
           bboxX + keyframe.x * width,
           bboxY + keyframe.y * height,
         ),
-        ...(keyframe.corner ? { corner: true } : {}),
+        ...(sketchCorner ? { sketchCorner: true } : {}),
+        ...(graphCorner ? { graphCorner: true } : {}),
       };
     });
 
@@ -420,6 +427,10 @@ function isSerializedKeyframe(value: unknown): value is SerializedKeyframe {
   if (!isRecord(value)) return false;
   if (!isFiniteNumber(value.x) || !isFiniteNumber(value.y)) return false;
   if (value.time !== undefined && !isFiniteNumber(value.time)) return false;
+  if (value.sketchCorner !== undefined && typeof value.sketchCorner !== 'boolean')
+    return false;
+  if (value.graphCorner !== undefined && typeof value.graphCorner !== 'boolean')
+    return false;
   return (['sketchIn', 'sketchOut', 'graphIn', 'graphOut'] as const).every(
     (key) => isOptionalHandle(value[key]),
   );
