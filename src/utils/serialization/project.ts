@@ -315,28 +315,28 @@ export function deserializePaths(
       }
     }
 
-    const diagonal = Math.hypot(width, height);
+    const bbox = serializedPath.bbox;
     for (let i = 0; i < keyframes.length - 1; i++) {
       const startSerialized = serializedKeyframes[i];
       const endSerialized = serializedKeyframes[i + 1];
       const startKeyframe = keyframes[i];
       const endKeyframe = keyframes[i + 1];
 
-      if (startSerialized.sketchOut && diagonal > 1e-6) {
+      if (startSerialized.sketchOut) {
         const outHandle = deserializeHandle(
           startSerialized.sketchOut,
           startKeyframe.position,
-          diagonal,
+          bbox,
           p,
         );
         startKeyframe.sketchOut = outHandle.sub(startKeyframe.position);
       }
 
-      if (endSerialized.sketchIn && diagonal > 1e-6) {
+      if (endSerialized.sketchIn) {
         const inHandle = deserializeHandle(
           endSerialized.sketchIn,
           endKeyframe.position,
-          diagonal,
+          bbox,
           p,
         );
         endKeyframe.sketchIn = inHandle.sub(endKeyframe.position);
