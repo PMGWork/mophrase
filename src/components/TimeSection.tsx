@@ -17,23 +17,9 @@ type TimeSectionProps = {
 export const TimeSection = ({
   startTime,
   duration,
-  effectiveDuration,
-  durationScale,
   onChange,
   activePathId,
 }: TimeSectionProps) => {
-  const resolvedEffectiveDuration =
-    typeof effectiveDuration === 'number' && Number.isFinite(effectiveDuration)
-      ? Math.max(0, effectiveDuration)
-      : duration;
-  const resolvedDurationScale =
-    typeof durationScale === 'number' && Number.isFinite(durationScale)
-      ? durationScale
-      : 1;
-  const hasDurationDelta =
-    Math.abs(resolvedEffectiveDuration - duration) >= 1e-3;
-  const formatSeconds = (value: number) => value.toFixed(2);
-
   return (
     <div id="timeSection" className="flex flex-col gap-2 p-3">
       <span className="text-text-muted text-xs font-medium">Time</span>
@@ -73,13 +59,6 @@ export const TimeSection = ({
             s
           </span>
         </div>
-      </div>
-      <div className="text-text-subtle flex items-center justify-between px-0.5 text-[11px]">
-        <span>実効秒数</span>
-        <span className={hasDurationDelta ? 'text-gray-100' : 'text-text-subtle'}>
-          {formatSeconds(resolvedEffectiveDuration)}s
-          {` (${resolvedDurationScale.toFixed(2)}x)`}
-        </span>
       </div>
     </div>
   );
