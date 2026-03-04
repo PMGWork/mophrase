@@ -42,6 +42,7 @@ function serializeHandle(
   const ndx = dx / bbox.width;
   const ndy = dy / bbox.height;
   const angle = Math.atan2(ndy, ndx) * (180 / Math.PI);
+  // 正規化空間（1×1）の対角線長 √2 で割り、dist を対角線比に正規化
   const dist = Math.hypot(ndx, ndy) / Math.SQRT2;
   return {
     angle: round(angle, 3),
@@ -350,6 +351,7 @@ export function deserializeHandle(
   p: p5,
 ): p5.Vector {
   const angle = handle.angle * (Math.PI / 180);
+  // serializeHandle の √2 除算の逆変換
   const normDist = handle.dist * Math.SQRT2;
   const ndx = Math.cos(angle) * normDist;
   const ndy = Math.sin(angle) * normDist;
