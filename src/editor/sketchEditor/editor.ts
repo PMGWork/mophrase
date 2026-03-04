@@ -329,6 +329,10 @@ export class SketchEditor {
     this.suggestionLoop.syncOnHoverChange();
   }
 
+  public setModifierAdjusting(isAdjusting: boolean): void {
+    this.suggestionLoop.setModifierAdjusting(isAdjusting, this.activePath);
+  }
+
   // #region プロジェクト設定
 
   public getProjectSettings(): ProjectSettings {

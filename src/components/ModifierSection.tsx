@@ -8,6 +8,8 @@ type ModifierSectionProps = {
   modifiers: Array<AnyModifier>; // モディファイアの配列
   onChange: (modifier: AnyModifier, type: ModifierKind, value: number) => void;
   onRemove: (modifier: AnyModifier, type: ModifierKind) => void;
+  onAdjustStart?: () => void;
+  onAdjustEnd?: () => void;
 };
 
 // コンポーネント
@@ -17,6 +19,8 @@ export const ModifierSection = ({
   modifiers,
   onChange,
   onRemove,
+  onAdjustStart,
+  onAdjustEnd,
 }: ModifierSectionProps) => (
   <div
     className="border-border flex flex-col gap-2 border-t p-3"
@@ -31,6 +35,8 @@ export const ModifierSection = ({
           type={type}
           onChange={onChange}
           onRemove={onRemove}
+          onAdjustStart={onAdjustStart}
+          onAdjustEnd={onAdjustEnd}
         />
       ))}
     </div>

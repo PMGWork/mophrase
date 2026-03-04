@@ -35,6 +35,7 @@ const App = () => {
     updateSuggestionUI,
     submitPrompt,
     setSuggestionHover,
+    setModifierAdjusting,
     selectSuggestion,
     captureSketchCanvas,
     getSelectionRange,
@@ -149,6 +150,14 @@ const App = () => {
     [applyPathUpdate],
   );
 
+  const handleModifierAdjustStart = useCallback(() => {
+    setModifierAdjusting(true);
+  }, [setModifierAdjusting]);
+
+  const handleModifierAdjustEnd = useCallback(() => {
+    setModifierAdjusting(false);
+  }, [setModifierAdjusting]);
+
   const hasGraphPath = (activePath?.keyframes?.length ?? 0) >= 2;
   const handleFitToleranceChange = useCallback(
     (fitTolerance: number) => {
@@ -201,6 +210,8 @@ const App = () => {
             onTimeChange: handleTimeChange,
             onModifierChange: handleModifierChange,
             onModifierRemove: handleModifierRemove,
+            onModifierAdjustStart: handleModifierAdjustStart,
+            onModifierAdjustEnd: handleModifierAdjustEnd,
           }}
         />
       </div>

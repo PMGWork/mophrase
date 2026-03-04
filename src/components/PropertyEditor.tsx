@@ -12,6 +12,8 @@ export type PropertyEditorHandlers = {
     value: number,
   ) => void;
   onModifierRemove?: (modifierId: string, type: ModifierKind) => void;
+  onModifierAdjustStart?: () => void;
+  onModifierAdjustEnd?: () => void;
 };
 
 // プロパティ型定義
@@ -106,6 +108,8 @@ export const PropertyEditor = ({
           modifiers={sketchModifiers}
           onChange={handleModifierChange}
           onRemove={handleModifierRemove}
+          onAdjustStart={handlers?.onModifierAdjustStart}
+          onAdjustEnd={handlers?.onModifierAdjustEnd}
         />
 
         {/* グラフモディファイアセクション */}
@@ -115,6 +119,8 @@ export const PropertyEditor = ({
           modifiers={graphModifiers}
           onChange={handleModifierChange}
           onRemove={handleModifierRemove}
+          onAdjustStart={handlers?.onModifierAdjustStart}
+          onAdjustEnd={handlers?.onModifierAdjustEnd}
         />
       </div>
     </div>

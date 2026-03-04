@@ -95,6 +95,7 @@ type UseSketchEditorResult = {
   updateSuggestionUI: () => void;
   submitPrompt: (prompt: string) => void;
   setSuggestionHover: (id: string | null, strength: number) => void;
+  setModifierAdjusting: (isAdjusting: boolean) => void;
   selectSuggestion: (id: string, strength: number) => void;
   captureSketchCanvas: (
     path?: Path,
@@ -340,6 +341,10 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     },
     [],
   );
+
+  const setModifierAdjusting = useCallback((isAdjusting: boolean) => {
+    editorRef.current?.setModifierAdjusting(isAdjusting);
+  }, []);
 
   // 提案選択
   const selectSuggestion = useCallback((id: string, strength: number) => {
@@ -716,6 +721,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     updateSuggestionUI,
     submitPrompt,
     setSuggestionHover,
+    setModifierAdjusting,
     selectSuggestion,
     captureSketchCanvas,
     getSelectionRange,

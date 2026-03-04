@@ -1,4 +1,5 @@
 import { Minus } from 'lucide-react';
+import type { PointerEvent } from 'react';
 import type { AnyModifier, ModifierKind } from '../types';
 import { clamp } from '../utils/math';
 
@@ -8,6 +9,8 @@ type ModifierItemProps = {
   type: ModifierKind; // モディファイアの種類
   onChange: (modifier: AnyModifier, type: ModifierKind, value: number) => void;
   onRemove: (modifier: AnyModifier, type: ModifierKind) => void;
+  onAdjustStart?: () => void;
+  onAdjustEnd?: () => void;
 };
 
 // 影響度をパーセンテージ形式にフォーマットする関数
@@ -19,9 +22,23 @@ export const ModifierItem = ({
   type,
   onChange,
   onRemove,
+  onAdjustStart,
+  onAdjustEnd,
 }: ModifierItemProps) => {
   const strengthValue = formatStrength(modifier.strength);
   const indicatorWidth = `${strengthValue / 2}%`;
+
+  const handleAdjustStart = (event: PointerEvent<HTMLInputElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    onAdjustStart?.();
+  };
+
+  const handleAdjustEnd = (event: PointerEvent<HTMLInputElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    onAdjustEnd?.();
+  };
 
   return (
     <div className="flex items-center gap-2">
@@ -47,6 +64,10 @@ export const ModifierItem = ({
           onChange={(event) =>
             onChange(modifier, type, Number(event.target.value))
           }
+          onPointerDown={handleAdjustStart}
+          onPointerUp={handleAdjustEnd}
+          onPointerCancel={handleAdjustEnd}
+          onBlur={() => onAdjustEnd?.()}
           className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
         />
       </div>

@@ -24,6 +24,7 @@ export class SuggestionLoopController {
   private loopPath: Path | null = null;
   private hoveredId: string | null = null;
   private hasHoverableSuggestions = false;
+  private isModifierAdjusting = false;
   private deps: SuggestionLoopDeps;
 
   constructor(deps: SuggestionLoopDeps) {
@@ -48,6 +49,14 @@ export class SuggestionLoopController {
 
   set hoveredSuggestionId(id: string | null) {
     this.hoveredId = id;
+  }
+
+  setModifierAdjusting(isAdjusting: boolean, path: Path | null): void {
+    this.isModifierAdjusting = isAdjusting;
+    if (path) {
+      this.loopPath = path;
+    }
+    this.syncByState({ restartIfPlaying: isAdjusting });
   }
 
   // paths 配列に存在するループ対象パスを返す
@@ -88,6 +97,7 @@ export class SuggestionLoopController {
     this.loopPath = null;
     this.hoveredId = null;
     this.hasHoverableSuggestions = false;
+    this.isModifierAdjusting = false;
   }
 
   // ループ再生を停止
@@ -100,7 +110,10 @@ export class SuggestionLoopController {
 
   // ループ再生が必要か判定
   private shouldPlay(): boolean {
-    return this.hasHoverableSuggestions && this.hoveredId !== null;
+    if (this.hasHoverableSuggestions && this.hoveredId !== null) {
+      return true;
+    }
+    return this.isModifierAdjusting && this.getResolvedLoopPath() !== null;
   }
 
   // 状態に応じてループ再生を開始・停止・再開
@@ -126,7 +139,11 @@ export class SuggestionLoopController {
 
     const p = this.deps.getP5();
     if (!p) return;
-    const path = this.deps.getSuggestionManager().getHoveredPreviewPath(p);
+    const isSuggestionHoverActive =
+      this.hasHoverableSuggestions && this.hoveredId !== null;
+    const path = isSuggestionHoverActive
+      ? this.deps.getSuggestionManager().getHoveredPreviewPath(p)
+      : this.getResolvedLoopPath();
     if (!path) return;
 
     const duration = Number.isFinite(path.duration)
@@ -135,7 +152,7 @@ export class SuggestionLoopController {
     const loopPath: Path = { ...path, startTime: 0, duration };
 
     const originalPath = this.getResolvedLoopPath();
-    const colorSource = originalPath ?? path;
+    const colorSource = isSuggestionHoverActive ? originalPath ?? path : path;
     smm.startAll(
       [loopPath],
       [this.deps.getPathColor(colorSource)],
