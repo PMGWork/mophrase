@@ -4,9 +4,8 @@
  */
 
 import type p5 from 'p5';
-import { toFinite } from '../../utils/math';
+import { clamp, toFinite } from '../../utils/math';
 
-const EPS = 1e-6;
 const MIN_TIME_DELTA_MS = 8;
 
 // 定数
@@ -86,7 +85,7 @@ function buildCandidateMetric(
   const nextVec = next.copy().sub(curr);
   const prevLen = prevVec.mag();
   const nextLen = nextVec.mag();
-  if (prevLen <= EPS || nextLen <= EPS) return null;
+  if (prevLen <= 1e-6 || nextLen <= 1e-6) return null;
 
   const turnAngleDeg = computeTurnAngleDeg(prevVec, nextVec, prevLen, nextLen);
   const windowTurnAngleDeg = computeWindowTurnAngleDeg(points, index);
@@ -142,9 +141,11 @@ function computeCandidateScore(
   minStepPx: number,
 ): number {
   const isLocalAnglePeak = isLocalAnglePeakByRadius(metrics, index, 2);
-  const angleScore = clamp01(
+  const angleScore = clamp(
     // 固定: scored min angle = 48deg
     (metric.baseAngleDeg - 48) / (CORNER_ANGLE_DEG - 48),
+    0,
+    1,
   );
 
   const ratioScore =
@@ -169,10 +170,8 @@ function isCornerCandidate(
   const isAssistedCorner =
     metric.baseAngleDeg >= ASSISTED_ANGLE_DEG &&
     metric.maxStep >= minStepPx &&
-    // 固定: distance ratio >= 3.2 or speed ratio >= 4.0
     (metric.distanceRatio >= 3.2 || metric.speedRatio >= 4.0);
   const isScoredCorner =
-    // 固定: scored min angle = 48deg
     metric.baseAngleDeg >= 48 &&
     score >= SCORED_PASS_THRESHOLD;
 
@@ -216,7 +215,7 @@ function computeWindowTurnAngleDeg(points: p5.Vector[], index: number): number {
   const outVec = after.copy().sub(current);
   const inLen = inVec.mag();
   const outLen = outVec.mag();
-  if (inLen <= EPS || outLen <= EPS) return 0;
+  if (inLen <= 1e-6 || outLen <= 1e-6) return 0;
 
   return computeTurnAngleDeg(inVec, outVec, inLen, outLen);
 }
@@ -247,12 +246,6 @@ function isCandidateBetter(a: Candidate, b: Candidate): boolean {
   return a.windowTurnAngleDeg > b.windowTurnAngleDeg;
 }
 
-// 値を 0..1 にクランプ
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(1, value));
-}
-
 // 前後ベクトルのなす角（度）を返す
 function computeTurnAngleDeg(
   prevVec: p5.Vector,
@@ -269,7 +262,7 @@ function computeTurnAngleDeg(
 function ratio(a: number, b: number): number {
   const maxValue = Math.max(a, b);
   const minValue = Math.min(a, b);
-  return maxValue / Math.max(minValue, EPS);
+  return maxValue / Math.max(minValue, 1e-6);
 }
 
 // 2点間の経過時間（ms）を返す。最小値 MIN_TIME_DELTA_MS でクランプ
