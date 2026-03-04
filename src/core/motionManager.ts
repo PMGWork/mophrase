@@ -4,6 +4,7 @@
  */
 
 import type p5 from 'p5';
+import { PLAYBACK_EVAL_FPS_DEFAULT } from '../constants';
 import type { Path } from '../types';
 import { bezierCurve } from '../utils/bezier';
 import { clamp } from '../utils/math';
@@ -40,6 +41,7 @@ export class MotionManager {
 
   // プロジェクト設定からの上書き
   private durationOverrideMs: number = 0; // 0=未設定(自動計算)
+  private evaluationFrameRate: number = PLAYBACK_EVAL_FPS_DEFAULT;
 
   // 全パスのアニメーション状態
   private animationStates: PathAnimationState[] = [];
@@ -78,6 +80,14 @@ export class MotionManager {
   // 総再生時間の上書きを設定（ミリ秒、0=未設定で自動計算）
   public setDurationOverride(durationMs: number): void {
     this.durationOverrideMs = durationMs;
+  }
+
+  // 再生時の評価フレームレートを設定（fps）
+  public setEvaluationFrameRate(frameRate: number): void {
+    this.evaluationFrameRate =
+      Number.isFinite(frameRate) && frameRate > 0
+        ? frameRate
+        : PLAYBACK_EVAL_FPS_DEFAULT;
   }
 
   // 全パスのタイムライン再生を開始
@@ -150,9 +160,11 @@ export class MotionManager {
         this.elapsedTime = 0;
       }
 
+      const evaluatedTime = this.quantizeTime(this.elapsedTime);
+
       // 各パスのオブジェクトを描画
       for (const state of this.animationStates) {
-        const position = this.evaluatePathPosition(state, this.elapsedTime);
+        const position = this.evaluatePathPosition(state, evaluatedTime);
         this.drawObject(position, state.color);
       }
       return;
@@ -175,13 +187,25 @@ export class MotionManager {
     if (this.animationStates.length === 0) return;
 
     const previewTime = clamp(this.elapsedTime, 0, this.totalDuration);
+    const evaluatedTime = this.quantizeTime(previewTime);
     for (const state of this.animationStates) {
-      const position = this.evaluatePathPosition(state, previewTime);
+      const position = this.evaluatePathPosition(state, evaluatedTime);
       this.drawObject(position, state.color);
     }
   }
 
   // #region プライベート関数
+
+  private quantizeTime(elapsedMs: number): number {
+    const frameMs = 1000 / this.evaluationFrameRate;
+    if (!Number.isFinite(frameMs) || frameMs <= 0) {
+      return elapsedMs;
+    }
+
+    const snapped = Math.floor(elapsedMs / frameMs + 1e-6) * frameMs;
+    return clamp(snapped, 0, this.totalDuration);
+  }
+
   private buildAnimationStates(
     paths: Path[],
     colors: string[],

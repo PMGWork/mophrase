@@ -6,7 +6,7 @@
 
 import p5 from 'p5';
 import { type Colors, type Config } from '../../config';
-import { OBJECT_SIZE } from '../../constants';
+import { CANVAS_FRAME_RATE, OBJECT_SIZE } from '../../constants';
 import { HandleManager } from '../../core/handleManager';
 import { MotionManager } from '../../core/motionManager';
 import {
@@ -339,14 +339,14 @@ export class SketchEditor {
     const normalizedSettings = normalizeProjectSettings(settings);
     this.projectSettings = normalizedSettings;
 
-    if (this.p) {
-      this.p.frameRate(normalizedSettings.playbackFrameRate);
-    }
-
     const mm = this.playback.getMotionManager();
     if (mm) {
       mm.setDurationOverride(0);
+      mm.setEvaluationFrameRate(normalizedSettings.playbackFrameRate);
     }
+    this.suggestionMotionManager?.setEvaluationFrameRate(
+      normalizedSettings.playbackFrameRate,
+    );
 
     this.playback.refreshPlaybackTimeline();
   }
@@ -411,6 +411,7 @@ export class SketchEditor {
     this.inputHandler.attach(canvas);
     p.background(this.colors.background);
     p.textFont('Geist');
+    p.frameRate(CANVAS_FRAME_RATE);
 
     const mm = new MotionManager(p, OBJECT_SIZE);
     this.playback.setMotionManager(mm);

@@ -4,6 +4,12 @@ export const BEZIER_T_STEP = 0.02;
 // オブジェクト
 export const OBJECT_SIZE = 50;
 
+// キャンバス描画のフレームレート
+export const CANVAS_FRAME_RATE = 60;
+
+// 再生評価のデフォルトフレームレート
+export const PLAYBACK_EVAL_FPS_DEFAULT = 60;
+
 // オブジェクトの色（CSS変数）
 export const OBJECT_COLORS = [
   'var(--color-object-1)',
