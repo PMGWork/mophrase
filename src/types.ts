@@ -38,7 +38,7 @@ export interface HandleSelection {
 export type HandleType = 'ANCHOR' | 'SKETCH_IN' | 'SKETCH_OUT';
 
 // ハンドルドラッグモード
-export type HandleDragMode = 'mirror' | 'free';
+export type HandleDragMode = 'mirror' | 'free' | 'invert';
 
 // #region 2. コアデータモデル
 

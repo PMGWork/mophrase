@@ -36,6 +36,8 @@ type SelectedHandleIndexSets = {
 type Rect = { x: number; y: number; width: number; height: number };
 type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 
+const TOUCH_LONG_PRESS_MS = 350;
+
 // グラフエディタ
 export class GraphEditor {
   // データ
@@ -79,6 +81,9 @@ export class GraphEditor {
     onPointerEnd: (event) => this.pointerEnd(event),
     onPointerLostCapture: (event) => this.pointerLostCapture(event),
   });
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressActive = false;
+  private activePointerType: string | null = null;
 
   // #region メイン関数
 
@@ -263,6 +268,7 @@ export class GraphEditor {
   }
 
   public destroy(): void {
+    this.clearLongPressState();
     this.pointerSession.detach();
     this.p?.remove();
     this.p = null;
@@ -637,7 +643,11 @@ export class GraphEditor {
 
     const { curves, effectiveCurves, progress, effectiveTimes } = graphData;
     const target = this.pixelToNorm(p.mouseX, p.mouseY);
-    const sync = !p.keyIsDown(p.ALT);
+    const syncMode = p.keyIsDown(p.ALT)
+      ? 'free'
+      : this.longPressActive
+        ? 'invert'
+        : 'default';
     this.applyHandleDrag(
       this.draggedHandle,
       target.x,
@@ -646,7 +656,7 @@ export class GraphEditor {
       effectiveTimes,
       curves,
       effectiveCurves,
-      sync,
+      syncMode,
     );
   }
 
@@ -667,6 +677,7 @@ export class GraphEditor {
     if (!selection) return;
 
     if (!this.pointerSession.activate(input.pointerId)) return;
+    this.startLongPressTimer(input.pointerType);
     this.draggedHandle = selection;
     this.pointerSession.preventDefaultIfCancelable(event);
   }
@@ -685,7 +696,11 @@ export class GraphEditor {
 
     const { curves, effectiveCurves, progress, effectiveTimes } = graphData;
     const target = this.pixelToNorm(input.x, input.y);
-    const sync = !input.altKey;
+    const syncMode = input.altKey
+      ? 'free'
+      : this.longPressActive
+        ? 'invert'
+        : 'default';
     this.applyHandleDrag(
       this.draggedHandle,
       target.x,
@@ -694,21 +709,43 @@ export class GraphEditor {
       effectiveTimes,
       curves,
       effectiveCurves,
-      sync,
+      syncMode,
     );
   }
 
   private pointerEnd(event: PointerEvent): void {
     if (!this.pointerSession.isActivePointer(event.pointerId)) return;
     this.pointerSession.preventDefaultIfCancelable(event);
+    this.clearLongPressState();
     this.pointerSession.finishActivePointer({ releaseCapture: true });
     this.draggedHandle = null;
   }
 
   private pointerLostCapture(event: PointerEvent): void {
     if (!this.pointerSession.isActivePointer(event.pointerId)) return;
+    this.clearLongPressState();
     this.pointerSession.clearActivePointer();
     this.draggedHandle = null;
+  }
+
+  private startLongPressTimer(pointerType: string): void {
+    this.clearLongPressState();
+    this.activePointerType = pointerType;
+    if (pointerType === 'mouse') return;
+
+    this.longPressTimer = setTimeout(() => {
+      if (this.activePointerType !== pointerType) return;
+      this.longPressActive = true;
+    }, TOUCH_LONG_PRESS_MS);
+  }
+
+  private clearLongPressState(): void {
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressActive = false;
+    this.activePointerType = null;
   }
 
   // #region プライベート関数
@@ -909,7 +946,7 @@ export class GraphEditor {
     effectiveTimes: number[],
     originalCurves: p5.Vector[][],
     effectiveCurves: p5.Vector[][],
-    sync: boolean,
+    syncMode: 'default' | 'free' | 'invert',
   ): void {
     if (!this.activePath) return;
     const keyframes = this.activePath.keyframes;
@@ -957,10 +994,15 @@ export class GraphEditor {
     }
 
     // 対向ハンドルの同期処理
-    if (sync) {
+    if (syncMode !== 'free') {
       const draggedType = selection.type;
       const keyframe = draggedType === 'GRAPH_OUT' ? start : end;
-      this.mirrorOppositeGraphHandle(keyframe, draggedType);
+      if (syncMode === 'invert' && !isGraphCorner(keyframe)) return;
+      this.mirrorOppositeGraphHandle(
+        keyframe,
+        draggedType,
+        syncMode === 'invert',
+      );
     }
   }
 
@@ -968,9 +1010,10 @@ export class GraphEditor {
   private mirrorOppositeGraphHandle(
     keyframe: Keyframe,
     type: 'GRAPH_OUT' | 'GRAPH_IN',
+    allowCorner: boolean = false,
   ): void {
     // 不連続点（graphCorner）はハンドルを独立で扱う
-    if (isGraphCorner(keyframe)) return;
+    if (isGraphCorner(keyframe) && !allowCorner) return;
 
     const current = type === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;
     if (!current) return;

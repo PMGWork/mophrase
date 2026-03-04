@@ -21,9 +21,17 @@ const IGNORE_CLICK_CONTAINERS = [
 export interface InputDispatcher {
   getP5(): p5 | null;
   dispatchPress(p: p5, x: number, y: number, shift: boolean): void;
-  dispatchDrag(p: p5, x: number, y: number, alt: boolean): void;
+  dispatchDrag(
+    p: p5,
+    x: number,
+    y: number,
+    alt: boolean,
+    invertConstraint: boolean,
+  ): void;
   dispatchRelease(): void;
 }
+
+const TOUCH_LONG_PRESS_MS = 350;
 
 // 入力ハンドラー
 export class InputHandler {
@@ -31,6 +39,9 @@ export class InputHandler {
   private readonly pointerEventsEnabled: boolean;
   private readonly dispatcher: InputDispatcher;
   private readonly pointerSession: PointerSession;
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private longPressActive = false;
+  private activePointerType: string | null = null;
 
   constructor(dispatcher: InputDispatcher) {
     this.dispatcher = dispatcher;
@@ -60,6 +71,7 @@ export class InputHandler {
 
   // キャンバスからリスナーをデタッチする
   destroy(): void {
+    this.clearLongPressState();
     this.pointerSession.detach();
     this.canvas = null;
   }
@@ -73,7 +85,13 @@ export class InputHandler {
   }
 
   mouseDragged(p: p5): void {
-    this.dispatcher.dispatchDrag(p, p.mouseX, p.mouseY, p.keyIsDown(p.ALT));
+    this.dispatcher.dispatchDrag(
+      p,
+      p.mouseX,
+      p.mouseY,
+      p.keyIsDown(p.ALT),
+      false,
+    );
   }
 
   mouseReleased(): void {
@@ -97,6 +115,7 @@ export class InputHandler {
 
     if (!this.pointerSession.activate(input.pointerId)) return;
     this.pointerSession.preventDefaultIfCancelable(event);
+    this.startLongPressTimer(input.pointerType);
 
     this.dispatcher.dispatchPress(p, input.x, input.y, input.shiftKey);
   };
@@ -109,7 +128,13 @@ export class InputHandler {
 
     this.pointerSession.preventDefaultIfCancelable(event);
 
-    this.dispatcher.dispatchDrag(p, input.x, input.y, input.altKey);
+    this.dispatcher.dispatchDrag(
+      p,
+      input.x,
+      input.y,
+      input.altKey,
+      this.longPressActive,
+    );
   };
 
   private readonly pointerEnd = (event: PointerEvent): void => {
@@ -126,6 +151,7 @@ export class InputHandler {
 
   // ポインタ操作の終了処理。
   private finishPointerInteraction(releaseCapture: boolean): void {
+    this.clearLongPressState();
     const pointerId = this.pointerSession.finishActivePointer({ releaseCapture });
     if (pointerId === null) return;
     this.dispatcher.dispatchRelease();
@@ -152,6 +178,26 @@ export class InputHandler {
     const canvas = this.canvas;
     if (!canvas) return null;
     return { p, input: toEditorPointerInput(event, canvas) };
+  }
+
+  private startLongPressTimer(pointerType: string): void {
+    this.clearLongPressState();
+    this.activePointerType = pointerType;
+    if (pointerType === 'mouse') return;
+
+    this.longPressTimer = setTimeout(() => {
+      if (this.activePointerType !== pointerType) return;
+      this.longPressActive = true;
+    }, TOUCH_LONG_PRESS_MS);
+  }
+
+  private clearLongPressState(): void {
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressActive = false;
+    this.activePointerType = null;
   }
 
 }
