@@ -529,7 +529,10 @@ export class SketchEditor {
   private dispatchToolRelease(): void {
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
-      this.penTool.mouseReleased(ctx);
+      const didCreatePath = this.penTool.mouseReleased(ctx);
+      if (didCreatePath) {
+        this.setTool('select');
+      }
     } else {
       this.selectTool.mouseReleased(ctx);
     }

@@ -63,15 +63,18 @@ export class PenTool {
   }
 
   // マウスリリース
-  mouseReleased(ctx: ToolContext): void {
-    if (!this.draftPath) return;
+  mouseReleased(ctx: ToolContext): boolean {
+    if (!this.draftPath) return false;
+
+    let didCreatePath = false;
 
     if (this.draftPath.points.length >= 2) {
-      this.finalizePath(ctx);
+      didCreatePath = this.finalizePath(ctx);
     }
 
     // 描画中のパスをリセット
     this.draftPath = null;
+    return didCreatePath;
   }
 
   // 描画
@@ -91,8 +94,8 @@ export class PenTool {
   // #region プライベート関数
 
   // パスを確定
-  private finalizePath(ctx: ToolContext): void {
-    if (!this.draftPath) return;
+  private finalizePath(ctx: ToolContext): boolean {
+    if (!this.draftPath) return false;
 
     const canvasHeight = ctx.dom.getCanvasSize().height;
     const fitTolerance = resolveFitToleranceFromCanvasHeight(
@@ -108,7 +111,7 @@ export class PenTool {
       this.draftPath.fitError,
     );
 
-    if (keyframes.length < 2) return;
+    if (keyframes.length < 2) return false;
 
     const timestamps = this.draftPath.timestamps;
     const durationMs = timestamps[timestamps.length - 1] - timestamps[0];
@@ -125,6 +128,7 @@ export class PenTool {
     ctx.setActivePath(path);
     ctx.onPathCreated(path);
     ctx.onPathSelected(path);
+    return true;
   }
 
   // 既存パス上のクリックなら分割する
