@@ -1,4 +1,12 @@
-import { FolderOpen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import {
+  Download,
+  FolderOpen,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import type { ProjectSummary } from '../services/projectStorage';
 import { ModalBackdrop } from './ModalBackdrop';
 
@@ -8,6 +16,8 @@ type ProjectLibraryModalProps = {
   projects: ProjectSummary[];
   onClose: () => void;
   onLoadProject: (id: string) => void;
+  onImportProject: () => void;
+  onExportProject: (id: string) => void;
   onRenameProject: (id: string, name: string) => void;
   onDeleteProject: (id: string, name: string) => void;
   onCreateNewProject: () => void;
@@ -25,6 +35,8 @@ export const ProjectLibraryModal = ({
   projects,
   onClose,
   onLoadProject,
+  onImportProject,
+  onExportProject,
   onRenameProject,
   onDeleteProject,
   onCreateNewProject,
@@ -51,14 +63,24 @@ export const ProjectLibraryModal = ({
 
         <div className="border-border flex items-center justify-between border-b px-5 py-3">
           <p className="text-text-subtle text-sm">Saved Projects</p>
-          <button
-            id="newProjectButton"
-            className="corner-md inline-flex cursor-pointer items-center gap-2 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 transition-colors hover:bg-gray-700"
-            onClick={onCreateNewProject}
-          >
-            <Plus className="h-4 w-4" />
-            New Project
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              id="newProjectButton"
+              className="corner-md inline-flex cursor-pointer items-center gap-2 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 transition-colors hover:bg-gray-700"
+              onClick={onCreateNewProject}
+            >
+              <Plus className="h-4 w-4" />
+              New Project
+            </button>
+            <button
+              id="importProjectButton"
+              className="corner-md inline-flex cursor-pointer items-center gap-2 bg-gray-800 px-3 py-1.5 text-sm text-gray-100 transition-colors hover:bg-gray-700"
+              onClick={onImportProject}
+            >
+              <Upload className="h-4 w-4" />
+              Import
+            </button>
+          </div>
         </div>
 
         <div className="max-h-[55vh] overflow-y-auto p-3">
@@ -83,6 +105,14 @@ export const ProjectLibraryModal = ({
                           Updated: {formatUpdatedAt(project.updatedAt)}
                         </p>
                       </div>
+                    </button>
+                    <button
+                      className="focus-visible:ring-border inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-400 transition-colors hover:text-gray-200 focus:outline-none focus-visible:ring-1"
+                      onClick={() => onExportProject(project.id)}
+                      aria-label={`Export ${project.name}`}
+                      title="Export Project"
+                    >
+                      <Download className="h-4 w-4" />
                     </button>
                     <button
                       className="focus-visible:ring-border inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-400 transition-colors hover:text-gray-200 focus:outline-none focus-visible:ring-1"

@@ -123,6 +123,7 @@ type UseSketchEditorResult = {
   saveProject: () => void;
   loadProject: () => void;
   exportProjectAsJson: () => void;
+  exportProjectById: (id: string) => Promise<void>;
   importProjectFromJson: () => void;
   isProjectLibraryOpen: boolean;
   projectLibrary: ProjectSummary[];
@@ -145,6 +146,44 @@ const initialSuggestionUI: SuggestionUIState = {
 const sanitizeProjectFileName = (name: string): string => {
   const sanitized = name.replace(/[\\/:*?"<>|]/g, '_').trim();
   return sanitized || 'Untitled';
+};
+
+const formatProjectTimestamp = (date: Date): string => {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}_${month}${day}_${hours}${minutes}${seconds}`;
+};
+
+const resolveAutoProjectName = async (): Promise<string> => {
+  const normalizedBase = formatProjectTimestamp(new Date());
+  const exactMatch = await findProjectByName(normalizedBase);
+  if (!exactMatch) return normalizedBase;
+
+  for (let index = 2; index < 10000; index += 1) {
+    const candidate = `${normalizedBase}_${index}`;
+    const existing = await findProjectByName(candidate);
+    if (!existing) return candidate;
+  }
+
+  return `${normalizedBase}_${Date.now()}`;
+};
+
+const downloadProjectJson = (name: string, data: unknown): void => {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  const fileName = sanitizeProjectFileName(name);
+  anchor.href = url;
+  anchor.download = `${fileName}.mophrase.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 };
 
 const toImportedProjectName = (fileName: string): string => {
@@ -423,17 +462,19 @@ export const useSketchEditor = (): UseSketchEditorResult => {
         let targetName = projectName;
 
         if (!targetId) {
-          const defaultName = targetName ?? 'Untitled';
+          const defaultName = targetName ?? formatProjectTimestamp(new Date());
           const promptedName = window.prompt(
             'Enter a project name',
             defaultName,
           );
-          if (!promptedName) return;
+          if (promptedName === null) return;
 
           const trimmedName = promptedName.trim();
-          if (!trimmedName) return;
+          const resolvedName = trimmedName
+            ? trimmedName
+            : await resolveAutoProjectName();
 
-          const existing = await findProjectByName(trimmedName);
+          const existing = await findProjectByName(resolvedName);
           if (existing) {
             const shouldOverwrite = window.confirm(
               `"${existing.name}" already exists. Overwrite it?`,
@@ -443,7 +484,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
           } else {
             targetId = null;
           }
-          targetName = trimmedName;
+          targetName = resolvedName;
         }
 
         const fallbackName = targetName ?? 'Untitled';
@@ -492,22 +533,31 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     if (!projectData) return;
 
     try {
-      const json = JSON.stringify(projectData, null, 2);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      const fileName = sanitizeProjectFileName(projectName ?? 'Untitled');
-      anchor.href = url;
-      anchor.download = `${fileName}.mophrase.json`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      downloadProjectJson(projectName ?? 'Untitled', projectData);
     } catch (error) {
       console.error('[exportProject] Failed to export project JSON.', error);
       window.alert(PROJECT_EXPORT_ERROR_MESSAGE);
     }
   }, [buildProjectData, projectName]);
+
+  const exportProjectById = useCallback(async (id: string): Promise<void> => {
+    try {
+      const stored = await getProject(id);
+      if (!stored) {
+        console.error('[exportProjectById] Target project is not found.', { id });
+        window.alert('The project to export was not found.');
+        return;
+      }
+
+      downloadProjectJson(stored.name, stored.data);
+    } catch (error) {
+      console.error(
+        '[exportProjectById] Failed to export project from storage.',
+        error,
+      );
+      window.alert(PROJECT_EXPORT_ERROR_MESSAGE);
+    }
+  }, []);
 
   // JSONファイルからプロジェクトを読み込み
   const importProjectFromJson = useCallback((): void => {
@@ -742,6 +792,7 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     saveProject,
     loadProject,
     exportProjectAsJson,
+    exportProjectById,
     importProjectFromJson,
     isProjectLibraryOpen,
     projectLibrary,

@@ -57,12 +57,12 @@ const App = () => {
     updateProjectSettings,
     saveProject,
     loadProject,
-    exportProjectAsJson,
     importProjectFromJson,
     isProjectLibraryOpen,
     projectLibrary,
     closeProjectLibrary,
     loadProjectById,
+    exportProjectById,
     deleteProjectById,
     renameProjectById,
     createNewProject,
@@ -188,8 +188,9 @@ const App = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onSave={saveProject}
         onLoad={loadProject}
-        onExportJson={exportProjectAsJson}
-        onImportJson={importProjectFromJson}
+        onCreateNewProject={() => {
+          void createNewProject();
+        }}
       />
 
       <div className="mx-3 flex min-h-0 flex-1 gap-2.5 overflow-hidden pb-3">
@@ -243,6 +244,10 @@ const App = () => {
         onClose={closeProjectLibrary}
         onLoadProject={(id) => {
           void loadProjectById(id);
+        }}
+        onImportProject={importProjectFromJson}
+        onExportProject={(id) => {
+          void exportProjectById(id);
         }}
         onRenameProject={(id, name) => {
           void renameProjectById(id, name);

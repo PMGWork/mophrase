@@ -1,13 +1,12 @@
 import {
-  Download,
   FolderOpen,
   Hand,
   PenTool,
+  Plus,
   Save,
   Settings,
   Spline,
   Trash2,
-  Upload,
 } from 'lucide-react';
 import { FIT_TOLERANCE_MAX, FIT_TOLERANCE_MIN } from '../config';
 import type { ToolKind } from '../types';
@@ -26,8 +25,7 @@ type HeaderProps = {
   onOpenSettings: () => void; // 設定モーダルを開く
   onSave: () => void; // プロジェクトを保存
   onLoad: () => void; // プロジェクトを読み込み
-  onExportJson: () => void; // JSONエクスポート
-  onImportJson: () => void; // JSONインポート
+  onCreateNewProject: () => void; // 新規プロジェクトを作成
 };
 
 // コンポーネント
@@ -43,8 +41,7 @@ export const Header = ({
   onOpenSettings,
   onSave,
   onLoad,
-  onExportJson,
-  onImportJson,
+  onCreateNewProject,
 }: HeaderProps) => {
   const displayProjectName = projectName ?? 'Untitled';
 
@@ -103,18 +100,13 @@ export const Header = ({
 
         <div className="bg-border mx-2 h-6 w-px" />
 
+        <ToolButton
+          title="New Project"
+          icon={Plus}
+          onClick={onCreateNewProject}
+        />
         <ToolButton title="Save Project" icon={Save} onClick={onSave} />
         <ToolButton title="Load Project" icon={FolderOpen} onClick={onLoad} />
-        <ToolButton
-          title="Export Project"
-          icon={Download}
-          onClick={onExportJson}
-        />
-        <ToolButton
-          title="Import Project"
-          icon={Upload}
-          onClick={onImportJson}
-        />
 
         <div className="bg-border mx-2 h-6 w-px" />
 
