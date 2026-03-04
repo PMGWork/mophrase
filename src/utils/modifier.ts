@@ -249,16 +249,16 @@ export function createSketchModifier(
     const pos = diffVec2(modified.position, original.position);
     if (pos) delta.posDelta = pos;
 
-    // outデルタ（範囲内セグメントに属する out ハンドルのみ更新）
-    if (i <= endIndex && i < keyframes.length - 1) {
+    // outデルタ（外側ハンドルを含む）
+    if (i < keyframes.length - 1) {
       const v = diffVec2(modified.sketchOut, original.sketchOut, {
         treatUndefinedAsZero: true,
       });
       if (v) delta.outDelta = v;
     }
 
-    // inデルタ（範囲内セグメントに属する in ハンドルのみ更新）
-    if (i > startIndex && i > 0) {
+    // inデルタ（外側ハンドルを含む）
+    if (i > 0) {
       const v = diffVec2(modified.sketchIn, original.sketchIn, {
         treatUndefinedAsZero: true,
       });
@@ -342,8 +342,8 @@ export function createGraphModifier(
     if (localIndex < 0 || localIndex >= adjustedModifiedKeyframes.length) continue;
     const delta = deltas[i];
 
-    // outデルタ（出力カーブが範囲内の場合のみ）
-    if (i <= endIndex) {
+    // outデルタ（外側ハンドルを含む）
+    if (i < keyframes.length - 1) {
       const v = diffGraphOutHandle(
         keyframes,
         progress,
@@ -355,8 +355,8 @@ export function createGraphModifier(
       if (v) delta.outDelta = v;
     }
 
-    // inデルタ（入力カーブが範囲内の場合のみ）
-    if (i > startIndex) {
+    // inデルタ（外側ハンドルを含む）
+    if (i > 0) {
       const v = diffGraphInHandle(
         keyframes,
         progress,
@@ -900,9 +900,10 @@ function resolveGraphOutHandle(
   index: number,
 ): p5.Vector | undefined {
   const current = keyframes[index];
-  const next = keyframes[index + 1];
-  if (!current || !next) return undefined;
+  if (!current) return undefined;
   if (current.graphOut) return current.graphOut;
+  const next = keyframes[index + 1];
+  if (!next) return undefined;
   const v0 = progress[index] ?? 0;
   const v1 = progress[index + 1] ?? v0;
   return current.position
@@ -916,10 +917,11 @@ function resolveGraphInHandle(
   progress: number[],
   index: number,
 ): p5.Vector | undefined {
-  const previous = keyframes[index - 1];
   const current = keyframes[index];
-  if (!previous || !current) return undefined;
+  if (!current) return undefined;
   if (current.graphIn) return current.graphIn;
+  const previous = keyframes[index - 1];
+  if (!previous) return undefined;
   const v0 = progress[index - 1] ?? 0;
   const v1 = progress[index] ?? v0;
   return current.position

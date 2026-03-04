@@ -124,6 +124,34 @@ function serializeKeyframes(
     );
   }
 
+  // 選択範囲端の外側グラフハンドルもシリアライズする。
+  // メインループは隣接セグメント間のハンドルのみ処理するため、
+  // 先頭 graphIn / 末尾 graphOut は未設定のままになる。
+  if (keyframes.length >= 2) {
+    const first = keyframes[0];
+    const second = keyframes[1];
+    if (first.graphIn && !serialized[0].graphIn) {
+      serialized[0].graphIn = serializeGraphHandle(
+        first.graphIn,
+        { time: resolveFiniteTime(serializedTimes[0], first.time), progress: progress[0] ?? 0 },
+        { time: resolveFiniteTime(serializedTimes[1], second.time), progress: progress[1] ?? 0 },
+        false,
+      );
+    }
+
+    const lastIdx = keyframes.length - 1;
+    const last = keyframes[lastIdx];
+    const secondToLast = keyframes[lastIdx - 1];
+    if (last.graphOut && !serialized[lastIdx].graphOut) {
+      serialized[lastIdx].graphOut = serializeGraphHandle(
+        last.graphOut,
+        { time: resolveFiniteTime(serializedTimes[lastIdx - 1], secondToLast.time), progress: progress[lastIdx - 1] ?? 0 },
+        { time: resolveFiniteTime(serializedTimes[lastIdx], last.time), progress: progress[lastIdx] ?? 0 },
+        true,
+      );
+    }
+  }
+
   return serialized;
 }
 
@@ -236,6 +264,42 @@ export function deserializePathKeyframes(
       endSerialized.graphIn && segmentDiag > 1e-6
         ? deserializeGraphHandle(endSerialized.graphIn, segmentDiag, p)
         : defaultIn;
+  }
+
+  // 選択範囲端の外側グラフハンドルもデシリアライズする
+  if (keyframes.length >= 2) {
+    const firstSerialized = serializedPath.keyframes[0];
+    const first = keyframes[0];
+    if (firstSerialized?.graphIn && first && !first.graphIn) {
+      const second = keyframes[1];
+      if (second) {
+        const dt = second.time - first.time;
+        const v0 = deserializedProgress[0] ?? referenceProgress[0] ?? 0;
+        const v1 = deserializedProgress[1] ?? referenceProgress[1] ?? v0;
+        const dv = v1 - v0;
+        const segDiag = Math.hypot(dt, dv);
+        if (segDiag > 1e-6) {
+          first.graphIn = deserializeGraphHandle(firstSerialized.graphIn, segDiag, p);
+        }
+      }
+    }
+
+    const lastIdx = keyframes.length - 1;
+    const lastSerialized = serializedPath.keyframes[lastIdx];
+    const last = keyframes[lastIdx];
+    if (lastSerialized?.graphOut && last && !last.graphOut) {
+      const secondToLast = keyframes[lastIdx - 1];
+      if (secondToLast) {
+        const dt = last.time - secondToLast.time;
+        const v0 = deserializedProgress[lastIdx - 1] ?? referenceProgress[lastIdx - 1] ?? 0;
+        const v1 = deserializedProgress[lastIdx] ?? referenceProgress[lastIdx] ?? v0;
+        const dv = v1 - v0;
+        const segDiag = Math.hypot(dt, dv);
+        if (segDiag > 1e-6) {
+          last.graphOut = deserializeGraphHandle(lastSerialized.graphOut, segDiag, p);
+        }
+      }
+    }
   }
 
   return keyframes;
