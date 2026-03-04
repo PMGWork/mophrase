@@ -62,19 +62,6 @@ export const Header = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <ToolButton
-          title="Select Tool"
-          icon={Hand}
-          isSelected={selectedTool === 'select'}
-          onClick={() => onSelectTool('select')}
-        />
-        <ToolButton
-          title="Pen Tool"
-          icon={PenTool}
-          isSelected={selectedTool === 'pen'}
-          onClick={() => onSelectTool('pen')}
-        />
-        <div className="bg-border mx-1 h-6 w-px" />
         <label
           className="corner-md group flex h-9 cursor-pointer items-center gap-2 bg-gray-800 px-2.5 transition-colors select-none hover:bg-gray-700"
           title="Sketch Smooth"
@@ -95,6 +82,18 @@ export const Header = ({
             aria-label="Sketch smooth"
           />
         </label>
+        <ToolButton
+          title="Pen Tool"
+          icon={PenTool}
+          isSelected={selectedTool === 'pen'}
+          onClick={() => onSelectTool('pen')}
+        />
+        <ToolButton
+          title="Select Tool"
+          icon={Hand}
+          isSelected={selectedTool === 'select'}
+          onClick={() => onSelectTool('select')}
+        />
         <ToolButton
           title="Delete Active Path"
           icon={Trash2}
