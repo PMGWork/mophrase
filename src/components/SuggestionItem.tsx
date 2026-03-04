@@ -1,5 +1,11 @@
 import type { Suggestion } from '../types';
 
+const targetTint: Record<Suggestion['modifierTarget'], string> = {
+  sketch: 'rgba(56, 189, 248, 0.2)',
+  graph: 'rgba(167, 139, 250, 0.2)',
+  both: 'rgba(52, 211, 153, 0.2)',
+};
+
 // Props
 type SuggestionItemProps = {
   suggestion: Suggestion;
@@ -30,6 +36,7 @@ export const SuggestionItem = ({
   onClick,
 }: SuggestionItemProps) => {
   const indicatorWidth = isHovered ? `${(strength / 2) * 100}%` : '0';
+  const indicatorColor = targetTint[suggestion.modifierTarget];
 
   return (
     <button
@@ -46,8 +53,8 @@ export const SuggestionItem = ({
       onClick={onClick}
     >
       <div
-        className="pointer-events-none absolute inset-0 bg-white/15"
-        style={{ width: indicatorWidth }}
+        className="pointer-events-none absolute inset-0"
+        style={{ width: indicatorWidth, backgroundColor: indicatorColor }}
       />
       <span style={{ position: 'relative' }}>{suggestion.title}</span>
     </button>
