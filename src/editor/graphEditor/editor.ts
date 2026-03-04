@@ -14,6 +14,7 @@ import type {
 } from '../../types';
 import { isGraphCorner } from '../../utils/keyframeCorner';
 import { clamp } from '../../utils/math';
+import { resolveEffectiveDurationScale } from '../../utils/modifier';
 import { drawBezierCurve, drawControls } from '../shared/curveRendering';
 import { resolveGraphCurves } from '../../utils/path';
 import {
@@ -442,6 +443,8 @@ export class GraphEditor {
       }
     }
 
+    this.drawTimeAxis(p, graphW, graphH);
+
     p.pop();
   }
 
@@ -523,6 +526,96 @@ export class GraphEditor {
       return selected.anchors.has(endKeyframeIndex);
     }
     return false;
+  }
+
+  private drawTimeAxis(p: p5, graphW: number, graphH: number): void {
+    if (!this.activePath) return;
+
+    const axisStartSec = Number.isFinite(this.activePath.startTime)
+      ? this.activePath.startTime
+      : 0;
+    const baseDurationSec = Number.isFinite(this.activePath.duration)
+      ? this.activePath.duration
+      : 0;
+    const durationScale = resolveEffectiveDurationScale(
+      this.activePath.keyframes,
+      this.activePath.graphModifiers,
+    );
+    const effectiveDurationSec =
+      baseDurationSec * (Number.isFinite(durationScale) ? durationScale : 1);
+
+    if (!Number.isFinite(effectiveDurationSec) || effectiveDurationSec <= 0)
+      return;
+
+    const axisEndSec = axisStartSec + effectiveDurationSec;
+    if (!Number.isFinite(axisEndSec) || axisEndSec <= axisStartSec) return;
+
+    const ticks = this.buildSecondTicks(axisStartSec, axisEndSec);
+    if (ticks.length === 0) return;
+
+    const spanSec = axisEndSec - axisStartSec;
+    const tickTopY = graphH;
+    const tickBottomY = graphH + 4;
+    const labelY = tickBottomY + 2;
+
+    p.push();
+    p.textSize(10);
+    p.fill(`${this.colors.curve}cc`);
+    p.stroke(`${this.colors.curve}99`);
+    p.strokeWeight(1);
+
+    for (const tickSec of ticks) {
+      const ratio = clamp((tickSec - axisStartSec) / spanSec, 0, 1);
+      const x = ratio * graphW;
+
+      p.stroke(`${this.colors.curve}99`);
+      p.line(x, tickTopY, x, tickBottomY);
+
+      p.noStroke();
+      p.textAlign(p.CENTER, p.TOP);
+      p.text(this.formatSecondsLabel(tickSec), x, labelY);
+    }
+    p.pop();
+  }
+
+  private buildSecondTicks(axisStartSec: number, axisEndSec: number): number[] {
+    const EPSILON = 1e-6;
+    if (
+      !Number.isFinite(axisStartSec) ||
+      !Number.isFinite(axisEndSec) ||
+      axisEndSec <= axisStartSec
+    ) {
+      return [];
+    }
+
+    const rawTicks: number[] = [axisStartSec];
+    const integerStart = Math.ceil(axisStartSec - EPSILON);
+    const integerEnd = Math.floor(axisEndSec + EPSILON);
+    for (let sec = integerStart; sec <= integerEnd; sec++) {
+      rawTicks.push(sec);
+    }
+    rawTicks.push(axisEndSec);
+
+    const ticks: number[] = [];
+    for (const tick of rawTicks) {
+      if (!Number.isFinite(tick)) continue;
+      const last = ticks[ticks.length - 1];
+      if (last !== undefined && Math.abs(last - tick) <= EPSILON) continue;
+      ticks.push(tick);
+    }
+    return ticks;
+  }
+
+  private formatSecondsLabel(value: number): string {
+    if (!Number.isFinite(value)) return '0';
+
+    const roundedInt = Math.round(value);
+    if (Math.abs(value - roundedInt) <= 1e-6) {
+      return `${roundedInt}`;
+    }
+
+    const formatted = value.toFixed(2).replace(/\.?0+$/, '');
+    return formatted === '-0' ? '0' : formatted;
   }
 
   // p5.js マウス押下
