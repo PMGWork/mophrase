@@ -29,16 +29,21 @@ function serializePosition(
 }
 
 // p5.Vector -> 極座標（角度と距離）
+// bbox 正規化空間で角度・距離を計算し、アスペクト比の歪みを防ぐ
 function serializeHandle(
   handle: p5.Vector | undefined,
   anchor: p5.Vector,
-  diag: number,
+  bbox: SerializedBoundingBox,
 ): SerializedHandle {
   const safeHandle = handle ?? anchor;
   const dx = safeHandle.x - anchor.x;
   const dy = safeHandle.y - anchor.y;
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-  const dist = Math.hypot(dx, dy) / diag;
+  // bbox サイズで正規化してアスペクト比を保持
+  const ndx = dx / bbox.width;
+  const ndy = dy / bbox.height;
+  const angle = Math.atan2(ndy, ndx) * (180 / Math.PI);
+  // 正規化空間（1×1）の対角線長 √2 で割り、dist を対角線比に正規化
+  const dist = Math.hypot(ndx, ndy) / Math.SQRT2;
   return {
     angle: round(angle, 3),
     dist: round(dist, 3),
@@ -82,7 +87,6 @@ function serializeKeyframes(
   serializedTimes: number[],
   progress: number[],
 ): SerializedKeyframe[] {
-  const diag = Math.hypot(bbox.width, bbox.height);
   const serialized: SerializedKeyframe[] = keyframes.map((keyframe, index) => {
     const anchor = keyframe.position;
     const inHandle = keyframe.sketchIn
@@ -95,8 +99,8 @@ function serializeKeyframes(
     return {
       ...serializePosition(anchor, bbox),
       time: round(resolveFiniteTime(serializedTimes[index], keyframe.time), 3),
-      sketchIn: serializeHandle(inHandle, anchor, diag),
-      sketchOut: serializeHandle(outHandle, anchor, diag),
+      sketchIn: serializeHandle(inHandle, anchor, bbox),
+      sketchOut: serializeHandle(outHandle, anchor, bbox),
       ...(keyframe.corner ? { corner: true } : {}),
     };
   });
@@ -185,7 +189,6 @@ export function deserializePathKeyframes(
   const bbox = serializedPath.bbox;
   const width = bbox.width;
   const height = bbox.height;
-  const diagonal = Math.hypot(width, height);
   const count = Math.min(
     serializedPath.keyframes.length,
     referenceKeyframes.length,
@@ -212,12 +215,12 @@ export function deserializePathKeyframes(
     );
 
     const sketchIn = serialized.sketchIn
-      ? deserializeHandle(serialized.sketchIn, position, diagonal, p)
+      ? deserializeHandle(serialized.sketchIn, position, bbox, p)
           .copy()
           .sub(position)
       : undefined;
     const sketchOut = serialized.sketchOut
-      ? deserializeHandle(serialized.sketchOut, position, diagonal, p)
+      ? deserializeHandle(serialized.sketchOut, position, bbox, p)
           .copy()
           .sub(position)
       : undefined;
@@ -340,16 +343,20 @@ function resolveFiniteTime(value: number | undefined, fallback: number): number 
 }
 
 // 極座標のハンドル -> p5.Vector
+// bbox 正規化空間から復元し、アスペクト比の歪みを防ぐ
 export function deserializeHandle(
   handle: SerializedHandle,
   anchor: p5.Vector,
-  diag: number,
+  bbox: SerializedBoundingBox,
   p: p5,
 ): p5.Vector {
   const angle = handle.angle * (Math.PI / 180);
-  const dist = handle.dist * diag;
-  const x = anchor.x + Math.cos(angle) * dist;
-  const y = anchor.y + Math.sin(angle) * dist;
+  // serializeHandle の √2 除算の逆変換
+  const normDist = handle.dist * Math.SQRT2;
+  const ndx = Math.cos(angle) * normDist;
+  const ndy = Math.sin(angle) * normDist;
+  const x = anchor.x + ndx * bbox.width;
+  const y = anchor.y + ndy * bbox.height;
   return p.createVector(x, y);
 }
 
