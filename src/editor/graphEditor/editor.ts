@@ -23,11 +23,16 @@ import {
 import { PointerSession } from '../shared/pointerSession';
 import type { GraphEditorDomRefs, GraphHandleSelection } from './types';
 
+// グラフエディタで管理する選択ハンドルのインデックスセット
 type SelectedHandleIndexSets = {
   anchors: Set<number>;
   sketchOut: Set<number>;
   sketchIn: Set<number>;
 };
+
+// グラフエディタで使用する矩形と境界の型
+type Rect = { x: number; y: number; width: number; height: number };
+type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 
 // グラフエディタ
 export class GraphEditor {
@@ -114,14 +119,19 @@ export class GraphEditor {
     this.p.resizeCanvas(size, size);
   }
 
-  // キャンバスを PNG data URL としてキャプチャ（LLM用にマージン付き）
+  // キャンバスを PNG data URL としてキャプチャ
   public captureCanvas(): string | null {
     if (!this.canvasElement) return null;
     try {
       const src = this.canvasElement;
-      const margin = 32;
-      const w = src.width + margin * 2;
-      const h = src.height + margin * 2;
+      const selectionRange = this.selectionRangeProvider?.();
+      const crop = this.computeFocusedCropRect();
+      const sourceX = crop?.x ?? 0;
+      const sourceY = crop?.y ?? 0;
+      const sourceW = crop?.width ?? src.width;
+      const sourceH = crop?.height ?? src.height;
+      const w = sourceW;
+      const h = sourceH;
       const offscreen = document.createElement('canvas');
       offscreen.width = w;
       offscreen.height = h;
@@ -129,9 +139,24 @@ export class GraphEditor {
       if (!ctx) return src.toDataURL('image/png');
       ctx.fillStyle = this.colors.background;
       ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(src, margin, margin);
+      ctx.drawImage(
+        src,
+        sourceX,
+        sourceY,
+        sourceW,
+        sourceH,
+        0,
+        0,
+        sourceW,
+        sourceH,
+      );
       if (this.activePath) {
-        this.drawKeyframeLabels(ctx, margin);
+        this.drawKeyframeLabels(
+          ctx,
+          sourceX,
+          sourceY,
+          selectionRange,
+        );
       }
       return offscreen.toDataURL('image/png');
     } catch {
@@ -142,7 +167,9 @@ export class GraphEditor {
   // キャプチャ画像へキーフレームインデックスを描画
   private drawKeyframeLabels(
     ctx: CanvasRenderingContext2D,
-    outerMargin: number,
+    sourceX: number,
+    sourceY: number,
+    selectionRange: SelectionRange | undefined,
   ): void {
     const graphData = this.getGraphData();
     const src = this.canvasElement;
@@ -156,9 +183,13 @@ export class GraphEditor {
       anchors.push(effectiveCurves[i][3]);
     }
 
-    const graphMargin = GraphEditor.GRAPH_MARGIN;
-    const graphW = src.width - graphMargin * 2;
-    const graphH = src.height - graphMargin * 2;
+    const rect = src.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? src.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? src.height / rect.height : 1;
+    const graphMarginX = GraphEditor.GRAPH_MARGIN * scaleX;
+    const graphMarginY = GraphEditor.GRAPH_MARGIN * scaleY;
+    const graphW = src.width - graphMarginX * 2;
+    const graphH = src.height - graphMarginY * 2;
     if (graphW <= 0 || graphH <= 0) return;
 
     const fontSize = 24;
@@ -170,10 +201,13 @@ export class GraphEditor {
     ctx.textBaseline = 'middle';
 
     for (let i = 0; i < anchors.length; i++) {
+      if (!this.isKeyframeInSelection(i, anchors.length, selectionRange)) {
+        continue;
+      }
       const point = anchors[i];
       if (!point) continue;
-      const canvasX = outerMargin + graphMargin + point.x * graphW;
-      const canvasY = outerMargin + graphMargin + (1 - point.y) * graphH;
+      const canvasX = graphMarginX + point.x * graphW - sourceX;
+      const canvasY = graphMarginY + (1 - point.y) * graphH - sourceY;
 
       const label = `${i}`;
       const metrics = ctx.measureText(label);
@@ -196,6 +230,34 @@ export class GraphEditor {
       ctx.fillStyle = '#ffffff';
       ctx.fillText(label, canvasX, centerY);
     }
+  }
+
+  private isKeyframeInSelection(
+    index: number,
+    keyframeCount: number,
+    selectionRange: SelectionRange | undefined,
+  ): boolean {
+    if (!selectionRange) return true;
+
+    if (selectionRange.anchorKeyframeIndex !== undefined) {
+      const anchorIndex = Math.max(
+        0,
+        Math.min(keyframeCount - 1, selectionRange.anchorKeyframeIndex),
+      );
+      return index === anchorIndex;
+    }
+
+    const maxCurveIndex = Math.max(0, keyframeCount - 2);
+    const start = Math.max(
+      0,
+      Math.min(maxCurveIndex, selectionRange.startCurveIndex),
+    );
+    const end = Math.max(
+      0,
+      Math.min(maxCurveIndex, selectionRange.endCurveIndex),
+    );
+    if (start > end) return true;
+    return index >= start && index <= end + 1;
   }
 
   public destroy(): void {
@@ -606,6 +668,116 @@ export class GraphEditor {
     } = resolveGraphCurves(this.activePath);
 
     return { curves, effectiveCurves, progress, effectiveTimes };
+  }
+
+  private computeFocusedCropRect(): Rect | null {
+    const graphData = this.getGraphData();
+    const selectionRange = this.selectionRangeProvider?.();
+    const canvas = this.canvasElement;
+    if (!graphData || !canvas) return null;
+
+    const curves = graphData.effectiveCurves;
+    if (curves.length === 0) return null;
+
+    let points: p5.Vector[] = [];
+    if (!selectionRange) {
+      points = curves.flat();
+    } else if (selectionRange.anchorKeyframeIndex !== undefined) {
+      const anchorIndex = Math.max(
+        0,
+        Math.min(curves.length, selectionRange.anchorKeyframeIndex),
+      );
+      if (anchorIndex < curves.length) {
+        const forward = curves[anchorIndex];
+        if (forward) points.push(...forward);
+      }
+      if (anchorIndex > 0) {
+        const backward = curves[anchorIndex - 1];
+        if (backward) points.push(...backward);
+      }
+    } else {
+      const maxCurveIndex = curves.length - 1;
+      const start = Math.max(
+        0,
+        Math.min(maxCurveIndex, selectionRange.startCurveIndex),
+      );
+      const end = Math.max(
+        0,
+        Math.min(maxCurveIndex, selectionRange.endCurveIndex),
+      );
+      if (start <= end) {
+        points = curves.slice(start, end + 1).flat();
+      }
+    }
+
+    if (points.length === 0) {
+      points = curves.flat();
+    }
+    if (points.length === 0) return null;
+    const bounds = this.computePointBounds(points);
+    if (!bounds) return null;
+    return this.toCanvasCropRect(bounds, canvas);
+  }
+
+  private computePointBounds(points: p5.Vector[]): Bounds | null {
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (const point of points) {
+      if (!point) continue;
+      if (point.x < minX) minX = point.x;
+      if (point.y < minY) minY = point.y;
+      if (point.x > maxX) maxX = point.x;
+      if (point.y > maxY) maxY = point.y;
+    }
+
+    if (
+      !Number.isFinite(minX) ||
+      !Number.isFinite(minY) ||
+      !Number.isFinite(maxX) ||
+      !Number.isFinite(maxY)
+    ) {
+      return null;
+    }
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  private toCanvasCropRect(bounds: Bounds, canvas: HTMLCanvasElement): Rect {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    const graphMarginX = GraphEditor.GRAPH_MARGIN * scaleX;
+    const graphMarginY = GraphEditor.GRAPH_MARGIN * scaleY;
+    const graphW = canvas.width - graphMarginX * 2;
+    const graphH = canvas.height - graphMarginY * 2;
+    if (graphW <= 0 || graphH <= 0) {
+      return { x: 0, y: 0, width: canvas.width, height: canvas.height };
+    }
+
+    const left = graphMarginX + bounds.minX * graphW;
+    const right = graphMarginX + bounds.maxX * graphW;
+    const top = graphMarginY + (1 - bounds.maxY) * graphH;
+    const bottom = graphMarginY + (1 - bounds.minY) * graphH;
+
+    const boxW = Math.max(1, right - left);
+    const boxH = Math.max(1, bottom - top);
+    const padX = Math.min(32, boxW * 0.4);
+    const padY = Math.min(32, boxH * 0.4);
+
+    const rawX = Math.floor(left - padX);
+    const rawY = Math.floor(top - padY);
+    const rawW = Math.ceil(boxW + padX * 2);
+    const rawH = Math.ceil(boxH + padY * 2);
+
+    const x = Math.max(0, Math.min(canvas.width - 1, rawX));
+    const y = Math.max(0, Math.min(canvas.height - 1, rawY));
+    const width = Math.max(1, Math.min(canvas.width - x, rawW));
+    const height = Math.max(1, Math.min(canvas.height - y, rawH));
+
+    return { x, y, width, height };
   }
 
   // ハンドルのヒットテスト

@@ -72,9 +72,9 @@ export interface SketchKeyframeDelta {
 
 // グラフモディファイアのキーフレーム差分
 export interface GraphKeyframeDelta {
+  timeDelta?: number;
   inDelta?: { x: number; y: number };
   outDelta?: { x: number; y: number };
-  timeDelta?: number;
 }
 
 // スケッチモディファイア

@@ -16,19 +16,45 @@ type ProviderModelOption = {
 };
 
 const previewImageInConsole = (dataUrl: string): void => {
-  console.log(
-    '%c ',
-    [
-      'font-size:1px',
-      'padding:72px 120px',
-      'background-repeat:no-repeat',
-      'background-position:center',
-      'background-size:contain',
-      `background-image:url("${dataUrl}")`,
-      'background-color:#111',
-      'border:1px solid #333',
-    ].join(';'),
-  );
+  const image = new Image();
+  image.onload = () => {
+    const naturalWidth = image.naturalWidth || 1;
+    const naturalHeight = image.naturalHeight || 1;
+    const paddingY = Math.max(1, Math.ceil(naturalHeight / 2));
+    const paddingX = Math.max(1, Math.ceil(naturalWidth / 2));
+
+    console.log('[llm] image', { width: naturalWidth, height: naturalHeight });
+    console.log(
+      '%c ',
+      [
+        'font-size:1px',
+        `padding:${paddingY}px ${paddingX}px`,
+        'background-repeat:no-repeat',
+        'background-position:center',
+        `background-size:${naturalWidth}px ${naturalHeight}px`,
+        `background-image:url("${dataUrl}")`,
+        'background-color:#111',
+        'border:1px solid #333',
+      ].join(';'),
+    );
+  };
+  image.onerror = () => {
+    // 画像読み込みに失敗した場合は従来どおり固定サイズで表示する。
+    console.log(
+      '%c ',
+      [
+        'font-size:1px',
+        'padding:72px 120px',
+        'background-repeat:no-repeat',
+        'background-position:center',
+        'background-size:contain',
+        `background-image:url("${dataUrl}")`,
+        'background-color:#111',
+        'border:1px solid #333',
+      ].join(';'),
+    );
+  };
+  image.src = dataUrl;
 };
 
 // サーバーにリクエストを送信して構造化データを取得

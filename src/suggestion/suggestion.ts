@@ -46,7 +46,7 @@ export type SuggestionUIState = {
 
 export type SuggestionImagePayload = {
   sketchImageDataUrl?: string;
-  graphImageDataUrl?: string;
+  graphFocusedImageDataUrl?: string;
 };
 
 // 送信用画像プロバイダーの型

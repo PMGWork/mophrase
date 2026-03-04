@@ -12,11 +12,17 @@ import type {
   SketchKeyframeDelta,
   SketchModifier,
 } from '../types';
-import { splitKeyframeSegment } from './keyframes';
+import {
+  buildSketchCurves,
+  computeKeyframeProgress,
+  splitKeyframeSegment,
+} from './keyframes';
 import { clamp } from './math';
 
 const MIN_TIME_STEP = 1e-4;
 const DELTA_EPSILON = 1e-9;
+const MIN_DURATION_SCALE = 0.1;
+const MAX_DURATION_SCALE = 10;
 
 // #region 適用
 
@@ -121,43 +127,18 @@ export function resolveEffectiveTimes(
   if (keyframes.length === 0) return [];
   if (keyframes.length === 1) return [0];
 
-  const baseTimes = keyframes.map((keyframe, index) =>
-    Number.isFinite(keyframe.time)
-      ? keyframe.time
-      : index / Math.max(1, keyframes.length - 1),
+  const { baseTimes, rawTimes, hasTimeDelta } = resolveRawTimes(
+    keyframes,
+    modifiers,
   );
-  const resolved = [...baseTimes];
-  let hasTimeDelta = false;
-
-  if (modifiers && modifiers.length > 0) {
-    for (const modifier of modifiers) {
-      const len = Math.min(modifier.deltas.length, keyframes.length);
-      for (let idx = 0; idx < len; idx++) {
-        const delta = modifier.deltas[idx]?.timeDelta;
-        if (typeof delta !== 'number' || !Number.isFinite(delta)) continue;
-        const weighted = delta * modifier.strength;
-        if (Math.abs(weighted) < DELTA_EPSILON) continue;
-        resolved[idx] += weighted;
-        hasTimeDelta = true;
-      }
-    }
-  }
 
   if (!hasTimeDelta) return baseTimes;
-
-  for (let i = 1; i < resolved.length; i++) {
-    const minimum = resolved[i - 1] + MIN_TIME_STEP;
-    if (!Number.isFinite(resolved[i]) || resolved[i] < minimum) {
-      resolved[i] = minimum;
-    }
-  }
-
-  const span = resolved[resolved.length - 1] - resolved[0];
+  const span = rawTimes[rawTimes.length - 1] - rawTimes[0];
   let normalized: number[];
   if (!Number.isFinite(span) || span < MIN_TIME_STEP) {
-    normalized = evenTimes(resolved.length);
+    normalized = evenTimes(rawTimes.length);
   } else {
-    normalized = resolved.map((time) => (time - resolved[0]) / span);
+    normalized = rawTimes.map((time) => (time - rawTimes[0]) / span);
   }
 
   if (MIN_TIME_STEP * (normalized.length - 1) >= 1) {
@@ -181,6 +162,32 @@ export function resolveEffectiveTimes(
   normalized[0] = 0;
   normalized[normalized.length - 1] = 1;
   return normalized;
+}
+
+// GraphModifier を加味した全体時間スケール（path.duration 乗算用）を解決
+export function resolveEffectiveDurationScale(
+  keyframes: Keyframe[],
+  modifiers: GraphModifier[] | undefined,
+): number {
+  if (keyframes.length < 2) return 1;
+
+  const { baseTimes, rawTimes, hasTimeDelta } = resolveRawTimes(
+    keyframes,
+    modifiers,
+  );
+  if (!hasTimeDelta) return 1;
+
+  const baseSpan = baseTimes[baseTimes.length - 1] - baseTimes[0];
+  const rawSpan = rawTimes[rawTimes.length - 1] - rawTimes[0];
+
+  if (!Number.isFinite(baseSpan) || Math.abs(baseSpan) < MIN_TIME_STEP) {
+    return 1;
+  }
+  if (!Number.isFinite(rawSpan) || rawSpan <= 0) return 1;
+
+  const scale = rawSpan / baseSpan;
+  if (!Number.isFinite(scale) || scale <= 0) return 1;
+  return clamp(scale, MIN_DURATION_SCALE, MAX_DURATION_SCALE);
 }
 
 // #region 作成
@@ -312,6 +319,17 @@ export function createGraphModifier(
   const startIndex = selectionRange?.startCurveIndex ?? 0;
   const endIndex =
     selectionRange?.endCurveIndex ?? Math.max(0, keyframes.length - 2);
+  const adjustedModifiedKeyframes = expandTrailingModifiedTimes(
+    keyframes,
+    modifiedKeyframes,
+    startIndex,
+    endIndex,
+  );
+  const adjustedModifiedCurves = buildSketchCurves(adjustedModifiedKeyframes);
+  const adjustedModifiedProgress = computeKeyframeProgress(
+    adjustedModifiedKeyframes,
+    adjustedModifiedCurves,
+  );
 
   // 密配列: deltas[i] が keyframes[i] に対応
   const deltas: GraphKeyframeDelta[] = keyframes.map(() => ({}));
@@ -321,7 +339,7 @@ export function createGraphModifier(
     if (i >= keyframes.length) break;
 
     const localIndex = i - startIndex;
-    if (localIndex < 0 || localIndex >= modifiedKeyframes.length) continue;
+    if (localIndex < 0 || localIndex >= adjustedModifiedKeyframes.length) continue;
     const delta = deltas[i];
 
     // outデルタ（出力カーブが範囲内の場合のみ）
@@ -330,8 +348,8 @@ export function createGraphModifier(
         keyframes,
         progress,
         i,
-        modifiedKeyframes,
-        modifiedProgress,
+        adjustedModifiedKeyframes,
+        adjustedModifiedProgress,
         localIndex,
       );
       if (v) delta.outDelta = v;
@@ -343,15 +361,15 @@ export function createGraphModifier(
         keyframes,
         progress,
         i,
-        modifiedKeyframes,
-        modifiedProgress,
+        adjustedModifiedKeyframes,
+        adjustedModifiedProgress,
         localIndex,
       );
       if (v) delta.inDelta = v;
     }
 
     const original = keyframes[i];
-    const modified = modifiedKeyframes[localIndex];
+    const modified = adjustedModifiedKeyframes[localIndex];
     const timeDelta = diffScalar(modified?.time, original?.time);
     if (timeDelta !== undefined) delta.timeDelta = timeDelta;
   }
@@ -712,6 +730,167 @@ function addTimeDelta(
 function evenTimes(length: number): number[] {
   if (length <= 1) return [0];
   return Array.from({ length }, (_, index) => index / (length - 1));
+}
+
+function resolveRawTimes(
+  keyframes: Keyframe[],
+  modifiers: GraphModifier[] | undefined,
+): { baseTimes: number[]; rawTimes: number[]; hasTimeDelta: boolean } {
+  const baseTimes = keyframes.map((keyframe, index) =>
+    Number.isFinite(keyframe.time)
+      ? keyframe.time
+      : index / Math.max(1, keyframes.length - 1),
+  );
+  const rawTimes = [...baseTimes];
+  let hasTimeDelta = false;
+
+  if (modifiers && modifiers.length > 0) {
+    for (const modifier of modifiers) {
+      const len = Math.min(modifier.deltas.length, keyframes.length);
+      let lastSignificantIndex = -1;
+      let lastSignificantDelta = 0;
+
+      for (let idx = 0; idx < len; idx++) {
+        const delta = modifier.deltas[idx]?.timeDelta;
+        if (typeof delta !== 'number' || !Number.isFinite(delta)) continue;
+        const weighted = delta * modifier.strength;
+        if (Math.abs(weighted) < DELTA_EPSILON) continue;
+        rawTimes[idx] += weighted;
+        hasTimeDelta = true;
+        lastSignificantIndex = idx;
+        lastSignificantDelta = delta;
+      }
+
+      // 最後に編集された時刻オフセットを末尾まで伝播させる。
+      // これにより「一部区間を伸ばしたら後続を圧縮せず、全体長を増やす」挙動にする。
+      if (lastSignificantIndex >= 0 && lastSignificantIndex < len - 1) {
+        const tailWeighted = lastSignificantDelta * modifier.strength;
+        if (Math.abs(tailWeighted) >= DELTA_EPSILON) {
+          for (let idx = lastSignificantIndex + 1; idx < len; idx++) {
+            rawTimes[idx] += tailWeighted;
+          }
+          hasTimeDelta = true;
+        }
+      }
+    }
+  }
+
+  if (!hasTimeDelta) {
+    return { baseTimes, rawTimes: baseTimes, hasTimeDelta };
+  }
+
+  for (let i = 1; i < rawTimes.length; i++) {
+    const minimum = rawTimes[i - 1] + MIN_TIME_STEP;
+    if (!Number.isFinite(rawTimes[i]) || rawTimes[i] < minimum) {
+      rawTimes[i] = minimum;
+    }
+  }
+
+  return { baseTimes, rawTimes, hasTimeDelta };
+}
+
+function expandTrailingModifiedTimes(
+  keyframes: Keyframe[],
+  modifiedKeyframes: Keyframe[],
+  startIndex: number,
+  endIndex: number,
+): Keyframe[] {
+  if (modifiedKeyframes.length === 0) return modifiedKeyframes;
+  const expanded = modifiedKeyframes.map(cloneGraphComparableKeyframe);
+  const maxGlobalIndex = Math.min(endIndex + 1, keyframes.length - 1);
+  const maxLocalIndex = Math.min(
+    expanded.length - 1,
+    Math.max(0, maxGlobalIndex - startIndex),
+  );
+
+  let lastSignificantLocalIndex = -1;
+  let lastSignificantDelta = 0;
+  for (let localIndex = 0; localIndex <= maxLocalIndex; localIndex++) {
+    const globalIndex = startIndex + localIndex;
+    const original = keyframes[globalIndex];
+    const modified = expanded[localIndex];
+    const delta = diffScalar(modified?.time, original?.time);
+    if (delta === undefined) continue;
+    lastSignificantLocalIndex = localIndex;
+    lastSignificantDelta = delta;
+  }
+
+  if (
+    lastSignificantLocalIndex < 0 ||
+    lastSignificantLocalIndex >= maxLocalIndex
+  ) {
+    return expanded;
+  }
+
+  const boundaryStart = expanded[lastSignificantLocalIndex];
+  const boundaryEnd = expanded[lastSignificantLocalIndex + 1];
+  const oldDt =
+    (boundaryEnd?.time ?? 0) -
+    (boundaryStart?.time ?? 0);
+
+  for (
+    let localIndex = lastSignificantLocalIndex + 1;
+    localIndex <= maxLocalIndex;
+    localIndex++
+  ) {
+    const keyframe = expanded[localIndex];
+    if (!keyframe) continue;
+    keyframe.time = addTimeDelta(keyframe.time, lastSignificantDelta);
+  }
+
+  const newBoundaryStart = expanded[lastSignificantLocalIndex];
+  const newBoundaryEnd = expanded[lastSignificantLocalIndex + 1];
+  const newDt =
+    (newBoundaryEnd?.time ?? 0) -
+    (newBoundaryStart?.time ?? 0);
+  if (!Number.isFinite(oldDt) || Math.abs(oldDt) < DELTA_EPSILON) {
+    return expanded;
+  }
+
+  const ratio = newDt / oldDt;
+  if (!Number.isFinite(ratio) || ratio <= 0) return expanded;
+
+  if (newBoundaryStart?.graphOut) {
+    newBoundaryStart.graphOut.x *= ratio;
+    syncOppositeGraphHandleForSmoothKeyframe(newBoundaryStart, 'GRAPH_OUT');
+  }
+  if (newBoundaryEnd?.graphIn) {
+    newBoundaryEnd.graphIn.x *= ratio;
+    syncOppositeGraphHandleForSmoothKeyframe(newBoundaryEnd, 'GRAPH_IN');
+  }
+
+  return expanded;
+}
+
+function cloneGraphComparableKeyframe(keyframe: Keyframe): Keyframe {
+  return {
+    ...keyframe,
+    position: keyframe.position.copy(),
+    sketchIn: keyframe.sketchIn?.copy(),
+    sketchOut: keyframe.sketchOut?.copy(),
+    graphIn: keyframe.graphIn?.copy(),
+    graphOut: keyframe.graphOut?.copy(),
+  };
+}
+
+function syncOppositeGraphHandleForSmoothKeyframe(
+  keyframe: Keyframe,
+  changedType: 'GRAPH_OUT' | 'GRAPH_IN',
+): void {
+  if (keyframe.corner) return;
+
+  const changed =
+    changedType === 'GRAPH_OUT' ? keyframe.graphOut : keyframe.graphIn;
+  if (!changed || changed.magSq() <= DELTA_EPSILON) return;
+
+  if (changedType === 'GRAPH_OUT') {
+    const magnitude = keyframe.graphIn?.mag() ?? changed.mag();
+    keyframe.graphIn = changed.copy().normalize().mult(-magnitude);
+    return;
+  }
+
+  const magnitude = keyframe.graphOut?.mag() ?? changed.mag();
+  keyframe.graphOut = changed.copy().normalize().mult(-magnitude);
 }
 
 // graphOut を実効ベクトルとして取得（未指定時はデフォルトを返す）

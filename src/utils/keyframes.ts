@@ -6,6 +6,7 @@
 import type p5 from 'p5';
 import type { Keyframe } from '../types';
 import { curveLength, splitCubicBezier } from './bezier';
+import { clamp } from './math';
 
 // #region 共通利用
 // キーフレームからベジェ曲線を生成
@@ -75,10 +76,14 @@ export function buildGraphCurves(
     const p3 = end.position.copy().set(t1, v1);
 
     const defaultOut = start.position.copy().set(dt / 3, dv / 3);
-    const defaultIn = start.position.copy().set(-dt / 3, -dv / 3);
-
-    const outVec = start.graphOut ?? defaultOut;
-    const inVec = end.graphIn ?? defaultIn;
+    const defaultIn = end.position.copy().set(-dt / 3, -dv / 3);
+    const { outVec, inVec } = sanitizeGraphHandlePair(
+      start.graphOut,
+      end.graphIn,
+      defaultOut,
+      defaultIn,
+      dt,
+    );
 
     const p1 = p0.copy().add(outVec);
     const p2 = p3.copy().add(inVec);
@@ -232,6 +237,52 @@ export function splitKeyframeSegment(
 function normalizeHandle(vec: p5.Vector): p5.Vector | undefined {
   if (vec.magSq() <= 1e-6 * 1e-6) return undefined;
   return vec;
+}
+
+// graphハンドルを安全な範囲に補正（時間Xの折り返し防止）
+function sanitizeGraphHandlePair(
+  rawOut: p5.Vector | undefined,
+  rawIn: p5.Vector | undefined,
+  defaultOut: p5.Vector,
+  defaultIn: p5.Vector,
+  dt: number,
+): { outVec: p5.Vector; inVec: p5.Vector } {
+  const outY = resolveFinite(rawOut?.y, defaultOut.y);
+  const inY = resolveFinite(rawIn?.y, defaultIn.y);
+  const safeDt = Number.isFinite(dt) ? dt : defaultOut.x * 3;
+  if (Math.abs(safeDt) < 1e-9) {
+    return {
+      outVec: defaultOut.copy().set(0, outY),
+      inVec: defaultIn.copy().set(0, inY),
+    };
+  }
+
+  const outMin = Math.min(0, safeDt);
+  const outMax = Math.max(0, safeDt);
+  const inMin = Math.min(-safeDt, 0);
+  const inMax = Math.max(-safeDt, 0);
+
+  let outX = clamp(resolveFinite(rawOut?.x, defaultOut.x), outMin, outMax);
+  let inX = clamp(resolveFinite(rawIn?.x, defaultIn.x), inMin, inMax);
+
+  // p0 <= p1 <= p2 <= p3（dt<0のときは逆順）を満たすように中心へ寄せる
+  const p1x = outX;
+  const p2x = safeDt + inX;
+  if ((safeDt > 0 && p1x > p2x) || (safeDt < 0 && p1x < p2x)) {
+    const mid = (p1x + p2x) / 2;
+    outX = clamp(mid, outMin, outMax);
+    inX = clamp(mid - safeDt, inMin, inMax);
+  }
+
+  return {
+    outVec: defaultOut.copy().set(outX, outY),
+    inVec: defaultIn.copy().set(inX, inY),
+  };
+}
+
+function resolveFinite(value: number | undefined, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return fallback;
 }
 
 // キーフレームのクローン作成

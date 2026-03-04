@@ -21,7 +21,6 @@ export function captureCanvas(
 ): string | null {
   try {
     const src = canvasElement;
-    const outerMargin = 32;
     const crop = path
       ? selectionRange
         ? computeSelectionCropRect(path, selectionRange, src, p)
@@ -32,8 +31,8 @@ export function captureCanvas(
     const sourceW = crop?.width ?? src.width;
     const sourceH = crop?.height ?? src.height;
 
-    const w = sourceW + outerMargin * 2;
-    const h = sourceH + outerMargin * 2;
+    const w = sourceW;
+    const h = sourceH;
     const offscreen = document.createElement('canvas');
     offscreen.width = w;
     offscreen.height = h;
@@ -47,15 +46,23 @@ export function captureCanvas(
       sourceY,
       sourceW,
       sourceH,
-      outerMargin,
-      outerMargin,
+      0,
+      0,
       sourceW,
       sourceH,
     );
 
     // キーフレームインデックスラベルを描画
     if (path) {
-      drawKeyframeLabels(ctx, path, src, sourceX, sourceY, outerMargin, p);
+      drawKeyframeLabels(
+        ctx,
+        path,
+        src,
+        sourceX,
+        sourceY,
+        selectionRange,
+        p,
+      );
     }
 
     return offscreen.toDataURL('image/png');
@@ -71,7 +78,7 @@ function drawKeyframeLabels(
   src: HTMLCanvasElement,
   sourceX: number,
   sourceY: number,
-  outerMargin: number,
+  selectionRange: SelectionRange | undefined,
   p: p5 | null,
 ): void {
   const { effective: effectiveCurves } = resolveSketchCurves(
@@ -110,9 +117,12 @@ function drawKeyframeLabels(
   ctx.textBaseline = 'middle';
 
   for (let i = 0; i < anchorPositions.length; i++) {
+    if (!isKeyframeInSelection(i, anchorPositions.length, selectionRange)) {
+      continue;
+    }
     const pos = anchorPositions[i];
-    const canvasX = pos.x * scaleX - sourceX + outerMargin;
-    const canvasY = pos.y * scaleY - sourceY + outerMargin;
+    const canvasX = pos.x * scaleX - sourceX;
+    const canvasY = pos.y * scaleY - sourceY;
 
     const label = `${i}`;
     const metrics = ctx.measureText(label);
@@ -136,6 +146,28 @@ function drawKeyframeLabels(
     ctx.fillStyle = '#ffffff';
     ctx.fillText(label, canvasX, centerY);
   }
+}
+
+function isKeyframeInSelection(
+  index: number,
+  keyframeCount: number,
+  selectionRange: SelectionRange | undefined,
+): boolean {
+  if (!selectionRange) return true;
+
+  if (selectionRange.anchorKeyframeIndex !== undefined) {
+    const anchorIndex = Math.max(
+      0,
+      Math.min(keyframeCount - 1, selectionRange.anchorKeyframeIndex),
+    );
+    return index === anchorIndex;
+  }
+
+  const maxCurveIndex = Math.max(0, keyframeCount - 2);
+  const start = Math.max(0, Math.min(maxCurveIndex, selectionRange.startCurveIndex));
+  const end = Math.max(0, Math.min(maxCurveIndex, selectionRange.endCurveIndex));
+  if (start > end) return true;
+  return index >= start && index <= end + 1;
 }
 
 // パス全体のクロップ矩形を計算
@@ -179,17 +211,11 @@ function computeSelectionCropRect(
 
     if (anchorIndex < segmentCount) {
       const forward = effectiveCurves[anchorIndex];
-      const anchor = forward?.[0];
-      const outHandle = forward?.[1];
-      if (anchor) pointSet.push(anchor);
-      if (outHandle) pointSet.push(outHandle);
+      if (forward) pointSet.push(...forward);
     }
     if (anchorIndex > 0) {
       const backward = effectiveCurves[anchorIndex - 1];
-      const inHandle = backward?.[2];
-      const anchor = backward?.[3];
-      if (inHandle) pointSet.push(inHandle);
-      if (anchor) pointSet.push(anchor);
+      if (backward) pointSet.push(...backward);
     }
 
     if (pointSet.length > 0) {
@@ -246,8 +272,8 @@ function toCanvasCropRect(bounds: Bounds, canvas: HTMLCanvasElement): Rect {
   const { minX, minY, maxX, maxY } = bounds;
   const cssW = Math.max(1, maxX - minX);
   const cssH = Math.max(1, maxY - minY);
-  const padX = Math.max(24, cssW * 0.2);
-  const padY = Math.max(24, cssH * 0.2);
+  const padX = Math.min(32, cssW * 0.4);
+  const padY = Math.min(32, cssH * 0.4);
 
   const rect = canvas.getBoundingClientRect();
   const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;

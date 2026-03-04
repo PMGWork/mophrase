@@ -67,7 +67,7 @@ const App = () => {
     createNewProject,
   } = useSketchEditor();
 
-  const { graphCanvasRef, captureGraphCanvas } = useGraphEditor({
+  const { graphCanvasRef, captureGraphCanvasFocused } = useGraphEditor({
     activePath,
     config,
     colors,
@@ -81,16 +81,21 @@ const App = () => {
     setGraphImageProvider((path, selectionRange) => {
       const sketchImageDataUrl =
         captureSketchCanvas(path, selectionRange) ?? undefined;
-      const graphImageDataUrl = captureGraphCanvas() ?? undefined;
-      if (!sketchImageDataUrl && !graphImageDataUrl) {
+      const graphFocusedImageDataUrl =
+        captureGraphCanvasFocused() ?? undefined;
+      if (!sketchImageDataUrl && !graphFocusedImageDataUrl) {
         return null;
       }
       return {
         sketchImageDataUrl,
-        graphImageDataUrl,
+        graphFocusedImageDataUrl,
       };
     });
-  }, [captureGraphCanvas, captureSketchCanvas, setGraphImageProvider]);
+  }, [
+    captureGraphCanvasFocused,
+    captureSketchCanvas,
+    setGraphImageProvider,
+  ]);
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {

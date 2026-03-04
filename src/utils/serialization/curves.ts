@@ -79,10 +79,11 @@ function serializeGraphHandle(
 function serializeKeyframes(
   keyframes: Keyframe[],
   bbox: SerializedBoundingBox,
+  serializedTimes: number[],
   progress: number[],
 ): SerializedKeyframe[] {
   const diag = Math.hypot(bbox.width, bbox.height);
-  const serialized: SerializedKeyframe[] = keyframes.map((keyframe) => {
+  const serialized: SerializedKeyframe[] = keyframes.map((keyframe, index) => {
     const anchor = keyframe.position;
     const inHandle = keyframe.sketchIn
       ? anchor.copy().add(keyframe.sketchIn)
@@ -93,7 +94,7 @@ function serializeKeyframes(
 
     return {
       ...serializePosition(anchor, bbox),
-      time: round(keyframe.time, 3),
+      time: round(resolveFiniteTime(serializedTimes[index], keyframe.time), 3),
       sketchIn: serializeHandle(inHandle, anchor, diag),
       sketchOut: serializeHandle(outHandle, anchor, diag),
       ...(keyframe.corner ? { corner: true } : {}),
@@ -111,14 +112,14 @@ function serializeKeyframes(
 
     startKeyframe.graphOut = serializeGraphHandle(
       start.graphOut,
-      { time: start.time, progress: startProgress },
-      { time: end.time, progress: endProgress },
+      { time: resolveFiniteTime(serializedTimes[i], start.time), progress: startProgress },
+      { time: resolveFiniteTime(serializedTimes[i + 1], end.time), progress: endProgress },
       true,
     );
     endKeyframe.graphIn = serializeGraphHandle(
       end.graphIn,
-      { time: start.time, progress: startProgress },
-      { time: end.time, progress: endProgress },
+      { time: resolveFiniteTime(serializedTimes[i], start.time), progress: startProgress },
+      { time: resolveFiniteTime(serializedTimes[i + 1], end.time), progress: endProgress },
       false,
     );
   }
@@ -132,8 +133,14 @@ export function serializePaths(paths: Path[]): SerializedPath[] {
     const curves = buildSketchCurves(path.keyframes);
     const bbox =
       curves.length > 0 ? computeBbox(curves) : computeBboxFromKeyframes(path.keyframes);
+    const serializedTimes = normalizePathTimes(path.keyframes);
     const progress = computeKeyframeProgress(path.keyframes, curves);
-    const keyframes = serializeKeyframes(path.keyframes, bbox, progress);
+    const keyframes = serializeKeyframes(
+      path.keyframes,
+      bbox,
+      serializedTimes,
+      progress,
+    );
     return { keyframes, bbox };
   });
 }
@@ -156,6 +163,14 @@ export function deserializePathKeyframes(
     referenceKeyframes.length,
   );
   if (count === 0) return [];
+  const referenceTimes = referenceKeyframes.map((keyframe, index) =>
+    Number.isFinite(keyframe.time)
+      ? keyframe.time
+      : index / Math.max(1, referenceKeyframes.length - 1),
+  );
+  const referenceStart = referenceTimes[0] ?? 0;
+  const referenceEnd = referenceTimes[referenceTimes.length - 1] ?? referenceStart;
+  const referenceSpan = referenceEnd - referenceStart;
 
   const keyframes: Keyframe[] = [];
   for (let i = 0; i < count; i++) {
@@ -182,7 +197,7 @@ export function deserializePathKeyframes(
     keyframes.push({
       time:
         serialized.time !== undefined && Number.isFinite(serialized.time)
-          ? serialized.time
+          ? denormalizeTime(serialized.time, referenceStart, referenceSpan)
           : reference.time,
       position,
       sketchIn,
@@ -224,6 +239,40 @@ export function deserializePathKeyframes(
   }
 
   return keyframes;
+}
+
+function normalizePathTimes(keyframes: Keyframe[]): number[] {
+  if (keyframes.length === 0) return [];
+  const baseTimes = keyframes.map((keyframe, index) =>
+    Number.isFinite(keyframe.time)
+      ? keyframe.time
+      : index / Math.max(1, keyframes.length - 1),
+  );
+  if (baseTimes.length === 1) return [0];
+  const start = baseTimes[0];
+  const end = baseTimes[baseTimes.length - 1];
+  const span = end - start;
+  if (!Number.isFinite(span) || Math.abs(span) < 1e-9) {
+    return baseTimes.map((_, index) => index / Math.max(1, baseTimes.length - 1));
+  }
+  return baseTimes.map((time) => (time - start) / span);
+}
+
+function denormalizeTime(
+  serializedTime: number,
+  referenceStart: number,
+  referenceSpan: number,
+): number {
+  if (!Number.isFinite(serializedTime)) return referenceStart;
+  if (!Number.isFinite(referenceSpan) || Math.abs(referenceSpan) < 1e-9) {
+    return referenceStart;
+  }
+  const denormalized = referenceStart + serializedTime * referenceSpan;
+  return Number.isFinite(denormalized) ? denormalized : referenceStart;
+}
+
+function resolveFiniteTime(value: number | undefined, fallback: number): number {
+  return Number.isFinite(value) ? (value as number) : fallback;
 }
 
 // 極座標のハンドル -> p5.Vector

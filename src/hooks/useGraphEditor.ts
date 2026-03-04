@@ -26,7 +26,7 @@ type UseGraphEditorParams = {
 // グラフエディタの結果
 type UseGraphEditorResult = {
   graphCanvasRef: RefObject<HTMLDivElement | null>; // グラフエディタのキャンバス参照
-  captureGraphCanvas: () => string | null; // グラフキャンバスを PNG data URL としてキャプチャ
+  captureGraphCanvasFocused: () => string | null; // 選択範囲中心の拡大グラフ画像をキャプチャ
 };
 
 // グラフエディタを管理するカスタムフック
@@ -94,10 +94,9 @@ export const useGraphEditor = ({
   }, []);
   useResizeObserver(graphCanvasRef, resizeCallback);
 
-  // グラフキャンバスをキャプチャ
-  const captureGraphCanvas = useCallback((): string | null => {
+  const captureGraphCanvasFocused = useCallback((): string | null => {
     return editorRef.current?.captureCanvas() ?? null;
   }, []);
 
-  return { graphCanvasRef, captureGraphCanvas };
+  return { graphCanvasRef, captureGraphCanvasFocused };
 };

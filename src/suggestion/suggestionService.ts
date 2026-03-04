@@ -27,7 +27,7 @@ type FetchSuggestionsOptions = {
 
 type PromptImageRole = {
   index: number;
-  role: 'sketch' | 'graph';
+  role: 'sketch' | 'graph_focused';
 };
 
 // 提案を取得
@@ -231,7 +231,7 @@ function buildPrompt(
       const roleDescription =
         imageRole.role === 'sketch'
           ? 'Sketch canvas (spatial motion path)'
-          : 'Graph editor canvas (timing/easing curve)';
+          : 'Graph editor focused crop (timing/easing, selected range detail)';
       promptParts.push(`- Image ${imageRole.index}: ${roleDescription}`);
     });
     promptParts.push(
@@ -268,8 +268,8 @@ const buildImageDataUrls = (
   if (imageData.sketchImageDataUrl) {
     urls.push(imageData.sketchImageDataUrl);
   }
-  if (imageData.graphImageDataUrl) {
-    urls.push(imageData.graphImageDataUrl);
+  if (imageData.graphFocusedImageDataUrl) {
+    urls.push(imageData.graphFocusedImageDataUrl);
   }
   return urls.length > 0 ? urls : undefined;
 };
@@ -284,8 +284,8 @@ const buildPromptImageRoles = (
     roles.push({ index, role: 'sketch' });
     index += 1;
   }
-  if (imageData.graphImageDataUrl) {
-    roles.push({ index, role: 'graph' });
+  if (imageData.graphFocusedImageDataUrl) {
+    roles.push({ index, role: 'graph_focused' });
   }
   return roles;
 };

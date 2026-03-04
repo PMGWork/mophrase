@@ -11,7 +11,11 @@ import {
   buildGraphCurves,
   computeKeyframeProgress,
 } from '../utils/keyframes';
-import { applyGraphModifiers, resolveEffectiveTimes } from '../utils/modifier';
+import {
+  applyGraphModifiers,
+  resolveEffectiveDurationScale,
+  resolveEffectiveTimes,
+} from '../utils/modifier';
 import { resolveSketchCurves } from '../utils/path';
 
 // 個別パスのアニメーション状態
@@ -191,7 +195,11 @@ export class MotionManager {
       if (path.keyframes.length < 2) continue;
 
       const startTime = path.startTime * 1000;
-      const duration = Math.max(1, path.duration * 1000);
+      const durationScale = resolveEffectiveDurationScale(
+        path.keyframes,
+        path.graphModifiers,
+      );
+      const duration = Math.max(1, path.duration * durationScale * 1000);
       const endTime = startTime + duration;
 
       // タイムライン全体の終了時間を更新
