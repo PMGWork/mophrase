@@ -58,8 +58,14 @@ export class SelectTool {
   }
 
   // マウスドラッグ
-  mouseDragged(x: number, y: number, altKey: boolean, ctx: ToolContext): void {
-    const dragMode = altKey ? 'free' : 'mirror';
+  mouseDragged(
+    x: number,
+    y: number,
+    altKey: boolean,
+    invertConstraint: boolean,
+    ctx: ToolContext,
+  ): void {
+    const dragMode = altKey ? 'free' : invertConstraint ? 'invert' : 'mirror';
     ctx.handleManager.updateDrag(x, y, dragMode);
     if (ctx.handleManager.isDragging()) {
       const selectionRange = ctx.handleManager.getSelectionRange();

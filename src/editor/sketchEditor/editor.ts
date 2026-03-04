@@ -109,7 +109,8 @@ export class SketchEditor {
     const dispatcher: InputDispatcher = {
       getP5: () => this.p,
       dispatchPress: (p, x, y, shift) => this.dispatchToolPress(p, x, y, shift),
-      dispatchDrag: (p, x, y, alt) => this.dispatchToolDrag(p, x, y, alt),
+      dispatchDrag: (p, x, y, alt, invertConstraint) =>
+        this.dispatchToolDrag(p, x, y, alt, invertConstraint),
       dispatchRelease: () => this.dispatchToolRelease(),
     };
     this.inputHandler = new InputHandler(dispatcher);
@@ -521,12 +522,13 @@ export class SketchEditor {
     x: number,
     y: number,
     alt: boolean,
+    invertConstraint: boolean,
   ): void {
     const ctx = this.getToolContext();
     if (this.currentTool === 'pen') {
       this.penTool.mouseDragged(_p, x, y);
     } else {
-      this.selectTool.mouseDragged(x, y, alt, ctx);
+      this.selectTool.mouseDragged(x, y, alt, invertConstraint, ctx);
     }
   }
 

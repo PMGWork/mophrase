@@ -363,14 +363,22 @@ export class HandleManager {
     }
 
     // ミラーモードの場合、制御点の反対側をミラーリング
-    if (dragMode === 'mirror') {
-      for (const selection of this.selectedHandles) {
-        if (selection.handleType === 'ANCHOR') continue;
-        const path = this.getPaths()[selection.pathIndex];
-        const keyframe = path?.keyframes?.[selection.keyframeIndex];
-        if (!keyframe) continue;
-        this.mirrorOppositeControl(keyframe, selection.handleType);
-      }
+    for (const selection of this.selectedHandles) {
+      if (selection.handleType === 'ANCHOR') continue;
+      const path = this.getPaths()[selection.pathIndex];
+      const keyframe = path?.keyframes?.[selection.keyframeIndex];
+      if (!keyframe) continue;
+      const mirror = this.shouldMirrorOppositeControl(
+        dragMode,
+        keyframe,
+        selection.handleType,
+      );
+      if (!mirror) continue;
+      this.mirrorOppositeControl(
+        keyframe,
+        selection.handleType,
+        dragMode === 'invert',
+      );
     }
   }
 
@@ -393,9 +401,18 @@ export class HandleManager {
       effectiveCurves,
     );
 
-    if (dragMode === 'mirror' && selection.handleType !== 'ANCHOR') {
+    if (selection.handleType !== 'ANCHOR') {
       const keyframe = path.keyframes[selection.keyframeIndex];
-      if (keyframe) this.mirrorOppositeControl(keyframe, selection.handleType);
+      const mirror =
+        keyframe &&
+        this.shouldMirrorOppositeControl(dragMode, keyframe, selection.handleType);
+      if (mirror && keyframe) {
+        this.mirrorOppositeControl(
+          keyframe,
+          selection.handleType,
+          dragMode === 'invert',
+        );
+      }
     }
   }
 
@@ -508,13 +525,28 @@ export class HandleManager {
     if (type === 'SKETCH_OUT') keyframe.sketchOut = vec ?? undefined;
   }
 
+
+  private shouldMirrorOppositeControl(
+    dragMode: HandleDragMode,
+    keyframe: Path['keyframes'][number],
+    type: HandleType,
+  ): boolean {
+    if (type === 'ANCHOR') return false;
+    if (dragMode === 'free') return false;
+
+    const corner = isSketchCorner(keyframe);
+    if (dragMode === 'invert') return corner;
+    return !corner;
+  }
+
   // 対称制御点をミラーリング
   private mirrorOppositeControl(
     keyframe: Path['keyframes'][number],
     type: HandleType,
+    allowCorner: boolean = false,
   ): void {
     if (type === 'ANCHOR') return;
-    if (isSketchCorner(keyframe)) return;
+    if (isSketchCorner(keyframe) && !allowCorner) return;
 
     const oppositeType: HandleType =
       type === 'SKETCH_IN' ? 'SKETCH_OUT' : 'SKETCH_IN';
