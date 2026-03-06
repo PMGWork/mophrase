@@ -11,6 +11,7 @@ type Env = {
 // サポートするLLMプロバイダの型定義
 type Provider = 'OpenAI' | 'Google';
 type OpenAIReasoningEffort = 'none' | 'low' | 'medium';
+type OpenAIServiceTier = 'priority';
 type GoogleReasoningEffort = 'none' | 'low' | 'medium' | 'high';
 type ReasoningEffort = OpenAIReasoningEffort | GoogleReasoningEffort;
 
@@ -21,6 +22,7 @@ type LlmGenerateRequest = {
   prompt: string;
   schema: Record<string, unknown>;
   reasoningEffort?: ReasoningEffort;
+  priorityProcessing?: boolean;
   imageDataUrls?: string[];
   imageDataUrl?: string;
 };
@@ -41,6 +43,7 @@ type ProviderMeta = {
   outputParseMs: number;
   totalMs: number;
   outputChars?: number;
+  serviceTier?: string;
 };
 
 // 現在時刻をミリ秒単位で取得するユーティリティ関数
@@ -134,6 +137,12 @@ const extractOpenAIOutputText = (data: unknown): string => {
   return textParts.join('');
 };
 
+const extractOpenAIServiceTier = (data: unknown): string | undefined => {
+  if (!data || typeof data !== 'object') return undefined;
+  const serviceTier = (data as { service_tier?: unknown }).service_tier;
+  return typeof serviceTier === 'string' ? serviceTier : undefined;
+};
+
 // 出力欠落時のデバッグ情報を作成
 const summarizeOpenAIOutput = (
   data: unknown,
@@ -213,7 +222,11 @@ const sanitizeSchemaForOpenAIStrict = (
     }
 
     const properties = result.properties;
-    if (properties && typeof properties === 'object' && !Array.isArray(properties)) {
+    if (
+      properties &&
+      typeof properties === 'object' &&
+      !Array.isArray(properties)
+    ) {
       result.required = Object.keys(properties as Record<string, unknown>);
     }
 
@@ -230,6 +243,7 @@ const generateWithOpenAI = async (
   prompt: string,
   schema: Record<string, unknown>,
   reasoningEffort?: OpenAIReasoningEffort,
+  priorityProcessing?: boolean,
   imageDataUrls?: string[],
 ): Promise<ProviderResult> => {
   const apiKey = env.OPENAI_API_KEY;
@@ -238,9 +252,12 @@ const generateWithOpenAI = async (
   }
 
   const t0 = nowMs();
-  // o1系列とGPT-5.2のモデルでreasoning effortを送信
+  // o1系列とGPT-5系モデルでreasoning effortを送信
   const supportsReasoningEffort =
-    model.startsWith('o1') || model.startsWith('gpt-5.2');
+    model.startsWith('o1') || model.startsWith('gpt-5.4');
+  const supportsPriorityProcessing = model.startsWith('gpt-5.4');
+  const usePriorityProcessing =
+    supportsPriorityProcessing && priorityProcessing === true;
   const sanitizedSchema = sanitizeSchemaForOpenAIStrict(schema);
   const requestBody: Record<string, unknown> = {
     model,
@@ -253,6 +270,9 @@ const generateWithOpenAI = async (
       },
     },
   };
+  if (usePriorityProcessing) {
+    requestBody.service_tier = 'priority' satisfies OpenAIServiceTier;
+  }
   // 画像がある場合はマルチモーダル入力を構築
   if (Array.isArray(imageDataUrls) && imageDataUrls.length > 0) {
     requestBody.input = [
@@ -313,6 +333,9 @@ const generateWithOpenAI = async (
     meta: {
       provider: 'OpenAI',
       model,
+      serviceTier:
+        extractOpenAIServiceTier(data) ??
+        (usePriorityProcessing ? 'priority' : undefined),
       upstreamMs: t1 - t0,
       jsonDecodeMs: t2 - t1,
       outputParseMs: t4 - t3,
@@ -611,6 +634,7 @@ app.post('/api/llm/generate', async (c) => {
     reasoningEffort,
     imageDataUrls,
     imageDataUrl,
+    priorityProcessing,
   } = body;
   const normalizedImageDataUrls = (
     Array.isArray(imageDataUrls)
@@ -618,7 +642,9 @@ app.post('/api/llm/generate', async (c) => {
       : typeof imageDataUrl === 'string'
         ? [imageDataUrl]
         : []
-  ).filter((value): value is string => typeof value === 'string' && value.length > 0);
+  ).filter(
+    (value): value is string => typeof value === 'string' && value.length > 0,
+  );
   const resolvedOpenAIReasoningEffort = isOpenAIReasoningEffort(reasoningEffort)
     ? reasoningEffort
     : undefined;
@@ -641,6 +667,7 @@ app.post('/api/llm/generate', async (c) => {
         prompt,
         schema,
         resolvedOpenAIReasoningEffort,
+        priorityProcessing === true,
         normalizedImageDataUrls,
       );
       const totalMs = nowMs() - requestStart;
@@ -655,6 +682,9 @@ app.post('/api/llm/generate', async (c) => {
         c.header('x-llm-prompt-chars', String(promptChars));
         if (result.meta.outputChars !== undefined) {
           c.header('x-llm-output-chars', String(result.meta.outputChars));
+        }
+        if (result.meta.serviceTier) {
+          c.header('x-llm-service-tier', result.meta.serviceTier);
         }
       }
       return c.json(result.body, result.status);

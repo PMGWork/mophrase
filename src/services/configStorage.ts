@@ -18,7 +18,9 @@ type PersistentConfigFields = Omit<
 
 // モデルマイグレーションテーブル: [fromProvider, fromModel, toProvider, toModel]
 const MODEL_MIGRATIONS: [string, string, string, string][] = [
-  ['Cerebras', 'gpt-oss-120b', 'OpenAI', 'gpt-5.2'],
+  ['Cerebras', 'gpt-oss-120b', 'OpenAI', 'gpt-5.4'],
+  ['OpenAI', 'gpt-5.2', 'OpenAI', 'gpt-5.4'],
+  ['OpenAI', 'gpt-5.3-chat-latest', 'OpenAI', 'gpt-5.4'],
   ['Google', 'gemini-2.5-flash', 'Google', 'gemini-3-flash-preview'],
 ];
 
@@ -80,12 +82,15 @@ const migrateConfig = (
   if (
     next.llmProvider === 'OpenAI' &&
     typeof next.llmModel === 'string' &&
-    next.llmModel.startsWith('gpt-oss')
+    (next.llmModel.startsWith('gpt-oss') || next.llmModel.startsWith('gpt-5.2'))
   ) {
-    next.llmModel = 'gpt-5.2';
+    next.llmModel = 'gpt-5.4';
   }
   if (next.llmProvider === 'Google') {
     next.parallelGeneration = true;
+  }
+  if (typeof next.llmPriorityProcessing !== 'boolean') {
+    next.llmPriorityProcessing = undefined;
   }
 
   return next;

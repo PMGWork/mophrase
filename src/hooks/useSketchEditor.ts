@@ -48,6 +48,7 @@ type SketchConfigUpdate = {
   llmProvider: Config['llmProvider'];
   llmModel: Config['llmModel'];
   llmReasoningEffort: Config['llmReasoningEffort'];
+  llmPriorityProcessing: Config['llmPriorityProcessing'];
   parallelGeneration: Config['parallelGeneration'];
   graphImageEnabled: Config['graphImageEnabled'];
   fitTolerance: Config['fitTolerance'];
@@ -103,9 +104,7 @@ type UseSketchEditorResult = {
   ) => string | null;
   getSelectionRange: () => SelectionRange | undefined;
   getSelectedHandlesForActivePath: () => HandleSelection[];
-  setGraphImageProvider: (
-    provider: GraphImageProvider,
-  ) => void;
+  setGraphImageProvider: (provider: GraphImageProvider) => void;
   getPreviewGraphCurves: (
     p: p5,
   ) => { curves: p5.Vector[][]; strength: number } | null;
@@ -408,12 +407,9 @@ export const useSketchEditor = (): UseSketchEditorResult => {
   );
 
   // グラフ画像プロバイダーを設定
-  const setGraphImageProvider = useCallback(
-    (provider: GraphImageProvider) => {
-      editorRef.current?.getSuggestionManager().setGraphImageProvider(provider);
-    },
-    [],
-  );
+  const setGraphImageProvider = useCallback((provider: GraphImageProvider) => {
+    editorRef.current?.getSuggestionManager().setGraphImageProvider(provider);
+  }, []);
 
   // 提案のグラフ曲線を取得
   const getPreviewGraphCurves = useCallback(
@@ -544,7 +540,9 @@ export const useSketchEditor = (): UseSketchEditorResult => {
     try {
       const stored = await getProject(id);
       if (!stored) {
-        console.error('[exportProjectById] Target project is not found.', { id });
+        console.error('[exportProjectById] Target project is not found.', {
+          id,
+        });
         window.alert('The project to export was not found.');
         return;
       }

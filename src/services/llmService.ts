@@ -95,8 +95,13 @@ async function requestServer<T>(
   prompt: string,
   schema: z.ZodType<T>,
   reasoningEffort?: LLMReasoningEffort,
+  priorityProcessing?: boolean,
   imageDataUrls?: string[],
 ): Promise<T> {
+  const usePriorityProcessing =
+    provider === 'OpenAI' &&
+    model.startsWith('gpt-5.4') &&
+    priorityProcessing === true;
   const requestId =
     typeof globalThis.crypto?.randomUUID === 'function'
       ? globalThis.crypto.randomUUID()
@@ -107,11 +112,13 @@ async function requestServer<T>(
     prompt,
     schema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
     reasoningEffort,
+    priorityProcessing: usePriorityProcessing,
   };
   if (Array.isArray(imageDataUrls) && imageDataUrls.length > 0) {
     body.imageDataUrls = imageDataUrls;
   }
-  const promptPreview = prompt.length > 400 ? `${prompt.slice(0, 400)}...` : prompt;
+  const promptPreview =
+    prompt.length > 400 ? `${prompt.slice(0, 400)}...` : prompt;
   console.log('[llm] input', {
     requestId,
     provider,
@@ -151,6 +158,7 @@ async function requestServer<T>(
     upstreamMs: response.headers.get('x-llm-upstream-ms'),
     totalMs: response.headers.get('x-llm-total-ms'),
     outputChars: response.headers.get('x-llm-output-chars'),
+    serviceTier: response.headers.get('x-llm-service-tier'),
     schemaBytes: response.headers.get('x-llm-schema-bytes'),
     promptChars: response.headers.get('x-llm-prompt-chars'),
   };
@@ -163,9 +171,8 @@ async function requestServer<T>(
       requestId,
       provider: responseMeta.provider ?? provider,
       model: responseMeta.model ?? model,
-      totalMs: responseMeta.totalMs
-        ? Number(responseMeta.totalMs)
-        : undefined,
+      serviceTier: responseMeta.serviceTier ?? undefined,
+      totalMs: responseMeta.totalMs ? Number(responseMeta.totalMs) : undefined,
       upstreamMs: responseMeta.upstreamMs
         ? Number(responseMeta.upstreamMs)
         : undefined,
@@ -202,18 +209,14 @@ async function requestServer<T>(
     body: data,
   });
   const parsed = schema.parse(data);
-  console.log('[llm] parsed', { requestId, body: parsed });
   return parsed;
 }
 
 // 各LLMプロバイダの設定
 const PROVIDERS: Record<LLMProvider, ProviderConfig> = {
   OpenAI: {
-    defaultModel: 'gpt-5.2',
-    models: [
-      { id: 'gpt-5.2', name: 'GPT-5.2' },
-      { id: 'gpt-5.3-chat-latest', name: 'GPT-5.3 Chat' },
-    ],
+    defaultModel: 'gpt-5.4',
+    models: [{ id: 'gpt-5.4', name: 'GPT-5.4' }],
   },
   Google: {
     defaultModel: 'gemini-3-flash-preview',
@@ -234,6 +237,7 @@ export async function generateStructured<T>(
   provider: LLMProvider,
   model?: string,
   reasoningEffort?: LLMReasoningEffort,
+  priorityProcessing?: boolean,
   imageDataUrls?: string[],
 ): Promise<T> {
   const config = PROVIDERS[provider];
@@ -248,6 +252,7 @@ export async function generateStructured<T>(
     prompt,
     schema,
     reasoningEffort,
+    priorityProcessing,
     imageDataUrls,
   );
 }

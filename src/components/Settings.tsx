@@ -16,6 +16,7 @@ export type SettingsUpdate = {
   llmProvider: LLMProvider;
   llmModel: string;
   llmReasoningEffort: LLMReasoningEffort;
+  llmPriorityProcessing: boolean;
   parallelGeneration: boolean;
   graphImageEnabled: boolean;
   fitTolerance: number;
@@ -49,7 +50,7 @@ const getReasoningCapability = (
   modelId: string,
 ): ReasoningCapability => {
   const isToggleModel =
-    (provider === 'OpenAI' && modelId.startsWith('gpt-5.2')) ||
+    (provider === 'OpenAI' && modelId.startsWith('gpt-5.4')) ||
     (provider === 'Google' && modelId.includes('flash'));
   if (isToggleModel) {
     return {
@@ -65,6 +66,11 @@ const getReasoningCapability = (
     resolve: () => 'none',
   };
 };
+
+const isPriorityProcessingAvailable = (
+  provider: LLMProvider,
+  modelId: string,
+): boolean => provider === 'OpenAI' && modelId.startsWith('gpt-5.4');
 
 // トグルスイッチの行コンポーネント
 const ToggleRow = ({
@@ -105,9 +111,7 @@ const ToggleRow = ({
       <div
         aria-hidden="true"
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 ${
-          checked
-            ? 'bg-success/80'
-            : 'bg-gray-600 group-hover:bg-gray-500'
+          checked ? 'bg-success/80' : 'bg-gray-600 group-hover:bg-gray-500'
         }`}
       >
         <span
@@ -131,13 +135,19 @@ export const Settings = ({
   const selectedProvider = config?.llmProvider ?? 'OpenAI';
   const selectedModel = config?.llmModel ?? '';
   const reasoningEffort = config?.llmReasoningEffort ?? 'none';
+  const priorityProcessing = config?.llmPriorityProcessing ?? false;
+  const showPriorityProcessing = isPriorityProcessingAvailable(
+    selectedProvider,
+    selectedModel,
+  );
   const reasoning = getReasoningCapability(selectedProvider, selectedModel);
   const resolvedEffort = reasoning.resolve(reasoningEffort);
   const parallelGeneration = resolveParallelGeneration(
     selectedProvider,
     config?.parallelGeneration ?? false,
   );
-  const isParallelGenerationLocked = isParallelGenerationForced(selectedProvider);
+  const isParallelGenerationLocked =
+    isParallelGenerationForced(selectedProvider);
   const resolvedGraphImageEnabled = config?.graphImageEnabled ?? true;
   const tolerance = config?.fitTolerance ?? FIT_TOLERANCE_DEFAULT;
   const testMode = config?.testMode ?? false;
@@ -148,6 +158,7 @@ export const Settings = ({
       llmProvider: selectedProvider,
       llmModel: selectedModel,
       llmReasoningEffort: resolvedEffort,
+      llmPriorityProcessing: priorityProcessing,
       parallelGeneration,
       graphImageEnabled: resolvedGraphImageEnabled,
       fitTolerance: tolerance,
@@ -212,7 +223,10 @@ export const Settings = ({
                         provider: LLMProvider;
                         modelId: string;
                       };
-                      const cap = getReasoningCapability(parsed.provider, parsed.modelId);
+                      const cap = getReasoningCapability(
+                        parsed.provider,
+                        parsed.modelId,
+                      );
                       const effort = cap.resolve('none');
                       emit({
                         llmProvider: parsed.provider,
@@ -255,15 +269,16 @@ export const Settings = ({
                 emit({ llmReasoningEffort: next });
               }}
             />
-            <ToggleRow
-              label="Curve Image"
-              description="Send sketch and graph canvas screenshots to LLM"
-              checked={resolvedGraphImageEnabled}
-              disabled={false}
-              onChange={() =>
-                emit({ graphImageEnabled: !resolvedGraphImageEnabled })
-              }
-            />
+            {showPriorityProcessing ? (
+              <ToggleRow
+                label="Priority Processing"
+                description="Use OpenAI priority tier for lower latency (higher cost)"
+                checked={priorityProcessing}
+                onChange={() => {
+                  emit({ llmPriorityProcessing: !priorityProcessing });
+                }}
+              />
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3 p-5">
@@ -287,13 +302,21 @@ export const Settings = ({
               }}
             />
             <ToggleRow
+              label="Curve Image"
+              description="Send sketch and graph canvas screenshots to LLM"
+              checked={resolvedGraphImageEnabled}
+              disabled={false}
+              onChange={() =>
+                emit({ graphImageEnabled: !resolvedGraphImageEnabled })
+              }
+            />
+            <ToggleRow
               label="Test Mode"
               description="Generate 5 times for benchmarking"
               checked={testMode}
               onChange={() => emit({ testMode: !testMode })}
             />
           </div>
-
         </div>
       </div>
     </ModalBackdrop>

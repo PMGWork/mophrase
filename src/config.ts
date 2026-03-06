@@ -12,6 +12,7 @@ export interface Config {
   llmProvider: LLMProvider; // LLMプロバイダ名
   llmModel: string; // LLMモデル名
   llmReasoningEffort: LLMReasoningEffort; // 推論強度
+  llmPriorityProcessing: boolean; // OpenAI Priority Processing を使うか
   parallelGeneration: boolean; // 提案生成を並列で実行するか
   graphImageEnabled: boolean; // スケッチ/グラフ画像をLLMに送信するか
   testMode: boolean; // テストモード（5回生成してベンチマーク）
@@ -20,15 +21,15 @@ export interface Config {
 }
 
 // プロバイダごとの並列生成強制設定
-export const isParallelGenerationForced = (
-  provider: LLMProvider,
-): boolean => provider === 'Google';
+export const isParallelGenerationForced = (provider: LLMProvider): boolean =>
+  provider === 'Google';
 
 // 並列生成設定をプロバイダ制約込みで解決
 export const resolveParallelGeneration = (
   provider: LLMProvider,
   parallelGeneration: boolean,
-): boolean => (isParallelGenerationForced(provider) ? true : parallelGeneration);
+): boolean =>
+  isParallelGenerationForced(provider) ? true : parallelGeneration;
 
 // プロジェクト設定の型定義
 const composePrompt = (common: string, modeSpecific: string): string => {
@@ -74,8 +75,9 @@ export const DEFAULT_CONFIG: Config = {
   lineWeight: 1,
   pointSize: 6,
   llmProvider: 'OpenAI',
-  llmModel: 'gpt-5.2',
+  llmModel: 'gpt-5.4',
   llmReasoningEffort: 'none',
+  llmPriorityProcessing: false,
   parallelGeneration: false,
   graphImageEnabled: true,
   testMode: false,

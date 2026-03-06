@@ -59,7 +59,9 @@ export async function fetchSuggestions(
   const requiresSingleResponseSchema = config.llmProvider === 'Google';
   const useSingleResponseSchema =
     parallelGeneration || requiresSingleResponseSchema;
-  const requestSingleWithSlot = (slotIndex: number): Promise<SuggestionResponse> => {
+  const requestSingleWithSlot = (
+    slotIndex: number,
+  ): Promise<SuggestionResponse> => {
     const slottedPrompt = buildPrompt(
       serializedPaths,
       basePrompt,
@@ -73,6 +75,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
+      config.llmPriorityProcessing,
       imageDataUrls,
     );
   };
@@ -83,6 +86,7 @@ export async function fetchSuggestions(
       config.llmProvider,
       config.llmModel,
       config.llmReasoningEffort,
+      config.llmPriorityProcessing,
       imageDataUrls,
     );
 
@@ -124,8 +128,8 @@ export async function fetchSuggestions(
           parallelRequestCount,
           options.onSuggestion,
         )
-    : // 直列モードは1回のバッチ要求のみ実行する。
-      await fetchBatchedSuggestions(requestBatchOnce, options.onSuggestion);
+      : // 直列モードは1回のバッチ要求のみ実行する。
+        await fetchBatchedSuggestions(requestBatchOnce, options.onSuggestion);
 
   return suggestions.map(toSuggestionItem);
 }
@@ -219,10 +223,7 @@ function buildPrompt(
   const promptParts = [basePrompt];
 
   if (slot) {
-    promptParts.push(
-      '',
-      `[SLOT ${slot.index} of ${slot.total}]`,
-    );
+    promptParts.push('', `[SLOT ${slot.index} of ${slot.total}]`);
   }
 
   if (imageRoles.length > 0) {

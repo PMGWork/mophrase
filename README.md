@@ -35,17 +35,15 @@ pnpm install
 ```env
 # Worker secrets
 OPENAI_API_KEY=your_openai_api_key_here
-CEREBRAS_API_KEY=your_cerebras_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Provider: "openai" or "cerebras" or "google" (default: "cerebras")
-VITE_PROVIDER=cerebras
+# Provider: "openai" or "google" (default: "openai")
+VITE_PROVIDER=openai
 
 # Model name (optional)
-# OpenAI: gpt-5.2 など
-# Cerebras: gpt-oss-120b など
+# OpenAI: gpt-5.4 など
 # Google AI Studio: gemini-3-flash-preview / gemini-3.1-flash-lite-preview など
-VITE_MODEL=gpt-oss-120b
+VITE_MODEL=gpt-5.4
 ```
 
 ## 開発
@@ -129,7 +127,7 @@ docs/               # ドキュメント
 - **フロントエンド**: React, TypeScript, Vite, Tailwind CSS
 - **グラフィックス**: p5.js
 - **状態管理**: React Hooks
-- **LLM**: OpenAI / Cerebras / Google AI Studio API
+- **LLM**: OpenAI / Google AI Studio API
 - **バックエンド**: Cloudflare Workers
 
 ## ライセンス

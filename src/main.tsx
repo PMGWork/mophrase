@@ -82,8 +82,7 @@ const App = () => {
     setGraphImageProvider((path, selectionRange) => {
       const sketchImageDataUrl =
         captureSketchCanvas(path, selectionRange) ?? undefined;
-      const graphFocusedImageDataUrl =
-        captureGraphCanvasFocused() ?? undefined;
+      const graphFocusedImageDataUrl = captureGraphCanvasFocused() ?? undefined;
       if (!sketchImageDataUrl && !graphFocusedImageDataUrl) {
         return null;
       }
@@ -92,11 +91,7 @@ const App = () => {
         graphFocusedImageDataUrl,
       };
     });
-  }, [
-    captureGraphCanvasFocused,
-    captureSketchCanvas,
-    setGraphImageProvider,
-  ]);
+  }, [captureGraphCanvasFocused, captureSketchCanvas, setGraphImageProvider]);
 
   // アクティブパス更新適用ヘルパー
   const applyPathUpdate = (updater: (path: Path) => void) => {
@@ -165,6 +160,7 @@ const App = () => {
         llmProvider: config.llmProvider,
         llmModel: config.llmModel,
         llmReasoningEffort: config.llmReasoningEffort,
+        llmPriorityProcessing: config.llmPriorityProcessing,
         parallelGeneration: config.parallelGeneration,
         graphImageEnabled: config.graphImageEnabled,
         fitTolerance,
