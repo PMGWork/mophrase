@@ -23,18 +23,18 @@
 
 | 用語 | 型/場所 | 定義 |
 | --- | --- | --- |
-| `Keyframe` | `src/types.ts` | 時刻 `time` と位置 `position`、およびハンドルを持つ節点。配列インデックスで識別 |
+| `Keyframe` | `apps/web/src/types.ts` | 時刻 `time` と位置 `position`、およびハンドルを持つ節点。配列インデックスで識別 |
 | `sketchIn` / `sketchOut` | `Keyframe` | 空間ベジェの入出ハンドル（アンカー相対ベクトル） |
 | `graphIn` / `graphOut` | `Keyframe` | 時間カーブの入出ハンドル（時間-進行度平面のベクトル） |
 | `sketchCorner` | `Keyframe` | 空間ハンドルを独立扱いするフラグ。`true` のとき `sketchIn/out` をミラー同期しない |
 | `graphCorner` | `Keyframe` | 時間ハンドルを独立扱いするフラグ。`true` のとき `graphIn/out` をミラー同期しない |
-| `SerializedKeyframe` | `src/types.ts` | LLM 通信用の正規化キーフレーム |
-| `SerializedHandle` | `src/types.ts` | `angle` と `dist` で表現される極座標ハンドル |
-| `SerializedPath` | `src/types.ts` | `keyframes` + `bbox` の LLM 通信用パス |
-| `Suggestion` | `src/types.ts` | UI表示用の提案（`id`, `title`, `path`） |
-| `Modifier` | `src/types.ts` | `SketchModifier \| GraphModifier` の共通型エイリアス |
-| `SketchModifier` | `src/types.ts` | 空間ベジェ差分をキーフレーム単位で保持する編集単位 |
-| `GraphModifier` | `src/types.ts` | 時間カーブ差分をキーフレーム単位で保持する編集単位 |
+| `SerializedKeyframe` | `apps/web/src/types.ts` | LLM 通信用の正規化キーフレーム |
+| `SerializedHandle` | `apps/web/src/types.ts` | `angle` と `dist` で表現される極座標ハンドル |
+| `SerializedPath` | `apps/web/src/types.ts` | `keyframes` + `bbox` の LLM 通信用パス |
+| `Suggestion` | `apps/web/src/types.ts` | UI表示用の提案（`id`, `title`, `path`） |
+| `Modifier` | `apps/web/src/types.ts` | `SketchModifier \| GraphModifier` の共通型エイリアス |
+| `SketchModifier` | `apps/web/src/types.ts` | 空間ベジェ差分をキーフレーム単位で保持する編集単位 |
+| `GraphModifier` | `apps/web/src/types.ts` | 時間カーブ差分をキーフレーム単位で保持する編集単位 |
 
 ## 4. 座標・正規化ルール
 
@@ -95,12 +95,12 @@
 
 - 実装の `SerializedHandle` は `angle/dist` 形式。
 - 論文説明では時間ハンドルを比率座標で説明している箇所があるが、現行コードでは極座標で扱う。
-- AI 向け仕様を更新する際は、`src/types.ts` を唯一のスキーマ正として参照する。
+- AI 向け仕様を更新する際は、`apps/web/src/types.ts` を唯一のスキーマ正として参照する。
 
 ## 10. 参照
 
 - 論文: `/Users/yuto/Downloads/interaction2026_last.pdf`
-- プロンプト: `src/prompts/keyframePrompt.common.md`（共通） + `src/prompts/keyframePrompt.serial.md`（直列差分） / `src/prompts/keyframePrompt.parallel.md`（並列差分）
-- 型: `src/types.ts`
-- シリアライズ: `src/utils/serialization/curves.ts`
-- 提案処理: `src/suggestion/suggestionService.ts`
+- プロンプト: `apps/web/src/prompts/keyframePrompt.common.md`（共通） + `apps/web/src/prompts/keyframePrompt.serial.md`（直列差分） / `apps/web/src/prompts/keyframePrompt.parallel.md`（並列差分）
+- 型: `apps/web/src/types.ts`
+- シリアライズ: `apps/web/src/utils/serialization/curves.ts`
+- 提案処理: `apps/web/src/suggestion/suggestionService.ts`

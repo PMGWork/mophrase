@@ -1,18 +1,36 @@
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
-  base: './',
-  plugins: [react(), tailwindcss()],
-  server: {
-    host: true,
-    allowedHosts: true,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8787',
-        changeOrigin: true,
-      },
+  staged: {
+    '*': 'vp check --fix',
+  },
+  lint: {
+    plugins: ['oxc', 'typescript', 'unicorn', 'react'],
+    ignorePatterns: [
+      'apps/worker/worker-configuration.d.ts',
+      '.vscode/',
+      '.agent/',
+      '.codex/',
+      'docs/',
+      'vite.config.ts',
+    ],
+    options: {
+      typeAware: true,
+      typeCheck: true,
     },
+  },
+  fmt: {
+    sortTailwindcss: {},
+    sortPackageJson: false,
+    singleQuote: true,
+    printWidth: 80,
+    ignorePatterns: [
+      'apps/worker/worker-configuration.d.ts',
+      '.vscode/',
+      '.agent/',
+      '.codex/',
+      'docs/',
+      'vite.config.ts',
+    ],
   },
 });

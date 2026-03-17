@@ -1,0 +1,288 @@
+/**
+ * ベジエ曲線フィッティングの再帰アルゴリズム。
+ * 手書き点群を許容誤差内でベジエ曲線列に変換する。
+ * スケッチ（誤差ベース分割）とグラフ（分割点指定）の両方に対応。
+ */
+
+import type p5 from 'p5';
+import type { FitErrorResult } from '../../types';
+import { splitTangent } from '../../utils/bezier';
+import {
+  computeRangeEndTangents,
+  computeMaxError,
+  computeMaxErrorAtSplitPoints,
+  extractEndPoints,
+  fitControlPoints,
+  parametrizeRange,
+  refineParams,
+  type FitCurveResult,
+  type FitRange,
+  type Tangents,
+} from './segment';
+
+type FitSketchOptions = {
+  forcedSplitPoints?: number[];
+};
+
+// #region パブリック関数
+
+// スケッチのフィッティング
+export function fitSketchCurves(
+  points: p5.Vector[],
+  errorTol: number,
+  coarseErrTol: number,
+  fitError: { current: FitErrorResult },
+  options?: FitSketchOptions,
+): FitCurveResult {
+  const curves: p5.Vector[][] = [];
+  const ranges: FitRange[] = [];
+  const normalizedForcedSplits = normalizeSplitPoints(
+    options?.forcedSplitPoints ?? [],
+    points.length,
+  );
+  const initialRanges = buildBoundaryRanges(
+    points.length,
+    normalizedForcedSplits,
+  );
+
+  for (const initialRange of initialRanges) {
+    const [tangent0, tangent1] = computeRangeEndTangents(points, initialRange);
+    fitSketchRecursive(
+      points,
+      curves,
+      initialRange,
+      { start: tangent0, end: tangent1 },
+      errorTol,
+      coarseErrTol,
+      fitError,
+      ranges,
+    );
+  }
+
+  return { curves, ranges };
+}
+
+// イージングのフィッティング
+export function fitGraphCurves(
+  points: p5.Vector[],
+  splitPoints: number[],
+): FitCurveResult {
+  const curves: p5.Vector[][] = [];
+  const ranges: FitRange[] = [];
+  const normalizedSplitPoints = normalizeSplitPoints(
+    splitPoints,
+    points.length,
+  );
+  const initialRanges = buildBoundaryRanges(
+    points.length,
+    normalizedSplitPoints,
+  );
+
+  for (const initialRange of initialRanges) {
+    const [tangent0, tangent1] = computeRangeEndTangents(points, initialRange);
+    fitGraphRecursive(
+      points,
+      curves,
+      initialRange,
+      { start: tangent0, end: tangent1 },
+      normalizedSplitPoints,
+      ranges,
+    );
+  }
+
+  return { curves, ranges };
+}
+
+// #region プライベート関数
+
+// 再帰的にベジェ曲線をフィットする
+// (スケッチのフィッティング用)
+function fitSketchRecursive(
+  points: p5.Vector[],
+  curves: p5.Vector[][],
+  range: FitRange,
+  tangents: Tangents,
+  errorTol: number,
+  coarseErrTol: number,
+  fitError: { current: FitErrorResult },
+  ranges?: FitRange[],
+): void {
+  // フィッティング結果を確定する関数
+  const finalizeCurve = (controls: p5.Vector[]): void => {
+    curves.push(controls);
+    ranges?.push({ start: range.start, end: range.end });
+  };
+
+  // パラメータを計算
+  const params = parametrizeRange(points, range);
+
+  // 制御点を計算
+  const controls: p5.Vector[] = Array.from({ length: 4 });
+  const [p0, p3] = extractEndPoints(points, range);
+  controls[0] = p0;
+  controls[3] = p3;
+  fitControlPoints(controls, params, tangents, points, range);
+
+  // 最大誤差を計算
+  const errorResult = computeMaxError(controls, params, points, range);
+  let maxError = errorResult.maxError;
+
+  // fitErrorを更新
+  fitError.current = errorResult;
+
+  // 許容誤差内にある場合のみ確定
+  if (maxError <= errorTol) {
+    finalizeCurve(controls);
+    return;
+  }
+
+  // 粗めの誤差を満たす場合
+  if (maxError <= coarseErrTol) {
+    // Newton法でパラメータを1回だけ再計算
+    refineParams(controls, params, points, range.start);
+
+    // 制御点を再生成
+    fitControlPoints(controls, params, tangents, points, range);
+
+    // 誤差を再評価
+    const newErrorResult = computeMaxError(controls, params, points, range);
+    maxError = newErrorResult.maxError;
+
+    // fitErrorを更新
+    fitError.current = newErrorResult;
+
+    // 許容誤差内に収まったら確定
+    if (maxError <= errorTol) {
+      finalizeCurve(controls);
+      return;
+    }
+  }
+
+  // 分割点で分割する
+  const splitIndex = fitError.current.index;
+  if (splitIndex <= range.start || splitIndex >= range.end) {
+    finalizeCurve(controls);
+    return;
+  }
+
+  // 分割点の接ベクトルを計算
+  const tangent = splitTangent(points, splitIndex, range);
+  if (tangent === null) {
+    finalizeCurve(controls);
+    return;
+  }
+
+  // 再帰的に分割してフィッティング
+  fitSketchRecursive(
+    points,
+    curves,
+    { start: range.start, end: splitIndex },
+    { start: tangents.start, end: tangent },
+    errorTol,
+    coarseErrTol,
+    fitError,
+    ranges,
+  );
+  fitSketchRecursive(
+    points,
+    curves,
+    { start: splitIndex, end: range.end },
+    { start: tangent.copy().mult(-1), end: tangents.end },
+    errorTol,
+    coarseErrTol,
+    fitError,
+    ranges,
+  );
+}
+
+// 分割点を考慮してベジェ曲線をフィットする
+// (イージングのフィッティング用)
+function fitGraphRecursive(
+  points: p5.Vector[],
+  curves: p5.Vector[][],
+  range: FitRange,
+  tangents: Tangents,
+  splitPoints: number[],
+  ranges: FitRange[],
+): void {
+  const params = parametrizeRange(points, range);
+
+  const controls: p5.Vector[] = Array.from({ length: 4 });
+  const [p0, p3] = extractEndPoints(points, range);
+  controls[0] = p0;
+  controls[3] = p3;
+  fitControlPoints(controls, params, tangents, points, range);
+
+  const errorResult = computeMaxErrorAtSplitPoints(
+    controls,
+    params,
+    points,
+    range,
+    splitPoints,
+  );
+  const splitIndex = errorResult.index;
+  if (splitIndex === -1) {
+    curves.push(controls);
+    ranges.push({ start: range.start, end: range.end });
+    return;
+  }
+
+  const tangent = splitTangent(points, splitIndex, range);
+  if (tangent === null) {
+    curves.push(controls);
+    ranges.push({ start: range.start, end: range.end });
+    return;
+  }
+
+  fitGraphRecursive(
+    points,
+    curves,
+    { start: range.start, end: splitIndex },
+    { start: tangents.start, end: tangent },
+    splitPoints,
+    ranges,
+  );
+  fitGraphRecursive(
+    points,
+    curves,
+    { start: splitIndex, end: range.end },
+    { start: tangent.copy().mult(-1), end: tangents.end },
+    splitPoints,
+    ranges,
+  );
+}
+
+function normalizeSplitPoints(
+  splitPoints: number[],
+  pointsLength: number,
+): number[] {
+  if (pointsLength < 2) return [];
+
+  const normalized = new Set<number>();
+  for (const split of splitPoints) {
+    if (!Number.isFinite(split)) continue;
+    const index = Math.trunc(split);
+    if (index <= 0 || index >= pointsLength - 1) continue;
+    normalized.add(index);
+  }
+
+  return Array.from(normalized).sort((a, b) => a - b);
+}
+
+function buildBoundaryRanges(
+  pointsLength: number,
+  splitPoints: number[],
+): FitRange[] {
+  if (pointsLength < 2) return [];
+
+  const boundaries = [0, ...splitPoints, pointsLength - 1];
+  const ranges: FitRange[] = [];
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const start = boundaries[i];
+    const end = boundaries[i + 1];
+    if (end - start < 1) continue;
+    ranges.push({ start, end });
+  }
+
+  return ranges;
+}
