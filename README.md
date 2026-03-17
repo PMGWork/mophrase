@@ -55,7 +55,7 @@ VITE_MODEL=gpt-5.4
 pnpm dev
 
 # アプリのみ起動
-pnpm dev:app
+pnpm dev:web
 
 # Workerのみ起動
 pnpm dev:worker
@@ -76,7 +76,7 @@ pnpm build
 pnpm build
 
 # Worker をデプロイ
-pnpx wrangler deploy --config worker/wrangler.toml
+pnpm deploy
 ```
 
 ### リント・フォーマット
@@ -102,17 +102,13 @@ pnpm fix
 ## プロジェクト構成
 
 ```
-src/
-├── components/      # React UIコンポーネント
-├── core/           # コアロジック（フィッティング、モーション管理）
-├── editor/         # スケッチ・グラフエディタ
-├── hooks/          # Reactフック
-├── prompts/        # LLMプロンプト
-├── services/       # 外部サービス（LLM、ストレージ）
-├── suggestion/     # 提案生成・管理
-└── utils/          # ユーティリティ関数
+apps/
+├── web/
+│   ├── src/        # React UI / editor / core / prompts
+│   ├── index.html
+│   └── vite.config.ts
+└── worker/         # Cloudflare Worker（LLM API中継）
 
-worker/             # Cloudflare Worker（LLM API中継）
 docs/               # ドキュメント
 ```
 

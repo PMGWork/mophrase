@@ -7,7 +7,7 @@
 
 - [x] モディファイア適用時の分割処理を実装する
   - 背景: 現在はモディファイア適用時に対象区間の分割が不十分で、局所編集時に意図しない影響範囲が出る可能性がある。
-  - 対象候補: `src/utils/modifier.ts`, `src/utils/path.ts`, 適用呼び出し元（`src/core/motionManager.ts` など）
+  - 対象候補: `apps/web/src/utils/modifier.ts`, `apps/web/src/utils/path.ts`, 適用呼び出し元（`apps/web/src/core/motionManager.ts` など）
   - 方針メモ:
     - 適用対象のセグメント境界を明示的に分割する。
     - 非対象区間は不変に保ち、既存のキーフレーム順序・接続順を維持する。
@@ -19,7 +19,7 @@
 
 - [ ] 補正提案のバリエーション品質を改善する（類似提案3件の発生を抑える）
   - 背景: 補正提案で3件がほぼ同一内容になることがあり、選択肢としての価値が下がっている。
-  - 対象候補: `src/prompts/keyframePrompt.common.md`, `src/prompts/keyframePrompt.parallel.md`, 提案生成呼び出し箇所, 出力後処理ロジック
+  - 対象候補: `apps/web/src/prompts/keyframePrompt.common.md`, `apps/web/src/prompts/keyframePrompt.parallel.md`, 提案生成呼び出し箇所, 出力後処理ロジック
   - 方針メモ:
     - 提案間の差分軸（テンポ/強弱/軌道/スタイル）を明示し、重複を避ける指示にする。
     - 出力結果の類似度チェックを導入し、一定閾値を超えた提案は再生成または置換する。
@@ -45,7 +45,7 @@
 
 - [ ] スケッチ/グラフのモディファイアを自動判定する
   - 背景: 現状は明示選択に依存し、入力意図に合うモディファイア選択の手間が大きい。
-  - 対象候補: `src/editor/sketchEditor/*`, `src/editor/graphEditor/*`, `src/utils/modifier.ts`, UI選択導線
+  - 対象候補: `apps/web/src/editor/sketchEditor/*`, `apps/web/src/editor/graphEditor/*`, `apps/web/src/utils/modifier.ts`, UI選択導線
   - 方針メモ:
     - 入力特徴（形状・時間変化・編集コンテキスト）から候補モディファイアを推定する。
     - 自動判定結果は提案として表示し、ユーザーが確定/上書きできるUIにする。
@@ -55,7 +55,7 @@
 
 - [x] iPad/PC両対応の入力基盤を整備する（Sketch/Graph）
   - 背景: 現状は `mousePressed/Dragged/Released` 中心で、デバイス差分の吸収が難しく、iPadのタッチ/ペン入力で描画・選択・編集がしづらい。
-  - 対象候補: `src/components/Canvas.tsx`, `src/editor/sketchEditor/editor.ts`, `src/editor/graphEditor/editor.ts`, `src/utils/input.ts`
+  - 対象候補: `apps/web/src/components/Canvas.tsx`, `apps/web/src/editor/sketchEditor/editor.ts`, `apps/web/src/editor/graphEditor/editor.ts`, `apps/web/src/utils/input.ts`
   - 方針メモ:
     - 入力取得を Pointer Events 基準に再整理し、マウス/タッチ/ペンを同一経路で処理する。
     - Pointer capture と `pointercancel` 処理を導入し、ドラッグ中断や誤入力に強くする。
@@ -69,7 +69,7 @@
 
 - [x] iPad向けのプロジェクト保存/読込対応を実装する
   - 背景: ブラウザ API 互換差で保存・読込導線が失われる環境があり、iPad利用時の運用が止まる。
-  - 対象候補: `src/hooks/useSketchEditor.ts`, 保存/読込UIまわり
+  - 対象候補: `apps/web/src/hooks/useSketchEditor.ts`, 保存/読込UIまわり
   - 方針メモ:
     - 保存基盤を IndexedDB に統一し、ブラウザ内で完結させる。
     - 既存のプロジェクト名・未保存状態管理と整合を取る。
