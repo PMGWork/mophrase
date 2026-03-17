@@ -94,10 +94,13 @@ const App = () => {
   }, [captureGraphCanvasFocused, captureSketchCanvas, setGraphImageProvider]);
 
   // アクティブパス更新適用ヘルパー
-  const applyPathUpdate = (updater: (path: Path) => void) => {
-    updateActivePath(updater);
-    updateSuggestionUI();
-  };
+  const applyPathUpdate = useCallback(
+    (updater: (path: Path) => void) => {
+      updateActivePath(updater);
+      updateSuggestionUI();
+    },
+    [updateActivePath, updateSuggestionUI],
+  );
 
   // 時間変更ハンドラ
   const handleTimeChange = useCallback(

@@ -117,7 +117,7 @@ function fitSketchRecursive(
   const params = parametrizeRange(points, range);
 
   // 制御点を計算
-  const controls: p5.Vector[] = new Array(4);
+  const controls: p5.Vector[] = Array.from({ length: 4 });
   const [p0, p3] = extractEndPoints(points, range);
   controls[0] = p0;
   controls[3] = p3;
@@ -207,7 +207,7 @@ function fitGraphRecursive(
 ): void {
   const params = parametrizeRange(points, range);
 
-  const controls: p5.Vector[] = new Array(4);
+  const controls: p5.Vector[] = Array.from({ length: 4 });
   const [p0, p3] = extractEndPoints(points, range);
   controls[0] = p0;
   controls[3] = p3;
