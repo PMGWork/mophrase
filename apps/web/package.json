@@ -6,14 +6,7 @@
   "scripts": {
     "dev": "vp dev",
     "build": "tsc && vp build",
-    "preview": "vp preview",
-    "lint": "vp lint .",
-    "lint:fix": "vp lint . --fix",
-    "format": "vp fmt .",
-    "format:check": "vp fmt --check .",
-    "check": "vp lint . && vp fmt --check .",
-    "fix": "vp lint . --fix && vp fmt .",
-    "prepare": "vp config"
+    "preview": "vp preview"
   },
   "devDependencies": {
     "@types/p5": "^1.7.7",
