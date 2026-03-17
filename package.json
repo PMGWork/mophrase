@@ -14,10 +14,6 @@
     "dev:worker": "pnpm -C apps/worker dev",
     "build": "pnpm -C apps/web build",
     "preview": "pnpm -C apps/web preview",
-    "deploy": "pnpm -C apps/worker deploy",
-    "check": "vp check && pnpm -C apps/worker check",
-    "check:worker": "pnpm -C apps/worker check",
-    "fix": "vp check --fix",
-    "prepare": "vp config"
+    "deploy": "pnpm -C apps/worker deploy"
   }
 }
